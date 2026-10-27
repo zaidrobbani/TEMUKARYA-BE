@@ -51,3 +51,18 @@ def test_get_categories():
     assert len(result) == 2
     assert result[0].name == "Desain Grafis"
     assert result[1].is_active is True
+
+
+def test_get_skills_empty():
+    class EmptyRepository:
+        def list_skills(self):
+            return []
+
+        def list_categories(self):
+            return []
+
+    use_case = ListMasterData(EmptyRepository())
+
+    result = use_case.get_skills()
+
+    assert result == []
