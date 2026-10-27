@@ -9,10 +9,12 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-      TZ: Asia/Jakarta
+      TZ: UTC
+    # Semua waktu disimpan dalam UTC; konversi ke WIB dilakukan di Android saat ditampilkan.
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
     ports:
       - "${DB_HOST_PORT:-3306}:3306"
     volumes:
