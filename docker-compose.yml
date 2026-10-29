@@ -10,7 +10,6 @@ services:
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: UTC
-    # Semua waktu disimpan dalam UTC; konversi ke WIB dilakukan di Android saat ditampilkan.
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -42,13 +41,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Mode development: kode di-mount dan server reload otomatis saat file berubah.
-    # ":z" diperlukan di Linux dengan SELinux (Fedora); diabaikan di sistem lain.
     volumes:
       - .:/app:z
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-  # GUI database opsional: docker compose --profile tools up -d
   adminer:
     image: adminer:4.8.1
     restart: unless-stopped

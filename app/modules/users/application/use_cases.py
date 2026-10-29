@@ -6,6 +6,7 @@ from app.modules.users.domain.exceptions import EmailAlreadyRegisteredError, Use
 from app.modules.users.domain.repositories import UserRepository
 
 
+
 class RegisterUser:
     def __init__(self, users: UserRepository, hasher: PasswordHasher, uow: UnitOfWork):
         self._users = users
@@ -33,7 +34,7 @@ class GetUser:
     def __init__(self, users: UserRepository):
         self._users = users
 
-    def execute(self, user_id: int) -> User:
+    def execute(self, user_id: str) -> User:
         user = self._users.get_by_id(user_id)
         if user is None:
             raise UserNotFoundError(user_id)

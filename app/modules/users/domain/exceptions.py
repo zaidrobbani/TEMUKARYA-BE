@@ -2,7 +2,7 @@ from app.core.exceptions import ConflictError, NotFoundError
 
 
 class UserNotFoundError(NotFoundError):
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: str):
         super().__init__(f"User {user_id} tidak ditemukan")
 
 

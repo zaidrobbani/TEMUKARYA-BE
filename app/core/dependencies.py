@@ -14,7 +14,6 @@ class SqlAlchemyUnitOfWork(UnitOfWork):
         self._session.commit()
 
 
-# FastAPI meng-cache dependency per request, jadi repository & UoW berbagi session yang sama.
 def get_uow(db: Session = Depends(get_db)) -> UnitOfWork:
     return SqlAlchemyUnitOfWork(db)
 

@@ -1,10 +1,3 @@
-"""collaboration and delivery: agreements, milestones, status history, submissions, reviews
-
-Revision ID: b7c1e9d3f582
-Revises: 8d2e4b6a1c93
-Create Date: 2026-10-27 04:02:00
-
-"""
 from typing import Sequence, Union
 
 from alembic import op
@@ -42,10 +35,6 @@ def file_columns() -> list[sa.Column]:
 
 
 def upgrade() -> None:
-    # ===== kesepakatan (F2) =====
-    # Dibuat saat UMKM memilih freelancer. UNIQUE(project_id) sekaligus mencegah dua freelancer
-    # terpilih bila ada dua request bersamaan. Harga/deadline/scope diisi otomatis dari lamaran
-    # (atau dari budget & deadline project untuk DIRECT_SEARCH), lalu boleh diubah saat negosiasi.
     op.create_table(
         "project_agreements",
         uuid_pk(),
@@ -57,7 +46,6 @@ def upgrade() -> None:
         sa.Column("agreed_price", mysql.BIGINT(unsigned=True), nullable=False),
         sa.Column("agreed_deadline", sa.Date(), nullable=False),
         sa.Column("status", sa.String(35), nullable=False, server_default="PENDING_APPROVAL"),
-        # Naik setiap detail kesepakatan/milestone berubah; kedua *_approved_at di-reset ke NULL
         sa.Column("agreement_version", mysql.INTEGER(unsigned=True), nullable=False, server_default="1"),
         sa.Column("umkm_approved_at", mysql.DATETIME(fsp=3), nullable=True),
         sa.Column("freelancer_approved_at", mysql.DATETIME(fsp=3), nullable=True),
@@ -71,14 +59,12 @@ def upgrade() -> None:
         ),
     )
 
-    # ===== milestone (F4) =====
     op.create_table(
         "project_milestones",
         uuid_pk(),
         uuid_fk("project_id", "projects.id"),
         sa.Column("name", sa.String(180), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
-        # Total bobot per project = 100 divalidasi di backend (tidak bisa dengan CHECK per baris)
         sa.Column("weight_percent", sa.Numeric(5, 2), nullable=False),
         sa.Column("status", sa.String(25), nullable=False, server_default="BELUM_SELESAI"),
         sa.Column("sort_order", mysql.INTEGER(unsigned=True), nullable=False),
@@ -92,7 +78,6 @@ def upgrade() -> None:
         ),
     )
 
-    # ===== riwayat status project (append-only) =====
     op.create_table(
         "project_status_history",
         uuid_pk(),
@@ -102,7 +87,6 @@ def upgrade() -> None:
         sa.Column("action", sa.String(50), nullable=False),
         sa.Column("change_reason", sa.Text(), nullable=True),
         sa.Column("change_source", sa.String(15), nullable=False, server_default="USER"),
-        # NULL untuk perubahan oleh SYSTEM
         uuid_fk("changed_by_user_id", "users.id", nullable=True),
         timestamp("changed_at"),
     )
@@ -110,14 +94,12 @@ def upgrade() -> None:
         "ix_project_status_history_project_changed_at", "project_status_history", ["project_id", "changed_at"]
     )
 
-    # ===== pengiriman hasil & review =====
     op.create_table(
         "project_submissions",
         uuid_pk(),
         uuid_fk("project_id", "projects.id"),
         sa.Column("version_number", mysql.INTEGER(unsigned=True), nullable=False),
         sa.Column("submission_note", sa.Text(), nullable=True),
-        # Wajib ada result_url ATAU minimal satu submission_files; divalidasi di backend
         sa.Column("result_url", sa.String(1000), nullable=True),
         timestamp("submitted_at"),
         sa.UniqueConstraint("project_id", "version_number", name="uq_project_submissions_project_version"),
@@ -145,8 +127,6 @@ def upgrade() -> None:
         ),
     )
 
-    # ===== rating freelancer (satu per project yang SELESAI) =====
-    # Freelancer yang dinilai diturunkan dari project_agreements.freelancer_id
     op.create_table(
         "freelancer_reviews",
         uuid_pk(),

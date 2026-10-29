@@ -17,5 +17,5 @@ def register_user(
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, use_case: GetUser = Depends(get_user_use_case)):
+def get_user(user_id: str, use_case: GetUser = Depends(get_user_use_case)):
     return use_case.execute(user_id)

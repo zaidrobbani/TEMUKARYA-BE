@@ -10,7 +10,7 @@ class SqlAlchemyUserRepository(UserRepository):
     def __init__(self, session: Session):
         self._session = session
 
-    def get_by_id(self, user_id: int) -> User | None:
+    def get_by_id(self, user_id: str) -> User | None:
         model = self._session.get(UserModel, user_id)
         return _to_entity(model) if model else None
 
@@ -24,9 +24,10 @@ class SqlAlchemyUserRepository(UserRepository):
             email=user.email,
             password_hash=user.password_hash,
             role=user.role.value,
+            phone_number=user.phone_number,
+            profile_image_url=user.profile_image_url,
         )
         self._session.add(model)
-        # flush + refresh supaya id & created_at dari database terisi sebelum commit
         self._session.flush()
         self._session.refresh(model)
         return _to_entity(model)
@@ -39,5 +40,8 @@ def _to_entity(model: UserModel) -> User:
         email=model.email,
         password_hash=model.password_hash,
         role=UserRole(model.role),
+        phone_number=model.phone_number,
+        profile_image_url=model.profile_image_url,
         created_at=model.created_at,
+        updated_at=model.updated_at,
     )
