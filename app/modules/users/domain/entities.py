@@ -14,5 +14,8 @@ class User:
     email: str
     password_hash: str
     role: UserRole
-    id: int | None = None
+    phone_number: str | None = None
+    profile_image_url: str | None = None
+    id: str | None = None
     created_at: datetime | None = None
+    updated_at: datetime | None = None

@@ -1,4 +1,3 @@
-# Composition root modul users: satu-satunya tempat implementasi konkret dirakit ke use case.
 from fastapi import Depends
 from sqlalchemy.orm import Session
 

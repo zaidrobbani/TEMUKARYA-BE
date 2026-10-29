@@ -1,5 +1,5 @@
-# Test use case tanpa database: repository & UoW diganti fake in-memory.
 from dataclasses import replace
+from uuid import uuid4
 
 import pytest
 
@@ -14,16 +14,16 @@ from app.modules.users.domain.repositories import UserRepository
 
 class FakeUserRepository(UserRepository):
     def __init__(self):
-        self.users: dict[int, User] = {}
+        self.users: dict[str, User] = {}
 
-    def get_by_id(self, user_id: int) -> User | None:
+    def get_by_id(self, user_id: str) -> User | None:
         return self.users.get(user_id)
 
     def get_by_email(self, email: str) -> User | None:
         return next((u for u in self.users.values() if u.email == email), None)
 
     def add(self, user: User) -> User:
-        saved = replace(user, id=len(self.users) + 1)
+        saved = replace(user, id=str(uuid4()))
         self.users[saved.id] = saved
         return saved
 
@@ -46,7 +46,7 @@ def test_register_user_normalizes_email_hashes_password_and_commits():
 
     user = RegisterUser(repo, hasher, uow).execute(make_input())
 
-    assert user.id == 1
+    assert repo.get_by_id(user.id) == user
     assert user.email == "budi@mail.com"
     assert hasher.verify("rahasia123", user.password_hash)
     assert uow.committed
@@ -65,4 +65,4 @@ def test_register_user_rejects_duplicate_email():
 
 def test_get_user_raises_when_missing():
     with pytest.raises(UserNotFoundError):
-        GetUser(FakeUserRepository()).execute(99)
+        GetUser(FakeUserRepository()).execute(str(uuid4()))
