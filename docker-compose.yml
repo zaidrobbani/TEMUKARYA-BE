@@ -37,6 +37,7 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
+      PROJECT_ATTACHMENT_STORAGE_ROOT: /app/storage/projects
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -46,6 +47,7 @@ services:
     # ":z" diperlukan di Linux dengan SELinux (Fedora); diabaikan di sistem lain.
     volumes:
       - .:/app:z
+      - project_uploads:/app/storage
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   # GUI database opsional: docker compose --profile tools up -d
@@ -62,3 +64,4 @@ services:
 
 volumes:
   mysql_data:
+  project_uploads:
