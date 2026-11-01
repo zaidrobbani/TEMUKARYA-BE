@@ -20,6 +20,8 @@ RUN groupadd -g ${GID} app && useradd -m -u ${UID} -g ${GID} app
 COPY --chown=app:app . .
 RUN chmod +x docker/entrypoint.sh
 
+RUN mkdir -p /app/storage/projects && chown -R app:app /app/storage
+
 USER app
 
 EXPOSE 8000
