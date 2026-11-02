@@ -6,11 +6,14 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.error_handlers import register_error_handlers
 from app.modules.users.presentation.router import router as users_router
+from app.modules.discovery.presentation.router import router as discovery_router
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
 
 register_error_handlers(app)
 app.include_router(users_router)
+
+app.include_router(discovery_router)
 
 
 @app.get("/health", tags=["health"])
