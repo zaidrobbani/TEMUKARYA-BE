@@ -5,11 +5,13 @@ Proyek tim (4 orang), kelas Pengembangan Aplikasi Perangkat Bergerak. Admin dash
 
 ## Cara kerja dengan user (PENTING)
 
-- User **mengetik kode sendiri secara manual**. Jangan langsung mengedit/membuat file kode di repo.
-  Pandu langkah demi langkah: jelaskan struktur, berikan potongan kode lengkap per file, lalu tunggu user selesai mengetik.
-- Edit langsung hanya kalau user secara eksplisit meminta (misalnya file dokumentasi seperti ini).
-- Bahasa percakapan: Indonesia. Komentar di kode: Indonesia, singkat, hanya untuk "kenapa" yang tidak jelas dari kode.
-- Kerjakan per langkah kecil yang bisa dijalankan dan dites, jangan sekaligus banyak modul.
+- Sejak 2026-11-02 Claude **langsung mengerjakan kode** di repo, **satu fitur sampai tuntas** per sesi/PR
+  (tidak lagi memandu user mengetik manual). Deadline padat: jangan banyak tanya, ambil keputusan wajar lalu laporkan.
+- Setiap fitur wajib: semua skenario error ditangani + dites (use case dengan fake repo, dan HTTP via `TestClient`),
+  plus dokumen kontrak di `docs/api/<fitur>.md` berisi request/response, tabel status code + pesan per skenario error,
+  dan tabel **"Keputusan yang perlu dicek"** untuk hal yang beda/tidak diatur di PRD atau Figma, supaya user bisa review.
+- Kode rapi, komentar minim: Indonesia, singkat, hanya untuk "kenapa" yang tidak jelas dari kode.
+- Bahasa percakapan: Indonesia.
 
 ## Sumber kebenaran
 
@@ -49,7 +51,17 @@ Aturan:
 - Error bisnis = subclass `AppError` (`app/core/exceptions.py`), dipetakan ke HTTP di `error_handlers.py`. Jangan raise `HTTPException` dari use case.
 - Model baru wajib di-import di `alembic/env.py` agar terdeteksi autogenerate; router baru didaftarkan di `app/main.py`.
 - Test use case di `tests/modules/<modul>/` memakai fake repository in-memory (tanpa DB). Contoh: `tests/modules/users/test_use_cases.py`.
-- Modul `users` adalah contoh pola yang harus ditiru.
+- Modul `users` + `auth` adalah contoh pola yang harus ditiru. Fake repository bersama ada di `tests/fakes.py`;
+  contoh test HTTP: `tests/api/test_auth_api.py`.
+
+Kontrak API (untuk Android & admin web):
+- Semua response memakai envelope `{"success": bool, "message": str, "data": ...}`. Sukses: router `return success_response("...", data)`
+  dengan `response_model=ApiResponse[Schema]` dan `responses=error_responses(...)` (`app/core/responses.py`).
+- Error: `{"success": false, "message": ..., "data": null}`; khusus 422 ditambah `errors: [{field, message}]` dengan pesan Indonesia. Error yang perlu dibedakan client boleh menambah `code` (atribut `code` di subclass `AppError`).
+  Handler ada di `app/core/error_handlers.py` (AppError, validasi, 404/405, 500).
+- Datetime di response pakai tipe `UtcDateTime` (ISO UTC berakhiran `Z`).
+- Setiap enum yang dipakai client didaftarkan di `app/modules/enums/registry.py` (`{value, label}`), otomatis tersedia di `GET /enums` dan `GET /enums/{nama}`.
+- Endpoint yang butuh login: `Depends(get_current_user)` atau `Depends(require_roles(UserRole.X))` dari `app/modules/auth/presentation/dependencies.py`.
 
 ## Konvensi data
 
@@ -79,15 +91,21 @@ F4: total bobot milestone harus 100; progres dihitung dari milestone SELESAI (ti
 
 - [x] Fondasi: Docker, MySQL, Alembic, core (config, database, UoW, exceptions, PasswordHasher scrypt), modul `users` (register + get).
 - [x] Migrasi skema lengkap 28 tabel + seed skills & kategori (diuji upgrade/downgrade di DB terpisah).
-- [ ] Sesuaikan modul `users` ke UUID (id `str`, model `CHAR(36)` + `default=lambda: str(uuid4())`, `DATETIME(3)`), termasuk test.
-- [ ] Langkah 1: modul `auth` (login JWT via PyJWT, `/auth/me`, `get_current_user`, `require_roles`), role `ADMIN`, larang register sebagai admin.
+- [x] Modul `users` memakai UUID.
+- [x] Fitur auth (branch `3-feat/auth-jwt`): register, login app, login admin, `/auth/me`, logout (revoke token di tabel `revoked_tokens`),
+  `get_current_user`, `require_roles`, role `ADMIN` (dibuat via `python -m app.scripts.create_admin`), envelope response, error handler,
+  endpoint enum. Kontrak + skenario error: `docs/api/auth.md`. Menunggu review user atas tabel "Keputusan yang perlu dicek".
+- [x] Auth disamakan dengan Figma (2026-11-04): verifikasi email wajib sebelum login, lupa password via tautan, login Google (akun terdaftar saja),
+  `terms_accepted`, tabel `auth_action_tokens`, port `EmailSender` (SMTP + Mailpit di Compose) dan `GoogleTokenVerifier`. Android belum menyesuaikan field & alur baru.
 - [ ] Langkah 2: model + modul `profiles` & `skills` (tabel sudah ada).
 - [ ] Berikutnya: projects + kategori + `project_skills` → applications → agreements/workflow → milestones → payments/wallet → submissions/review → matching → chat, notifications, admin.
 
 ## Skema database (sudah final di migrasi)
 
-Seluruh 28 tabel sudah dibuat lewat 5 migrasi di `alembic/versions/` (identity_and_profiles → projects_and_applications →
-collaboration_and_delivery → communication → finance). DDL lengkap: `docs/schema.sql` (generate, jangan edit manual).
+28 tabel ERD dibuat lewat 5 migrasi di `alembic/versions/` (identity_and_profiles → projects_and_applications →
+collaboration_and_delivery → communication → finance), ditambah migrasi `revoked_tokens_and_uppercase_roles`
+(tabel `revoked_tokens` untuk logout + nilai `users.role` jadi huruf besar) dan `email_verification_and_password_reset`
+(tabel `auth_action_tokens` + kolom `users.email_verified_at/password_changed_at/terms_accepted_at`). DDL lengkap: `docs/schema.sql` (generate, jangan edit manual).
 Model SQLAlchemy yang ditulis per modul **harus cocok** dengan migrasi ini; perubahan skema selanjutnya lewat migrasi baru.
 
 Keputusan yang sudah diambil:
@@ -104,7 +122,6 @@ Keputusan yang sudah diambil:
 
 Belum diputuskan:
 - Penyimpanan file (`storage_key`): folder lokal/volume Docker atau object storage.
-- Role `ADMIN` di `UserRole` (kolom `role` sudah VARCHAR, tidak perlu migrasi).
 
 ## Git
 

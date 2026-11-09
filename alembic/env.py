@@ -6,7 +6,8 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.core.database import Base
 
-from app.modules.users.infrastructure import models as users_models  # noqa: F401
+from app.modules.auth.infrastructure import models as auth_models
+from app.modules.users.infrastructure import models as users_models
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))

@@ -24,6 +24,7 @@ Lalu buka:
 |-----|-----|
 | http://localhost:8000/docs | Swagger UI |
 | http://localhost:8000/health | Cek API + koneksi database |
+| http://localhost:8025 | Mailpit: email verifikasi & reset saat development |
 
 Kode di-mount ke container, jadi setiap file `.py` yang diubah langsung reload otomatis.
 
@@ -41,12 +42,20 @@ docker compose exec api alembic revision --autogenerate -m "create users table"
 docker compose exec api alembic upgrade head
 docker compose exec api alembic downgrade -1
 
+# Test
+docker compose exec api pytest -q
+
+# Buat akun admin (password diminta interaktif)
+docker compose exec api python -m app.scripts.create_admin --name "Admin" --email admin@temukarya.id
+
 # GUI database (Adminer) di http://localhost:8080
 # server: db, user/password sesuai .env
 docker compose --profile tools up -d
 ```
 
 Migrasi juga otomatis dijalankan setiap container API start (`RUN_MIGRATIONS=true` di `.env`).
+
+Kontrak API per fitur (format response, skenario error, status code) ada di `docs/api/`.
 
 ## Troubleshooting
 

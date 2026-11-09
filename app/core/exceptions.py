@@ -1,4 +1,6 @@
 class AppError(Exception):
+    code: str | None = None
+
     def __init__(self, message: str):
         super().__init__(message)
         self.message = message
@@ -21,4 +23,8 @@ class NotFoundError(AppError):
 
 
 class ConflictError(AppError):
+    pass
+
+
+class ServiceUnavailableError(AppError):
     pass

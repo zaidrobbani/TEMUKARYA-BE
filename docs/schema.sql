@@ -513,3 +513,47 @@ CREATE INDEX ix_wallet_transactions_wallet_created_at ON wallet_transactions (wa
 
 UPDATE alembic_version SET version_num='c4f8a2d6e071' WHERE alembic_version.version_num = '1e5a7c9b3d26';
 
+-- Running upgrade c4f8a2d6e071 -> 5b8d3f1a9e27
+
+UPDATE users SET role = UPPER(role);
+
+CREATE TABLE revoked_tokens (
+    jti CHAR(36) NOT NULL, 
+    user_id CHAR(36) NOT NULL, 
+    expires_at DATETIME(3) NOT NULL, 
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), 
+    PRIMARY KEY (jti), 
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_revoked_tokens_expires_at ON revoked_tokens (expires_at);
+
+UPDATE alembic_version SET version_num='5b8d3f1a9e27' WHERE alembic_version.version_num = 'c4f8a2d6e071';
+
+-- Running upgrade 5b8d3f1a9e27 -> a1d4e7c29b63
+
+ALTER TABLE users ADD COLUMN email_verified_at DATETIME(3);
+
+ALTER TABLE users ADD COLUMN password_changed_at DATETIME(3);
+
+ALTER TABLE users ADD COLUMN terms_accepted_at DATETIME(3);
+
+UPDATE users SET email_verified_at = created_at;
+
+CREATE TABLE auth_action_tokens (
+    id CHAR(36) NOT NULL DEFAULT (UUID()), 
+    user_id CHAR(36) NOT NULL, 
+    purpose VARCHAR(30) NOT NULL, 
+    token_hash CHAR(64) NOT NULL, 
+    expires_at DATETIME(3) NOT NULL, 
+    used_at DATETIME(3), 
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), 
+    PRIMARY KEY (id), 
+    CONSTRAINT uq_auth_action_tokens_token_hash UNIQUE (token_hash), 
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_auth_action_tokens_user_purpose_created ON auth_action_tokens (user_id, purpose, created_at);
+
+UPDATE alembic_version SET version_num='a1d4e7c29b63' WHERE alembic_version.version_num = '5b8d3f1a9e27';
+

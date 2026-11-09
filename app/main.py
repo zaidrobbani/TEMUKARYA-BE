@@ -5,15 +5,20 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.error_handlers import register_error_handlers
+from app.core.responses import success_response
+from app.modules.auth.presentation.router import router as auth_router
+from app.modules.enums.presentation.router import router as enums_router
 from app.modules.users.presentation.router import router as users_router
 
-app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG)
+app = FastAPI(title=settings.APP_NAME)
 
 register_error_handlers(app)
+app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(enums_router)
 
 
 @app.get("/health", tags=["health"])
 def health_check(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
-    return {"status": "ok", "env": settings.APP_ENV, "database": "connected"}
+    return success_response("API berjalan", {"env": settings.APP_ENV, "database": "connected"})

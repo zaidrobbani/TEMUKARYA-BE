@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import uuid4
 
@@ -49,6 +49,14 @@ UpdatedAt = Annotated[
         server_onupdate=FetchedValue(),
     ),
 ]
+
+
+def to_db_utc(value: datetime) -> datetime:
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
+def from_db_utc(value: datetime | None) -> datetime | None:
+    return value.replace(tzinfo=UTC) if value is not None else None
 
 
 def get_db() -> Generator[Session, None, None]:
