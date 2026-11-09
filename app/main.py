@@ -13,6 +13,7 @@ from app.modules.skills.presentation.router import router as skills_router
 from app.modules.profiles.presentation.router import router as profiles_router
 from app.modules.projects.presentation.router import router as projects_router
 from app.modules.applications.presentation.router import router as applications_router
+from app.modules.discovery.presentation.router import router as discovery_router
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -24,6 +25,7 @@ app.include_router(skills_router)
 app.include_router(profiles_router)
 app.include_router(projects_router)
 app.include_router(applications_router)
+app.include_router(discovery_router)
 
 
 @app.get("/health", tags=["health"])
