@@ -17,6 +17,7 @@ from app.modules.discovery.presentation.router import router as discovery_router
 from app.modules.matching.presentation.router import router as matching_router
 from app.modules.milestones.presentation.router import router as milestones_router
 from app.modules.chat.presentation.router import router as chat_router
+from app.modules.admin_statistics.presentation.router import router as admin_statistics_router
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -32,6 +33,7 @@ app.include_router(discovery_router)
 app.include_router(matching_router)
 app.include_router(milestones_router)
 app.include_router(chat_router)
+app.include_router(admin_statistics_router)
 
 
 @app.get("/health", tags=["health"])
