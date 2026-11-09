@@ -18,6 +18,8 @@ COPY --chown=app:app . .
 RUN chmod +x docker/entrypoint.sh
 RUN mkdir -p /app/storage/portfolios && chown -R app:app /app/storage
 
+RUN mkdir -p /app/storage/projects && chown -R app:app /app/storage
+
 USER app
 
 EXPOSE 8000
