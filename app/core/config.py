@@ -1,6 +1,9 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+API_PREFIX = "/api/v1"
 
 
 class Settings(BaseSettings):
@@ -15,6 +18,25 @@ class Settings(BaseSettings):
     DB_NAME: str = "temukarya"
     DB_USER: str = "temukarya"
     DB_PASSWORD: str = ""
+
+    JWT_SECRET_KEY: str = Field(min_length=32)
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = Field(default=60 * 24, gt=0)
+
+    PUBLIC_BASE_URL: str = "http://localhost:8000"
+
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 1025
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = False
+    EMAIL_FROM: str = "TEMUKARYA <no-reply@temukarya.id>"
+
+    GOOGLE_CLIENT_ID: str = ""
+
+    @property
+    def PUBLIC_API_URL(self) -> str:
+        return f"{self.PUBLIC_BASE_URL.rstrip('/')}{API_PREFIX}"
 
     @property
     def DATABASE_URL(self) -> str:

@@ -1,10 +1,3 @@
-"""communication: conversations, messages, message attachments, notifications
-
-Revision ID: 1e5a7c9b3d26
-Revises: b7c1e9d3f582
-Create Date: 2026-10-27 04:03:00
-
-"""
 from typing import Sequence, Union
 
 from alembic import op
@@ -47,10 +40,7 @@ def upgrade() -> None:
         uuid_pk(),
         uuid_fk("umkm_id", "umkm_profiles.user_id"),
         uuid_fk("freelancer_id", "freelancer_profiles.user_id"),
-        # NULL = chat umum sebelum ada project (dari pencarian freelancer manual)
         uuid_fk("project_id", "projects.id", nullable=True),
-        # UNIQUE biasa membolehkan banyak NULL, jadi project_id NULL dipetakan ke '' agar
-        # satu pasangan UMKM–freelancer hanya punya satu chat umum dan satu chat per project.
         sa.Column("project_key", sa.CHAR(36), sa.Computed("coalesce(project_id, '')", persisted=True)),
         sa.Column("last_message_at", mysql.DATETIME(fsp=3), nullable=True),
         timestamp("created_at"),
@@ -64,7 +54,6 @@ def upgrade() -> None:
         "messages",
         uuid_pk(),
         uuid_fk("conversation_id", "conversations.id"),
-        # Harus salah satu peserta conversation; divalidasi di backend
         uuid_fk("sender_user_id", "users.id"),
         sa.Column("message_text", sa.Text(), nullable=True),
         sa.Column("message_type", sa.String(20), nullable=False, server_default="TEXT"),
@@ -75,7 +64,6 @@ def upgrade() -> None:
             "message_type <> 'TEXT' OR message_text IS NOT NULL", name="ck_messages_text_required"
         ),
     )
-    # UUID acak tidak berurutan, jadi urutan pesan selalu memakai sent_at (presisi milidetik)
     op.create_index("ix_messages_conversation_sent_at", "messages", ["conversation_id", "sent_at"])
 
     op.create_table(
@@ -92,7 +80,6 @@ def upgrade() -> None:
         sa.Column("notification_type", sa.String(45), nullable=False),
         sa.Column("title", sa.String(180), nullable=False),
         sa.Column("body", sa.Text(), nullable=False),
-        # Objek yang dibuka saat notifikasi diklik, misalnya ("PROJECT", <project_id>)
         sa.Column("reference_type", sa.String(40), nullable=True),
         sa.Column("reference_id", sa.CHAR(36), nullable=True),
         timestamp("created_at"),

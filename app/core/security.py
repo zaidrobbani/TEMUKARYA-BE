@@ -13,7 +13,6 @@ class PasswordHasher(ABC):
 
 
 class ScryptPasswordHasher(PasswordHasher):
-    # Format: scrypt$n$r$p$salt_hex$digest_hex
     _N, _R, _P = 2**14, 8, 1
 
     def hash(self, password: str) -> str:

@@ -1,10 +1,3 @@
-"""projects and applications: categories, projects, project skills, attachments, applications
-
-Revision ID: 8d2e4b6a1c93
-Revises: 3f9a1c7e2b40
-Create Date: 2026-10-27 04:01:00
-
-"""
 from typing import Sequence, Union
 
 from alembic import op
@@ -41,7 +34,6 @@ def file_columns() -> list[sa.Column]:
     ]
 
 
-# Diturunkan dari daftar kebutuhan digital UMKM di PRD (Blueprint 1.2). Boleh diubah tim lewat migrasi baru.
 CATEGORIES = [
     ("website", "Website", "Pembuatan, desain, dan pemeliharaan website"),
     ("graphic_design", "Desain Grafis", "Logo, identitas merek, kemasan, dan materi promosi"),
@@ -75,10 +67,8 @@ def upgrade() -> None:
         ),
         sa.Column("title", sa.String(180), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
-        # Budget estimasi dari form UMKM; harga final ada di project_agreements.agreed_price
         sa.Column("budget", mysql.BIGINT(unsigned=True), nullable=False),
         sa.Column("deadline", sa.Date(), nullable=False),
-        # Diisi TERBUKA saat publish; perubahan berikutnya hanya lewat modul workflow
         sa.Column("status", sa.String(40), nullable=False, server_default="TERBUKA"),
         sa.Column("published_at", mysql.DATETIME(fsp=3), nullable=True),
         sa.Column("started_at", mysql.DATETIME(fsp=3), nullable=True),
@@ -87,7 +77,6 @@ def upgrade() -> None:
         timestamp("updated_at", on_update=True),
         sa.CheckConstraint("budget > 0", name="ck_projects_budget_positive"),
     )
-    # Untuk daftar project TERBUKA terbaru (marketplace & rekomendasi)
     op.create_index("ix_projects_status_published_at", "projects", ["status", "published_at"])
 
     op.create_table(
@@ -116,7 +105,6 @@ def upgrade() -> None:
         timestamp("submitted_at"),
         timestamp("created_at"),
         timestamp("updated_at", on_update=True),
-        # Satu freelancer hanya boleh melamar sekali per project
         sa.UniqueConstraint("project_id", "freelancer_id", name="uq_project_applications_project_freelancer"),
         sa.CheckConstraint("proposed_price > 0", name="ck_project_applications_price_positive"),
         sa.CheckConstraint("estimated_duration_days > 0", name="ck_project_applications_duration_positive"),

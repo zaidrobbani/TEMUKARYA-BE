@@ -6,8 +6,15 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.core.database import Base
 
-# Import model SQLAlchemy tiap modul di sini supaya terdeteksi --autogenerate
-from app.modules.users.infrastructure import models as users_models  # noqa: F401
+from app.modules.applications.infrastructure import models as applications_models
+from app.modules.auth.infrastructure import models as auth_models
+from app.modules.chat.infrastructure import models as chat_models
+from app.modules.milestones.infrastructure import models as milestones_models
+from app.modules.profiles.infrastructure import media_repository as profiles_media_models
+from app.modules.profiles.infrastructure import models as profiles_models
+from app.modules.projects.infrastructure import models as projects_models
+from app.modules.skills.infrastructure import models as skills_models
+from app.modules.users.infrastructure import models as users_models
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
@@ -18,12 +25,19 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def include_object(obj, name, type_, reflected, compare_to) -> bool:
+    if type_ == "table" and reflected and compare_to is None:
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -36,7 +50,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
+        )
         with context.begin_transaction():
             context.run_migrations()
 

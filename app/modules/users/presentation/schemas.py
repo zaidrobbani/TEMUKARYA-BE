@@ -1,20 +1,15 @@
-from datetime import datetime
+from pydantic import BaseModel
 
-from pydantic import BaseModel, Field
-
+from app.core.responses import UtcDateTime
 from app.modules.users.domain.entities import UserRole
 
 
-class RegisterUserRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
-    email: str = Field(max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-    password: str = Field(min_length=8, max_length=128)
-    role: UserRole
-
-
 class UserResponse(BaseModel):
-    id: int
+    id: str
     name: str
     email: str
+    phone_number: str | None
     role: UserRole
-    created_at: datetime
+    profile_image_url: str | None
+    email_verified_at: UtcDateTime | None
+    created_at: UtcDateTime
