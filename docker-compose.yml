@@ -38,6 +38,7 @@ services:
       DB_PORT: 3306
       SMTP_HOST: ${SMTP_HOST:-mailpit}
       SMTP_PORT: ${SMTP_PORT:-1025}
+      PORTFOLIO_STORAGE_ROOT: ${PORTFOLIO_STORAGE_ROOT:-/app/storage/portfolios}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -45,6 +46,7 @@ services:
         condition: service_healthy
     volumes:
       - .:/app:z
+      - portfolio_uploads:/app/storage
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   mailpit:
@@ -66,3 +68,4 @@ services:
 
 volumes:
   mysql_data:
+  portfolio_uploads:

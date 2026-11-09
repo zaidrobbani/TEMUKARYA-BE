@@ -10,6 +10,7 @@ from app.modules.auth.presentation.router import router as auth_router
 from app.modules.enums.presentation.router import router as enums_router
 from app.modules.users.presentation.router import router as users_router
 from app.modules.skills.presentation.router import router as skills_router
+from app.modules.profiles.presentation.router import router as profiles_router
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -18,6 +19,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(enums_router)
 app.include_router(skills_router)
+app.include_router(profiles_router)
 
 
 @app.get("/health", tags=["health"])
