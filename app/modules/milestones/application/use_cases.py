@@ -46,6 +46,8 @@ from app.modules.milestones.domain.delay_risk import (
     evaluate_delay_risk,
 )
 
+from app.modules.users.domain.entities import UserRole
+
 
 # ============================================================
 # 1. WORKFLOW PERMISSION CONTRACT
@@ -138,7 +140,7 @@ def _validate_actor(
 
     _clean_id(actor.user_id, "User ID")
 
-    if actor.role not in ("umkm", "freelancer"):
+    if actor.role not in (UserRole.UMKM, UserRole.FREELANCER):
         raise ForbiddenError(
             "Role pengguna tidak diizinkan"
         )
@@ -178,12 +180,12 @@ def _require_project_access(
     _validate_actor(actor)
 
     owner_allowed = (
-        actor.role == "umkm"
+        actor.role == UserRole.UMKM
         and actor.user_id == project.umkm_id
     )
 
     freelancer_allowed = (
-        actor.role == "freelancer"
+        actor.role == UserRole.FREELANCER
         and project.freelancer_id is not None
         and actor.user_id == project.freelancer_id
     )
@@ -201,7 +203,7 @@ def _require_project_owner(
     _require_project_access(project, actor)
 
     if (
-        actor.role != "umkm"
+        actor.role != UserRole.UMKM
         or actor.user_id != project.umkm_id
     ):
         raise ForbiddenError(

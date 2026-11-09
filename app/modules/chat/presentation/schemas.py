@@ -1,10 +1,10 @@
-from datetime import datetime
-
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
 )
+
+from app.core.responses import UtcDateTime
 
 from app.modules.chat.domain.entities import (
     MessageType,
@@ -68,10 +68,10 @@ class ConversationResponse(ChatResponseBase):
 
     project_id: str | None
 
-    last_message_at: datetime | None
+    last_message_at: UtcDateTime | None
 
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
 
 
 # ============================================================
@@ -126,10 +126,10 @@ class MessageResponse(ChatResponseBase):
     message_text: str | None
     message_type: MessageType
 
-    sent_at: datetime
-    created_at: datetime
+    sent_at: UtcDateTime
+    created_at: UtcDateTime
 
-    read_at: datetime | None
+    read_at: UtcDateTime | None
 
 
 # ============================================================
@@ -150,7 +150,7 @@ class MessageAttachmentResponse(ChatResponseBase):
     mime_type: str
     file_size_bytes: int
 
-    uploaded_at: datetime
+    uploaded_at: UtcDateTime
 
 
 # ============================================================
@@ -182,7 +182,7 @@ class MessageCursorResponse(ChatResponseBase):
     Menggunakan sent_at dan message_id.
     """
 
-    sent_at: datetime
+    sent_at: UtcDateTime
     message_id: str
 
 

@@ -4,9 +4,9 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.exceptions import UnauthorizedError
 
-from app.modules.users.domain.entities import UserRole
+from app.modules.auth.presentation.dependencies import get_current_user
+from app.modules.users.domain.entities import User, UserRole
 
 from app.modules.discovery.application.use_cases import (
     GetFreelancerDetail,
@@ -33,20 +33,9 @@ class AuthenticatedDiscoveryUser:
 
 
 def get_authenticated_discovery_user(
+    user: User = Depends(get_current_user),
 ) -> AuthenticatedDiscoveryUser:
-    """
-    Fail-closed authentication.
-
-    Sampai JWT Zaid terintegrasi,
-    seluruh request tanpa dependency override
-    harus menghasilkan 401 Unauthorized.
-
-    Tidak menggunakan hardcoded user_id.
-    Tidak mempercayai role dari query parameter.
-    """
-    raise UnauthorizedError(
-        "Authentication belum terintegrasi"
-    )
+    return AuthenticatedDiscoveryUser(user_id=user.id, role=user.role)
 
 
 # ============================================================

@@ -46,6 +46,8 @@ from app.modules.chat.domain.message_rules import (
     validate_message_payload,
 )
 
+from app.modules.users.domain.entities import UserRole
+
 
 # ============================================================
 # 1. SHARED HELPERS
@@ -205,9 +207,9 @@ class CreateOrGetConversation:
         )
 
         expected_role = (
-            "freelancer"
-            if actor.role == "umkm"
-            else "umkm"
+            UserRole.FREELANCER
+            if actor.role == UserRole.UMKM
+            else UserRole.UMKM
         )
 
         if counterpart_role != expected_role:
@@ -219,7 +221,7 @@ class CreateOrGetConversation:
         # 2. DETERMINE PARTICIPANTS
         # ====================================================
 
-        if actor.role == "umkm":
+        if actor.role == UserRole.UMKM:
             umkm_id = actor.user_id
             freelancer_id = counterpart_id
         else:

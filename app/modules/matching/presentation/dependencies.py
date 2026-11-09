@@ -5,9 +5,9 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.exceptions import UnauthorizedError
 
-from app.modules.users.domain.entities import UserRole
+from app.modules.auth.presentation.dependencies import get_current_user
+from app.modules.users.domain.entities import User, UserRole
 
 from app.modules.matching.application.use_cases import (
     RecommendFreelancersForProject,
@@ -29,12 +29,7 @@ from app.modules.matching.infrastructure.repositories import (
 
 @dataclass(frozen=True)
 class AuthenticatedMatchingUser:
-    """
-    Identitas user yang telah login.
-
-    user_id dan role nantinya berasal dari
-    JWT Auth Module milik Zaid.
-    """
+    """Identitas user yang telah login (dari JWT)."""
 
     user_id: str
     role: UserRole
@@ -45,22 +40,9 @@ class AuthenticatedMatchingUser:
 # ============================================================
 
 def get_authenticated_matching_user(
+    user: User = Depends(get_current_user),
 ) -> AuthenticatedMatchingUser:
-    """
-    Authentication placeholder.
-
-    Selama JWT dari Zaid belum diintegrasikan,
-    semua request langsung ditolak dengan 401.
-
-    TIDAK BOLEH:
-    - Menggunakan hardcoded user_id.
-    - Mengambil role dari query parameter.
-    - Menganggap semua request sudah login.
-    """
-
-    raise UnauthorizedError(
-        "Authentication belum terintegrasi"
-    )
+    return AuthenticatedMatchingUser(user_id=user.id, role=user.role)
 
 
 # ============================================================

@@ -303,7 +303,7 @@ def test_attachment_http_mysql_storage_flow(
                     upload_response.text
                 )
 
-                uploaded = upload_response.json()
+                uploaded = upload_response.json()["data"]
 
                 attachment_id = uploaded["id"]
 
@@ -353,7 +353,7 @@ def test_attachment_http_mysql_storage_flow(
 
                 assert list_response.status_code == 200
 
-                items = list_response.json()
+                items = list_response.json()["data"]
 
                 assert len(items) == 1
                 assert items[0]["id"] == attachment_id
@@ -417,8 +417,9 @@ def test_attachment_http_mysql_storage_flow(
                     f"{base_url}/{attachment_id}"
                 )
 
-                assert delete_response.status_code == 204
-                assert delete_response.content == b""
+                assert delete_response.status_code == 200
+                assert delete_response.json()["success"] is True
+                assert delete_response.json()["data"] is None
 
                 assert attachment_repository.get_by_id(
                     project_id=project_id,

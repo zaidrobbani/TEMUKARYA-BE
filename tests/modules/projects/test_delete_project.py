@@ -280,7 +280,7 @@ def test_freelancer_cannot_delete_project(http_context):
     assert uow.commit_count == 0
 
 
-def test_owner_delete_returns_204(http_context):
+def test_owner_delete_returns_200(http_context):
     app, client, repository, uow = http_context
 
     authenticate(
@@ -293,8 +293,8 @@ def test_owner_delete_returns_204(http_context):
         f"/projects/{PROJECT_ID}"
     )
 
-    assert response.status_code == 204
-    assert response.content == b""
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "message": "Project berhasil dihapus", "data": None}
     assert repository.project is None
     assert uow.commit_count == 1
 

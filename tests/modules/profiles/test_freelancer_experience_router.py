@@ -4,6 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.config import API_PREFIX
 from app.core.dependencies import get_uow
 from app.core.error_handlers import register_error_handlers
 from app.modules.profiles.presentation.auth import (
@@ -57,9 +58,10 @@ def test_get_experiences_returns_only_logged_in_owner(experience_app):
         response = client.get(BASE_URL, params={"freelancer_id": "owner-2"})
 
     assert response.status_code == 200
-    assert [item["id"] for item in response.json()] == ["own-newer", "own-older"]
-    assert all(item["freelancer_id"] == "owner-1" for item in response.json())
-    assert response.json()[0] == {
+    assert response.json()["message"] == "Daftar pengalaman kerja berhasil diambil"
+    assert [item["id"] for item in response.json()["data"]] == ["own-newer", "own-older"]
+    assert all(item["freelancer_id"] == "owner-1" for item in response.json()["data"])
+    assert response.json()["data"][0] == {
         "id": "own-newer", "freelancer_id": "owner-1",
         "job_title": "Designer", "organization_name": "Studio",
         "description": "Branding", "start_date": "2024-01-01", "end_date": None,
@@ -73,7 +75,7 @@ def test_get_experiences_returns_empty_list(experience_app):
     with TestClient(app) as client:
         response = client.get(BASE_URL)
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json()["data"] == []
 
 
 @pytest.mark.parametrize("end_date", ["2025-02-01", None, "omitted"])
@@ -91,16 +93,16 @@ def test_update_experience_returns_200_and_persists(experience_app, end_date):
         listed = client.get(BASE_URL)
 
     assert response.status_code == 200
-    assert response.json() == {
+    assert response.json()["data"] == {
         **body, "job_title": "Senior Designer", "end_date": body.get("end_date"),
         "id": "own-newer", "freelancer_id": "owner-1",
     }
-    assert listed.json()[0] == response.json()
+    assert listed.json()["data"][0] == response.json()["data"]
     repository.update.assert_called_once()
     uow.commit.assert_called_once()
 
 
-def test_delete_experience_returns_204_with_empty_body(experience_app):
+def test_delete_experience_returns_200_with_empty_data(experience_app):
     app, repository, uow = experience_app
     login_as(app)
     with TestClient(app) as client:
@@ -108,9 +110,9 @@ def test_delete_experience_returns_204_with_empty_body(experience_app):
         listed = client.get(BASE_URL)
         repeated = client.delete(BASE_URL + "/own-newer")
 
-    assert response.status_code == 204
-    assert response.content == b""
-    assert [item["id"] for item in listed.json()] == ["own-older"]
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "message": "Pengalaman kerja berhasil dihapus", "data": None}
+    assert [item["id"] for item in listed.json()["data"]] == ["own-older"]
     assert repeated.status_code == 404
     repository.delete.assert_any_call("own-newer", "owner-1")
     uow.commit.assert_called_once()
@@ -149,7 +151,7 @@ def test_experiences_hide_missing_and_foreign_ids(experience_app, method, target
         )
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Pengalaman kerja tidak ditemukan"}
+    assert response.json() == {"success": False, "message": "Pengalaman kerja tidak ditemukan", "data": None}
     assert repository.list_by_freelancer_id("owner-2") == foreign_before
     assert repository.list_by_freelancer_id("owner-1") == own_before
     uow.commit.assert_not_called()
@@ -181,7 +183,7 @@ def test_update_experience_rejects_invalid_input(experience_app, changes, status
 
     assert response.status_code == status
     if field is not None:
-        assert any(error["loc"] == ["body", field] for error in response.json()["detail"])
+        assert any(error["field"] == field for error in response.json()["errors"])
     repository.update.assert_not_called()
     uow.commit.assert_not_called()
 
@@ -192,8 +194,8 @@ def test_put_requires_complete_payload(experience_app):
     with TestClient(app) as client:
         response = client.put(BASE_URL + "/own-newer", json={"job_title": "Designer"})
     assert response.status_code == 422
-    assert {tuple(error["loc"]) for error in response.json()["detail"]} == {
-        ("body", "organization_name"), ("body", "description"), ("body", "start_date"),
+    assert {(error["field"], error["message"]) for error in response.json()["errors"]} == {
+        ("organization_name", "Wajib diisi"), ("description", "Wajib diisi"), ("start_date", "Wajib diisi"),
     }
     repository.update.assert_not_called()
     uow.commit.assert_not_called()
@@ -206,14 +208,14 @@ def test_real_application_registers_routes_and_remains_fail_closed(method, suffi
     assert get_authenticated_profile_user not in app.dependency_overrides
     routes = [
         route for route in app.routes
-        if getattr(route, "path", None) == (
+        if getattr(route, "path", None) == API_PREFIX + (
             BASE_URL if method == "GET" else BASE_URL + "/{experience_id}"
         ) and method in getattr(route, "methods", set())
     ]
     assert len(routes) == 1
     with TestClient(app) as client:
         response = client.request(
-            method, BASE_URL + suffix, **({"json": payload()} if method == "PUT" else {}),
+            method, API_PREFIX + BASE_URL + suffix, **({"json": payload()} if method == "PUT" else {}),
         )
     assert response.status_code == 401
-    assert response.json() == {"detail": "Authentication belum terintegrasi"}
+    assert response.json() == {"success": False, "message": "Silakan login terlebih dahulu", "data": None}

@@ -3,6 +3,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from app.core.responses import ApiResponse, error_responses, success_response
+
 from app.modules.milestones.application.dto import (
     GetDelayRiskInput,
     GetMilestonePlanInput,
@@ -48,7 +50,8 @@ router = APIRouter(
 
 @router.get(
     "/{project_id}/milestones",
-    response_model=MilestonePlanResponse,
+    response_model=ApiResponse[MilestonePlanResponse],
+    responses=error_responses(400, 401, 403, 404),
 )
 def get_project_milestones(
     project_id: str,
@@ -80,8 +83,9 @@ def get_project_milestones(
         )
     )
 
-    return MilestonePlanResponse.model_validate(
-        result
+    return success_response(
+        "Daftar milestone berhasil diambil",
+        MilestonePlanResponse.model_validate(result),
     )
 
 
@@ -91,7 +95,8 @@ def get_project_milestones(
 
 @router.get(
     "/{project_id}/milestones/progress",
-    response_model=MilestoneProgressResponse,
+    response_model=ApiResponse[MilestoneProgressResponse],
+    responses=error_responses(400, 401, 403, 404),
 )
 def get_project_milestone_progress(
     project_id: str,
@@ -123,8 +128,9 @@ def get_project_milestone_progress(
         )
     )
 
-    return MilestoneProgressResponse.model_validate(
-        result
+    return success_response(
+        "Progres milestone berhasil diambil",
+        MilestoneProgressResponse.model_validate(result),
     )
 
 
@@ -134,7 +140,8 @@ def get_project_milestone_progress(
 
 @router.get(
     "/{project_id}/milestones/delay-risk",
-    response_model=MilestoneDelayRiskResponse,
+    response_model=ApiResponse[MilestoneDelayRiskResponse],
+    responses=error_responses(400, 401, 403, 404),
 )
 def get_project_milestone_delay_risk(
     project_id: str,
@@ -170,6 +177,7 @@ def get_project_milestone_delay_risk(
         )
     )
 
-    return MilestoneDelayRiskResponse.model_validate(
-        result
+    return success_response(
+        "Risiko keterlambatan berhasil dihitung",
+        MilestoneDelayRiskResponse.model_validate(result),
     )

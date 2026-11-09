@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import (
     CHAR,
     CheckConstraint,
+    ForeignKey,
     String,
     Text,
     UniqueConstraint,
@@ -13,19 +14,12 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.modules.profiles.infrastructure import models as _profiles_models  # noqa: F401
+from app.modules.projects.infrastructure import models as _projects_models  # noqa: F401
 
 
 class ProjectApplicationModel(Base):
-    """
-    ORM untuk tabel project_applications.
-
-    Relasi FK ke projects dan freelancer_profiles
-    sudah ditegakkan oleh schema MySQL.
-
-    Referensi ForeignKey ORM belum dideklarasikan
-    karena model parent berada pada PR lain
-    yang belum terintegrasi ke branch dev.
-    """
+    """ORM untuk tabel project_applications."""
 
     __tablename__ = "project_applications"
 
@@ -53,11 +47,13 @@ class ProjectApplicationModel(Base):
 
     project_id: Mapped[str] = mapped_column(
         CHAR(36),
+        ForeignKey("projects.id", ondelete="RESTRICT"),
         nullable=False,
     )
 
     freelancer_id: Mapped[str] = mapped_column(
         CHAR(36),
+        ForeignKey("freelancer_profiles.user_id", ondelete="RESTRICT"),
         nullable=False,
     )
 

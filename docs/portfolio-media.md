@@ -86,7 +86,9 @@ application/operators; external root/administrator mutation is outside this mode
 
 ## API
 
-All paths below have prefix `/profiles/freelancer/portfolios/{portfolio_id}/media`.
+All paths below have prefix `/api/v1/profiles/freelancer/portfolios/{portfolio_id}/media`.
+JSON responses use the standard envelope `{success, message, data}` (see `docs/api/README.md`);
+the tables below describe `data`.
 
 | Method | Suffix | Success |
 |---|---|---|
@@ -95,12 +97,12 @@ All paths below have prefix `/profiles/freelancer/portfolios/{portfolio_id}/medi
 | GET | `/{media_id}/file` | 200, authorized image bytes |
 | PATCH | `/{media_id}/cover` | 200, updated metadata array |
 | PATCH | `/order` | 200, updated metadata array |
-| DELETE | `/{media_id}` | 204, empty body |
+| DELETE | `/{media_id}` | 200, `data: null` |
 
 ```sh
-curl -X POST "$API/profiles/freelancer/portfolios/$PORTFOLIO_ID/media" \
+curl -X POST "$API/api/v1/profiles/freelancer/portfolios/$PORTFOLIO_ID/media" \
   -H "Authorization: Bearer $TOKEN" -F 'file=@image.png'
-curl -X PATCH "$API/profiles/freelancer/portfolios/$PORTFOLIO_ID/media/order" \
+curl -X PATCH "$API/api/v1/profiles/freelancer/portfolios/$PORTFOLIO_ID/media/order" \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"media_ids":["second-media-uuid","first-media-uuid"]}'
 ```
@@ -109,13 +111,17 @@ Example upload response (storage key is never returned):
 
 ```json
 {
-  "id": "server-generated-media-uuid",
-  "portfolio_id": "owned-portfolio-uuid",
-  "mime_type": "image/png",
-  "file_size_bytes": 8421,
-  "uploaded_at": "2026-11-01T10:00:00.123",
-  "sort_order": 0,
-  "is_cover": true
+  "success": true,
+  "message": "Media portfolio berhasil diunggah",
+  "data": {
+    "id": "server-generated-media-uuid",
+    "portfolio_id": "owned-portfolio-uuid",
+    "mime_type": "image/png",
+    "file_size_bytes": 8421,
+    "uploaded_at": "2026-11-01T10:00:00.123Z",
+    "sort_order": 0,
+    "is_cover": true
+  }
 }
 ```
 

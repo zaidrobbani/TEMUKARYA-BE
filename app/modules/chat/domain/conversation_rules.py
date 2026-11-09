@@ -2,6 +2,7 @@ from app.modules.chat.domain.entities import (
     ChatActor,
     Conversation,
 )
+from app.modules.users.domain.entities import UserRole
 
 
 # ============================================================
@@ -9,8 +10,8 @@ from app.modules.chat.domain.entities import (
 # ============================================================
 
 VALID_CHAT_ROLES = frozenset({
-    "umkm",
-    "freelancer",
+    UserRole.UMKM,
+    UserRole.FREELANCER,
 })
 
 
@@ -183,12 +184,12 @@ def require_conversation_access(
     )
 
     owner_allowed = (
-        actor.role == "umkm"
+        actor.role == UserRole.UMKM
         and actor.user_id == umkm
     )
 
     freelancer_allowed = (
-        actor.role == "freelancer"
+        actor.role == UserRole.FREELANCER
         and actor.user_id == freelancer
     )
 
@@ -230,12 +231,12 @@ def require_conversation_initiator(
     require_chat_actor(actor)
 
     is_umkm = (
-        actor.role == "umkm"
+        actor.role == UserRole.UMKM
         and actor.user_id == umkm
     )
 
     is_freelancer = (
-        actor.role == "freelancer"
+        actor.role == UserRole.FREELANCER
         and actor.user_id == freelancer
     )
 

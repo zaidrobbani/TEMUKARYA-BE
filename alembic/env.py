@@ -6,7 +6,14 @@ from sqlalchemy import engine_from_config, pool
 from app.core.config import settings
 from app.core.database import Base
 
+from app.modules.applications.infrastructure import models as applications_models
 from app.modules.auth.infrastructure import models as auth_models
+from app.modules.chat.infrastructure import models as chat_models
+from app.modules.milestones.infrastructure import models as milestones_models
+from app.modules.profiles.infrastructure import media_repository as profiles_media_models
+from app.modules.profiles.infrastructure import models as profiles_models
+from app.modules.projects.infrastructure import models as projects_models
+from app.modules.skills.infrastructure import models as skills_models
 from app.modules.users.infrastructure import models as users_models
 
 config = context.config

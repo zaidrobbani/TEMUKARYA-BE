@@ -1,10 +1,12 @@
-from datetime import date, datetime
+from datetime import date
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
 )
+
+from app.core.responses import UtcDateTime
 
 
 # ============================================================
@@ -37,7 +39,7 @@ class AdminUserResponse(AdminResponseBase):
     name: str
     email: str
     role: str
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 # ============================================================
@@ -139,7 +141,7 @@ class AdminProjectResponse(AdminResponseBase):
     deadline: date
     status: str
 
-    created_at: datetime
+    created_at: UtcDateTime
 
 
 # ============================================================
@@ -176,9 +178,9 @@ class AdminProjectDetailResponse(AdminResponseBase):
         ge=0,
     )
 
-    published_at: datetime | None
-    started_at: datetime | None
-    completed_at: datetime | None
+    published_at: UtcDateTime | None
+    started_at: UtcDateTime | None
+    completed_at: UtcDateTime | None
 
 
 # ============================================================

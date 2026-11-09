@@ -112,8 +112,8 @@ def test_identity_key_distinguishes_general_from_project():
 @pytest.mark.parametrize(
     "actor",
     [
-        ChatActor("u1", "umkm"),
-        ChatActor("f1", "freelancer"),
+        ChatActor("u1", "UMKM"),
+        ChatActor("f1", "FREELANCER"),
     ],
 )
 def test_valid_actor(actor):
@@ -124,8 +124,8 @@ def test_valid_actor(actor):
     "actor",
     [
         None,
-        ChatActor("", "umkm"),
-        ChatActor("u1", "admin"),
+        ChatActor("", "UMKM"),
+        ChatActor("u1", "ADMIN"),
     ],
 )
 def test_invalid_actor(actor):
@@ -140,8 +140,8 @@ def test_invalid_actor(actor):
 @pytest.mark.parametrize(
     "actor",
     [
-        ChatActor("u1", "umkm"),
-        ChatActor("f1", "freelancer"),
+        ChatActor("u1", "UMKM"),
+        ChatActor("f1", "FREELANCER"),
     ],
 )
 def test_participant_access(actor):
@@ -153,9 +153,9 @@ def test_participant_access(actor):
 @pytest.mark.parametrize(
     "actor",
     [
-        ChatActor("outsider", "umkm"),
-        ChatActor("u1", "freelancer"),
-        ChatActor("f1", "umkm"),
+        ChatActor("outsider", "UMKM"),
+        ChatActor("u1", "FREELANCER"),
+        ChatActor("f1", "UMKM"),
     ],
 )
 def test_reject_nonparticipant_or_wrong_role(actor):
@@ -172,8 +172,8 @@ def test_reject_nonparticipant_or_wrong_role(actor):
 @pytest.mark.parametrize(
     "actor",
     [
-        ChatActor("u1", "umkm"),
-        ChatActor("f1", "freelancer"),
+        ChatActor("u1", "UMKM"),
+        ChatActor("f1", "FREELANCER"),
     ],
 )
 def test_initiator_is_participant(actor):
@@ -185,7 +185,7 @@ def test_initiator_is_participant(actor):
 def test_reject_fake_initiator():
     with pytest.raises(PermissionError):
         require_conversation_initiator(
-            ChatActor("other", "umkm"),
+            ChatActor("other", "UMKM"),
             "u1",
             "f1",
         )

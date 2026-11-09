@@ -43,13 +43,14 @@ def test_http_upload_list_authorized_file_cover_order_and_delete(media_client):
     client, _, storage, _ = media_client
     first = post(client)
     assert first.status_code == 201
-    first = first.json()
+    assert first.json()["message"] == "Media portfolio berhasil diunggah"
+    first = first.json()["data"]
     assert first["is_cover"] is True and first["mime_type"] == "image/png"
     assert "storage_key" not in first
-    second = post(client).json()
+    second = post(client).json()["data"]
     assert second["is_cover"] is False
     listed = client.get(BASE)
-    assert listed.status_code == 200 and len(listed.json()) == 2
+    assert listed.status_code == 200 and len(listed.json()["data"]) == 2
     file = client.get(f"{BASE}/{first['id']}/file")
     assert file.status_code == 200 and file.content.startswith(b"\x89PNG")
     assert len(file.content) == first["file_size_bytes"]
@@ -57,10 +58,12 @@ def test_http_upload_list_authorized_file_cover_order_and_delete(media_client):
     assert file.headers["x-content-type-options"] == "nosniff"
     assert client.patch(f"{BASE}/{second['id']}/cover").status_code == 200
     ordered = client.patch(BASE + "/order", json={"media_ids": [second["id"], first["id"]]})
-    assert ordered.status_code == 200 and ordered.json()[0]["is_cover"] is True
-    assert client.delete(f"{BASE}/{second['id']}").status_code == 204
-    assert client.get(BASE).json()[0]["is_cover"] is True
-    assert client.delete("/profiles/freelancer/portfolios/own-a").status_code == 204
+    assert ordered.status_code == 200 and ordered.json()["data"][0]["is_cover"] is True
+    deleted = client.delete(f"{BASE}/{second['id']}")
+    assert deleted.status_code == 200
+    assert deleted.json() == {"success": True, "message": "Media portfolio berhasil dihapus", "data": None}
+    assert client.get(BASE).json()["data"][0]["is_cover"] is True
+    assert client.delete("/profiles/freelancer/portfolios/own-a").status_code == 200
     assert not list(storage.root.iterdir())
 
 
@@ -70,7 +73,10 @@ def test_http_upload_list_authorized_file_cover_order_and_delete(media_client):
 ])
 def test_invalid_upload_status_and_cleanup(media_client, data, status):
     client, _, storage, repository = media_client
-    assert post(client, data=data).status_code == status
+    response = post(client, data=data)
+    assert response.status_code == status
+    assert response.json()["success"] is False and response.json()["data"] is None
+    assert isinstance(response.json()["message"], str)
     assert repository.list("own-a") == []
     assert not list(storage.root.iterdir())
 
@@ -107,7 +113,7 @@ def test_media_auth_and_roles(media_client, method, suffix, role, status):
 
 def test_other_owner_cannot_access_any_media_operation(media_client):
     client, app, storage, repository = media_client
-    item = post(client).json()
+    item = post(client).json()["data"]
     app.dependency_overrides[get_authenticated_profile_user] = lambda: AuthenticatedProfileUser("owner-2", UserRole.FREELANCER)
     for method, suffix, body in [
         ("GET", "", None), ("GET", f"/{item['id']}/file", None),
@@ -122,7 +128,7 @@ def test_other_owner_cannot_access_any_media_operation(media_client):
 
 def test_media_id_must_belong_to_path_portfolio(media_client):
     client, _, _, _ = media_client
-    item = post(client, BASE.replace("own-a", "own-b")).json()
+    item = post(client, BASE.replace("own-a", "own-b")).json()["data"]
     assert client.get(f"{BASE}/{item['id']}/file").status_code == 404
     assert client.patch(f"{BASE}/{item['id']}/cover").status_code == 404
     assert client.delete(f"{BASE}/{item['id']}").status_code == 404
@@ -130,7 +136,7 @@ def test_media_id_must_belong_to_path_portfolio(media_client):
 
 def test_missing_file_and_failed_cleanup_are_visible(media_client, monkeypatch):
     client, _, storage, repository = media_client
-    item = post(client).json()
+    item = post(client).json()["data"]
     row = repository.list("own-a")[0]
     (storage.root / row.storage_key).unlink()
     assert client.get(f"{BASE}/{item['id']}/file").status_code == 503
@@ -138,7 +144,9 @@ def test_missing_file_and_failed_cleanup_are_visible(media_client, monkeypatch):
     def fail(key):
         raise StorageFailure("permission denied")
     monkeypatch.setattr(storage, "delete", fail)
-    assert client.delete(f"{BASE}/{item['id']}").status_code == 503
+    failed = client.delete(f"{BASE}/{item['id']}")
+    assert failed.status_code == 503
+    assert failed.json()["success"] is False
     assert repository.list("own-a") == []
 
 
@@ -155,3 +163,4 @@ def test_storage_is_not_publicly_mounted():
     from app.main import app
     with TestClient(app) as client:
         assert client.get("/storage/portfolios/example.png").status_code == 404
+        assert client.get("/api/v1/storage/portfolios/example.png").status_code == 404

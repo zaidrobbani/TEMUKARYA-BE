@@ -49,17 +49,17 @@ PROJECT_ID = "project-1"
 
 UMKM = MilestoneActor(
     user_id="umkm-1",
-    role="umkm",
+    role="UMKM",
 )
 
 FREELANCER = MilestoneActor(
     user_id="freelancer-1",
-    role="freelancer",
+    role="FREELANCER",
 )
 
 OUTSIDER = MilestoneActor(
     user_id="another-umkm",
-    role="umkm",
+    role="UMKM",
 )
 
 
@@ -310,7 +310,7 @@ def test_unassigned_freelancer_cannot_read_plan(
 
     actor = MilestoneActor(
         "another-freelancer",
-        "freelancer",
+        "FREELANCER",
     )
 
     with pytest.raises(NotFoundError):
@@ -368,7 +368,7 @@ def test_invalid_role_rejected(context):
 
     actor = MilestoneActor(
         "admin-1",
-        "admin",
+        "ADMIN",
     )
 
     with pytest.raises(ForbiddenError):
@@ -780,7 +780,7 @@ def test_complete_outsider_rejected(context):
             completion_input(
                 actor=MilestoneActor(
                     "another-user",
-                    "freelancer",
+                    "FREELANCER",
                 )
             )
         )

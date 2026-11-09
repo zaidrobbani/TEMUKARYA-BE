@@ -46,10 +46,10 @@ NOW = datetime(
     tzinfo=timezone.utc,
 )
 
-UMKM = ChatActor("u1", "umkm")
-FREELANCER = ChatActor("f1", "freelancer")
+UMKM = ChatActor("u1", "UMKM")
+FREELANCER = ChatActor("f1", "FREELANCER")
 
-OUTSIDER = ChatActor("u2", "umkm")
+OUTSIDER = ChatActor("u2", "UMKM")
 
 
 def make_conversation(
@@ -102,10 +102,10 @@ class FakeChatRepository:
     def __init__(self):
 
         self.roles = {
-            "u1": "umkm",
-            "u2": "umkm",
-            "f1": "freelancer",
-            "f2": "freelancer",
+            "u1": "UMKM",
+            "u2": "UMKM",
+            "f1": "FREELANCER",
+            "f2": "FREELANCER",
         }
 
         self.project_owners = {
@@ -478,7 +478,7 @@ def test_invalid_actor_rejected(repo):
             CreateConversationInput(
                 actor=ChatActor(
                     "admin1",
-                    "admin",
+                    "ADMIN",
                 ),
                 counterpart_user_id="f1",
             )

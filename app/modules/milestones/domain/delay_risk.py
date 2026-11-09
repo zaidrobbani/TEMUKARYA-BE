@@ -61,15 +61,8 @@ def evaluate_delay_risk(
         else None
     )
 
-    if (
-        start_date is not None
-        and schedule.deadline < start_date
-    ):
-        raise ValueError(
-            "Deadline tidak boleh lebih awal "
-            "dari tanggal mulai project"
-        )
-
+    # Project bisa mulai setelah deadline (freelancer dipilih terlambat);
+    # total_days minimal 1 sehingga hasilnya OVERDUE, bukan error.
     total_days = (
         max(
             1,

@@ -42,7 +42,7 @@ from app.modules.users.domain.entities import User, UserRole
 from app.modules.users.domain.repositories import UserRepository
 from app.modules.users.presentation.dependencies import get_user_repository, register_user_use_case
 
-bearer_scheme = HTTPBearer(auto_error=False, description="Access token dari /auth/login")
+bearer_scheme = HTTPBearer(auto_error=False, description="Access token dari /api/v1/auth/login")
 
 
 def get_revoked_token_repository(db: Session = Depends(get_db)) -> RevokedTokenRepository:
@@ -69,7 +69,7 @@ def send_email_verification_use_case(
     email_sender: EmailSender = Depends(get_email_sender),
     uow: UnitOfWork = Depends(get_uow),
 ) -> SendEmailVerification:
-    return SendEmailVerification(users, action_tokens, email_sender, uow, settings.PUBLIC_BASE_URL)
+    return SendEmailVerification(users, action_tokens, email_sender, uow, settings.PUBLIC_API_URL)
 
 
 def register_account_use_case(
@@ -85,7 +85,7 @@ def resend_email_verification_use_case(
     email_sender: EmailSender = Depends(get_email_sender),
     uow: UnitOfWork = Depends(get_uow),
 ) -> ResendEmailVerification:
-    return ResendEmailVerification(users, action_tokens, email_sender, uow, settings.PUBLIC_BASE_URL)
+    return ResendEmailVerification(users, action_tokens, email_sender, uow, settings.PUBLIC_API_URL)
 
 
 def request_password_reset_use_case(
@@ -94,7 +94,7 @@ def request_password_reset_use_case(
     email_sender: EmailSender = Depends(get_email_sender),
     uow: UnitOfWork = Depends(get_uow),
 ) -> RequestPasswordReset:
-    return RequestPasswordReset(users, action_tokens, email_sender, uow, settings.PUBLIC_BASE_URL)
+    return RequestPasswordReset(users, action_tokens, email_sender, uow, settings.PUBLIC_API_URL)
 
 
 def verify_email_use_case(

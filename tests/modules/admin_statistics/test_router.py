@@ -597,7 +597,7 @@ def test_admin_list_users(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total"] == 3
     assert len(body["items"]) == 3
@@ -625,7 +625,7 @@ def test_admin_user_role_filter(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total"] == 1
     assert body["items"][0]["role"] == "umkm"
@@ -650,9 +650,9 @@ def test_admin_user_search(
     )
 
     assert response.status_code == 200
-    assert response.json()["total"] == 1
+    assert response.json()["data"]["total"] == 1
 
-    assert response.json()["items"][0]["id"] == "f1"
+    assert response.json()["data"]["items"][0]["id"] == "f1"
 
 
 # ============================================================
@@ -676,7 +676,7 @@ def test_admin_user_pagination(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total"] == 3
     assert len(body["items"]) == 1
@@ -750,7 +750,7 @@ def test_admin_get_umkm_detail(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["user"]["role"] == "umkm"
 
@@ -778,7 +778,7 @@ def test_admin_get_freelancer_detail(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["user"]["role"] == "freelancer"
 
@@ -807,7 +807,7 @@ def test_admin_get_admin_user_detail(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["user"]["role"] == "admin"
 
@@ -850,7 +850,7 @@ def test_admin_user_response_safe(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert "password" not in body["user"]
     assert "password_hash" not in body["user"]
@@ -875,7 +875,7 @@ def test_admin_list_projects(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total"] == 2
     assert len(body["items"]) == 2
@@ -906,7 +906,7 @@ def test_admin_project_status_filter(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total"] == 1
     assert body["items"][0]["id"] == "p2"
@@ -932,10 +932,10 @@ def test_admin_project_search(
 
     assert response.status_code == 200
 
-    assert response.json()["total"] == 1
+    assert response.json()["data"]["total"] == 1
 
     assert (
-        response.json()["items"][0]["title"]
+        response.json()["data"]["items"][0]["title"]
         == "Desain Logo"
     )
 
@@ -961,7 +961,7 @@ def test_admin_project_pagination(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total"] == 2
     assert len(body["items"]) == 1
@@ -984,7 +984,7 @@ def test_admin_project_without_freelancer(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["project"]["id"] == "p1"
 
@@ -1013,7 +1013,7 @@ def test_admin_project_with_freelancer(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["project"]["id"] == "p2"
 
@@ -1081,7 +1081,7 @@ def test_admin_system_statistics(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body == {
         "total_umkm": 1,
@@ -1119,8 +1119,8 @@ def test_admin_empty_statistics(
 
     assert response.status_code == 200
 
-    assert response.json()["total_projects"] == 0
-    assert response.json()["platform_income"] == 0
+    assert response.json()["data"]["total_projects"] == 0
+    assert response.json()["data"]["platform_income"] == 0
 
 
 # ============================================================
@@ -1199,11 +1199,11 @@ def test_main_app_registers_admin_router():
     paths = app.openapi()["paths"]
 
     required = {
-        "/admin/users",
-        "/admin/users/{user_id}",
-        "/admin/projects",
-        "/admin/projects/{project_id}",
-        "/admin/statistics",
+        "/api/v1/admin/users",
+        "/api/v1/admin/users/{user_id}",
+        "/api/v1/admin/projects",
+        "/api/v1/admin/projects/{project_id}",
+        "/api/v1/admin/statistics",
     }
 
     assert required.issubset(

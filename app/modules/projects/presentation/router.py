@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Query, status
 
-from fastapi import Response
-
-from app.core.exceptions import ForbiddenError
+from app.core.exceptions import BadRequestError, ForbiddenError
+from app.core.responses import ApiResponse, error_responses, success_response
 from app.modules.users.domain.entities import UserRole
 
 from app.modules.projects.application.use_cases import GetMyProjects
@@ -33,8 +32,6 @@ from app.modules.projects.presentation.dependencies import (
     get_delete_project_use_case,
 )
 
-from fastapi import Query
-
 from app.modules.projects.application.use_cases import SearchPublicProjects
 from app.modules.projects.presentation.dependencies import get_search_public_projects_use_case
 from app.modules.projects.presentation.schemas import PublicProjectsPageResponse
@@ -48,8 +45,9 @@ router = APIRouter(
 
 @router.post(
     "",
-    response_model=ProjectResponse,
+    response_model=ApiResponse[ProjectResponse],
     status_code=status.HTTP_201_CREATED,
+    responses=error_responses(400, 401, 403, 422),
     summary="Create Project",
     description="UMKM membuat dan memublikasikan proyek baru.",
 )
@@ -61,7 +59,7 @@ def create_project(
     use_case: CreateProject = Depends(
         get_create_project_use_case
     ),
-) -> ProjectResponse:
+):
     """
     Membuat proyek baru.
 
@@ -92,20 +90,17 @@ def create_project(
             data=data,
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+        raise BadRequestError(str(exc)) from exc
 
     # 4. Kembalikan informasi proyek
-    return ProjectResponse.model_validate(project)
+    return success_response("Project berhasil dibuat", ProjectResponse.model_validate(project))
 
 
 
 @router.get(
     "/mine",
-    response_model=list[ProjectResponse],
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[list[ProjectResponse]],
+    responses=error_responses(401, 403),
     summary="Get My Projects",
     description="UMKM melihat daftar proyek miliknya sendiri.",
 )
@@ -116,7 +111,7 @@ def get_my_projects(
     use_case: GetMyProjects = Depends(
         get_my_projects_use_case
     ),
-) -> list[ProjectResponse]:
+):
 
     # Hanya UMKM yang memiliki akses
     if current_user.role != UserRole.UMKM:
@@ -129,17 +124,17 @@ def get_my_projects(
         umkm_id=current_user.user_id
     )
 
-    return [
-        ProjectResponse.model_validate(project)
-        for project in projects
-    ]
+    return success_response(
+        "Daftar project berhasil diambil",
+        [ProjectResponse.model_validate(project) for project in projects],
+    )
 
 
 
 @router.get(
     "/{project_id}",
-    response_model=ProjectResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[ProjectResponse],
+    responses=error_responses(401, 404),
     summary="Get Project Detail",
     description="Melihat detail proyek berdasarkan ID.",
 )
@@ -151,14 +146,14 @@ def get_project_detail(
     use_case: GetProjectDetail = Depends(
         get_project_detail_use_case
     ),
-) -> ProjectResponse:
+):
 
     project = use_case.execute(
         project_id=project_id,
         requester_id=current_user.user_id,
     )
 
-    return ProjectResponse.model_validate(project)
+    return success_response("Detail project berhasil diambil", ProjectResponse.model_validate(project))
 
 
 # ============================================================
@@ -167,8 +162,8 @@ def get_project_detail(
 
 @router.put(
     "/{project_id}",
-    response_model=ProjectResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[ProjectResponse],
+    responses=error_responses(400, 401, 403, 404, 409, 422),
     summary="Update Project",
     description="UMKM memperbarui proyek miliknya sebelum pengerjaan.",
 )
@@ -181,7 +176,7 @@ def update_project(
     use_case: UpdateProject = Depends(
         get_update_project_use_case
     ),
-) -> ProjectResponse:
+):
 
     # 1. Hanya UMKM yang boleh memperbarui proyek.
     if current_user.role != UserRole.UMKM:
@@ -207,20 +202,17 @@ def update_project(
             data=data,
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+        raise BadRequestError(str(exc)) from exc
 
     # 4. Kembalikan proyek yang sudah diperbarui.
-    return ProjectResponse.model_validate(project)
+    return success_response("Project berhasil diperbarui", ProjectResponse.model_validate(project))
 
 
 
 @router.delete(
     "/{project_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
+    response_model=ApiResponse[None],
+    responses=error_responses(401, 403, 404, 409),
     summary="Delete Project",
     description="UMKM menghapus proyek miliknya sebelum pengerjaan.",
 )
@@ -232,7 +224,7 @@ def delete_project(
     use_case: DeleteProject = Depends(
         get_delete_project_use_case
     ),
-) -> Response:
+):
 
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
@@ -244,15 +236,13 @@ def delete_project(
         project_id=project_id,
     )
 
-    return Response(
-        status_code=status.HTTP_204_NO_CONTENT
-    )
+    return success_response("Project berhasil dihapus")
 
 
 @router.get(
     "",
-    response_model=PublicProjectsPageResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[PublicProjectsPageResponse],
+    responses=error_responses(400, 401, 403, 422),
     summary="Search Public Projects",
     description="Freelancer mencari proyek terbuka dengan filter.",
 )
@@ -289,7 +279,7 @@ def search_public_projects(
     use_case: SearchPublicProjects = Depends(
         get_search_public_projects_use_case
     ),
-) -> PublicProjectsPageResponse:
+):
 
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
@@ -306,19 +296,19 @@ def search_public_projects(
             offset=offset,
         )
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+        raise BadRequestError(str(exc)) from exc
 
-    return PublicProjectsPageResponse(
-        items=[
-            ProjectResponse.model_validate(project)
-            for project in result.items
-        ],
-        limit=result.limit,
-        offset=result.offset,
-        has_more=result.has_more,
+    return success_response(
+        "Daftar project berhasil diambil",
+        PublicProjectsPageResponse(
+            items=[
+                ProjectResponse.model_validate(project)
+                for project in result.items
+            ],
+            limit=result.limit,
+            offset=result.offset,
+            has_more=result.has_more,
+        ),
     )
 
 # Project Attachment HTTP Endpoints

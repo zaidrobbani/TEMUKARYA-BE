@@ -6,9 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 
-from app.core.exceptions import (
-    UnauthorizedError,
-)
+from app.modules.auth.presentation.dependencies import get_current_user
 
 from app.modules.admin_statistics.domain.entities import (
     AdminActor,
@@ -18,30 +16,18 @@ from app.modules.admin_statistics.infrastructure.repositories import (
     SqlAlchemyAdminStatisticsRepository,
 )
 
+from app.modules.users.domain.entities import User
+
 
 # ============================================================
 # 1. ADMIN AUTHENTICATION
 # ============================================================
 
-def get_authenticated_admin_actor() -> AdminActor:
-    """
-    Mengambil identitas Admin dari JWT.
-
-    Implementasi sementara: FAIL-CLOSED.
-
-    Semua request nyata ditolak dengan 401
-    sampai Auth Module terintegrasi.
-
-    Jangan mengambil role/user_id dari:
-    - Query parameter
-    - Request body
-    - Header bebas buatan client
-    """
-
-    raise UnauthorizedError(
-        "Autentikasi Admin belum "
-        "terintegrasi dengan JWT"
-    )
+def get_authenticated_admin_actor(
+    user: Annotated[User, Depends(get_current_user)],
+) -> AdminActor:
+    """Identitas dari JWT; pengecekan role Admin ada di Application Layer."""
+    return AdminActor(user_id=user.id, role=user.role)
 
 
 # ============================================================

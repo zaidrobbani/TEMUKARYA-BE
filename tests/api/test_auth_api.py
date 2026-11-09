@@ -91,17 +91,17 @@ def client(users, emails, action_tokens, google):
 
 
 def register(client, **overrides):
-    return client.post("/auth/register", json=register_body(**overrides))
+    return client.post("/api/v1/auth/register", json=register_body(**overrides))
 
 
-def login(client, email="rina.pratiwi@kulinerbandung.id", password=PASSWORD, path="/auth/login"):
+def login(client, email="rina.pratiwi@kulinerbandung.id", password=PASSWORD, path="/api/v1/auth/login"):
     return client.post(path, json={"email": email, "password": password})
 
 
 def register_verified(client, **overrides):
     response = register(client, **overrides)
     sender = app.dependency_overrides[get_email_sender]()
-    verified = client.post("/auth/email/verify", json={"token": sender.last_token})
+    verified = client.post("/api/v1/auth/email/verify", json={"token": sender.last_token})
     assert verified.status_code == 200, verified.text
     return response
 
@@ -183,7 +183,7 @@ class TestRegister:
         )
 
     def test_empty_body_lists_every_required_field(self, client):
-        errors = field_errors(client.post("/auth/register", json={}))
+        errors = field_errors(client.post("/api/v1/auth/register", json={}))
 
         assert set(errors) == {
             "name",
@@ -233,7 +233,7 @@ class TestRegister:
 
     def test_invalid_json(self, client):
         response = client.post(
-            "/auth/register", content="{bukan json", headers={"Content-Type": "application/json"}
+            "/api/v1/auth/register", content="{bukan json", headers={"Content-Type": "application/json"}
         )
 
         assert field_errors(response) == {"body": "Format JSON tidak valid"}
@@ -303,12 +303,12 @@ class TestLogin:
         ],
     )
     def test_invalid_body(self, client, body, expected):
-        assert field_errors(client.post("/auth/login", json=body)) == expected
+        assert field_errors(client.post("/api/v1/auth/login", json=body)) == expected
 
 
 class TestAdminLogin:
     def test_admin_success(self, client):
-        response = login(client, email=ADMIN_EMAIL, path="/auth/admin/login")
+        response = login(client, email=ADMIN_EMAIL, path="/api/v1/auth/admin/login")
 
         assert response.status_code == 200
         assert response.json()["message"] == "Login admin berhasil"
@@ -319,14 +319,14 @@ class TestAdminLogin:
         register(client, role=role)
 
         assert_error(
-            login(client, path="/auth/admin/login"),
+            login(client, path="/api/v1/auth/admin/login"),
             403,
             "Akun ini tidak memiliki akses ke dashboard admin",
         )
 
     def test_wrong_password(self, client):
         assert_error(
-            login(client, email=ADMIN_EMAIL, password="salah12345", path="/auth/admin/login"),
+            login(client, email=ADMIN_EMAIL, password="salah12345", path="/api/v1/auth/admin/login"),
             401,
             "Email atau kata sandi salah",
         )
@@ -336,7 +336,7 @@ class TestCurrentUser:
     def test_me_returns_current_user(self, client):
         token = token_of(client)
 
-        response = client.get("/auth/me", headers=auth(token))
+        response = client.get("/api/v1/auth/me", headers=auth(token))
 
         assert response.status_code == 200
         assert response.json()["message"] == "Data akun berhasil diambil"
@@ -347,12 +347,12 @@ class TestCurrentUser:
         [{}, {"Authorization": ""}, {"Authorization": "Bearer"}, {"Authorization": "Basic abc"}],
     )
     def test_missing_token(self, client, headers):
-        assert_error(client.get("/auth/me", headers=headers), 401, "Silakan login terlebih dahulu")
+        assert_error(client.get("/api/v1/auth/me", headers=headers), 401, "Silakan login terlebih dahulu")
 
     @pytest.mark.parametrize("token", ["abc", "a.b.c"])
     def test_invalid_token(self, client, token):
         assert_error(
-            client.get("/auth/me", headers=auth(token)),
+            client.get("/api/v1/auth/me", headers=auth(token)),
             401,
             "Token tidak valid, silakan login kembali",
         )
@@ -361,14 +361,14 @@ class TestCurrentUser:
         user_id = next(iter(users.users))
         token = JwtTokenService("secret-lain-yang-juga-minimal-32-karakter").create_access_token(user_id)
 
-        assert_error(client.get("/auth/me", headers=auth(token.token)), 401)
+        assert_error(client.get("/api/v1/auth/me", headers=auth(token.token)), 401)
 
     def test_expired_token(self, client, users):
         user_id = next(iter(users.users))
         token = JwtTokenService(SECRET, expire_minutes=-1).create_access_token(user_id).token
 
         assert_error(
-            client.get("/auth/me", headers=auth(token)),
+            client.get("/api/v1/auth/me", headers=auth(token)),
             401,
             "Sesi sudah kedaluwarsa, silakan login kembali",
         )
@@ -378,7 +378,7 @@ class TestCurrentUser:
         users.users = {k: v for k, v in users.users.items() if v.email == ADMIN_EMAIL}
 
         assert_error(
-            client.get("/auth/me", headers=auth(token)),
+            client.get("/api/v1/auth/me", headers=auth(token)),
             401,
             "Akun tidak ditemukan, silakan login kembali",
         )
@@ -388,78 +388,78 @@ class TestLogout:
     def test_logout_ends_session(self, client):
         token = token_of(client)
 
-        response = client.post("/auth/logout", headers=auth(token))
+        response = client.post("/api/v1/auth/logout", headers=auth(token))
 
         assert response.status_code == 200
         assert response.json() == {"success": True, "message": "Logout berhasil", "data": None}
         assert_error(
-            client.get("/auth/me", headers=auth(token)),
+            client.get("/api/v1/auth/me", headers=auth(token)),
             401,
             "Sesi sudah berakhir karena logout, silakan login kembali",
         )
 
     def test_logout_twice_is_unauthorized(self, client):
         token = token_of(client)
-        client.post("/auth/logout", headers=auth(token))
+        client.post("/api/v1/auth/logout", headers=auth(token))
 
-        assert_error(client.post("/auth/logout", headers=auth(token)), 401)
+        assert_error(client.post("/api/v1/auth/logout", headers=auth(token)), 401)
 
     def test_logout_keeps_other_sessions(self, client):
         first = token_of(client)
         second = login(client).json()["data"]["access_token"]
 
-        client.post("/auth/logout", headers=auth(first))
+        client.post("/api/v1/auth/logout", headers=auth(first))
 
-        assert client.get("/auth/me", headers=auth(second)).status_code == 200
+        assert client.get("/api/v1/auth/me", headers=auth(second)).status_code == 200
 
     def test_logout_without_token(self, client):
-        assert_error(client.post("/auth/logout"), 401, "Silakan login terlebih dahulu")
+        assert_error(client.post("/api/v1/auth/logout"), 401, "Silakan login terlebih dahulu")
 
 
 class TestGetUser:
     def test_user_can_read_self(self, client):
         token = token_of(client)
-        user_id = client.get("/auth/me", headers=auth(token)).json()["data"]["id"]
+        user_id = client.get("/api/v1/auth/me", headers=auth(token)).json()["data"]["id"]
 
-        response = client.get(f"/users/{user_id}", headers=auth(token))
+        response = client.get(f"/api/v1/users/{user_id}", headers=auth(token))
 
         assert response.status_code == 200
         assert response.json()["data"]["id"] == user_id
 
     def test_user_cannot_read_other_user(self, client):
         other = token_of(client, email="andi@mail.com", role="FREELANCER")
-        other_id = client.get("/auth/me", headers=auth(other)).json()["data"]["id"]
+        other_id = client.get("/api/v1/auth/me", headers=auth(other)).json()["data"]["id"]
         token = token_of(client)
 
         assert_error(
-            client.get(f"/users/{other_id}", headers=auth(token)),
+            client.get(f"/api/v1/users/{other_id}", headers=auth(token)),
             403,
             "Anda tidak memiliki akses ke data user ini",
         )
 
     def test_admin_can_read_any_user_and_gets_404_for_unknown(self, client):
         user_token = token_of(client)
-        user_id = client.get("/auth/me", headers=auth(user_token)).json()["data"]["id"]
-        admin_token = login(client, email=ADMIN_EMAIL, path="/auth/admin/login").json()["data"][
+        user_id = client.get("/api/v1/auth/me", headers=auth(user_token)).json()["data"]["id"]
+        admin_token = login(client, email=ADMIN_EMAIL, path="/api/v1/auth/admin/login").json()["data"][
             "access_token"
         ]
 
-        assert client.get(f"/users/{user_id}", headers=auth(admin_token)).status_code == 200
-        assert_error(client.get("/users/tidak-ada", headers=auth(admin_token)), 404)
+        assert client.get(f"/api/v1/users/{user_id}", headers=auth(admin_token)).status_code == 200
+        assert_error(client.get("/api/v1/users/tidak-ada", headers=auth(admin_token)), 404)
 
     def test_requires_login(self, client):
-        assert_error(client.get("/users/apa-saja"), 401)
+        assert_error(client.get("/api/v1/users/apa-saja"), 401)
 
 
 class TestEnums:
     def test_list_all_enums(self, client):
-        body = client.get("/enums").json()
+        body = client.get("/api/v1/enums").json()
 
         assert body["success"] is True
         assert set(body["data"]) == {"user_roles", "registration_roles"}
 
     def test_registration_roles_exclude_admin(self, client):
-        response = client.get("/enums/registration_roles")
+        response = client.get("/api/v1/enums/registration_roles")
 
         assert response.status_code == 200
         assert response.json()["data"] == [
@@ -468,7 +468,7 @@ class TestEnums:
         ]
 
     def test_unknown_enum(self, client):
-        assert_error(client.get("/enums/tidak_ada"), 404, "Enum tidak_ada tidak ditemukan")
+        assert_error(client.get("/api/v1/enums/tidak_ada"), 404, "Enum tidak_ada tidak ditemukan")
 
 
 class TestGenericErrors:
@@ -476,7 +476,7 @@ class TestGenericErrors:
         assert_error(client.get("/tidak-ada"), 404, "Endpoint tidak ditemukan")
 
     def test_wrong_method(self, client):
-        assert_error(client.get("/auth/login"), 405, "Metode HTTP tidak diizinkan untuk endpoint ini")
+        assert_error(client.get("/api/v1/auth/login"), 405, "Metode HTTP tidak diizinkan untuk endpoint ini")
 
     def test_unexpected_error_is_wrapped(self, client):
         def broken_repository():
@@ -492,7 +492,7 @@ class TestEmailVerification:
         register(client)
 
         assert emails.sent[-1].to == EMAIL
-        assert f"/auth/email/verify?token={emails.last_token}" in emails.sent[-1].text
+        assert f"/api/v1/auth/email/verify?token={emails.last_token}" in emails.sent[-1].text
 
     def test_failed_register_sends_nothing(self, client, emails):
         register(client, password_confirmation="beda12345")
@@ -502,7 +502,7 @@ class TestEmailVerification:
     def test_verify_then_login(self, client, emails):
         register(client)
 
-        response = client.post("/auth/email/verify", json={"token": emails.last_token})
+        response = client.post("/api/v1/auth/email/verify", json={"token": emails.last_token})
 
         assert response.status_code == 200
         assert response.json() == {
@@ -514,13 +514,13 @@ class TestEmailVerification:
 
     def test_opening_link_twice_stays_successful(self, client, emails):
         register(client)
-        client.post("/auth/email/verify", json={"token": emails.last_token})
+        client.post("/api/v1/auth/email/verify", json={"token": emails.last_token})
 
-        assert client.post("/auth/email/verify", json={"token": emails.last_token}).status_code == 200
+        assert client.post("/api/v1/auth/email/verify", json={"token": emails.last_token}).status_code == 200
 
     def test_unknown_token(self, client):
         assert_error(
-            client.post("/auth/email/verify", json={"token": "tidak-ada"}),
+            client.post("/api/v1/auth/email/verify", json={"token": "tidak-ada"}),
             400,
             "Tautan verifikasi tidak valid atau sudah digunakan",
         )
@@ -530,7 +530,7 @@ class TestEmailVerification:
         action_tokens.shift_all(-timedelta(hours=24))
 
         assert_error(
-            client.post("/auth/email/verify", json={"token": emails.last_token}),
+            client.post("/api/v1/auth/email/verify", json={"token": emails.last_token}),
             400,
             "Tautan verifikasi sudah kedaluwarsa, silakan minta tautan baru",
         )
@@ -541,13 +541,13 @@ class TestEmailVerification:
         [({}, "Wajib diisi"), ({"token": "  "}, "Wajib diisi"), ({"token": "a" * 513}, "Maksimal 512 karakter")],
     )
     def test_invalid_body(self, client, body, message):
-        assert field_errors(client.post("/auth/email/verify", json=body)) == {"token": message}
+        assert field_errors(client.post("/api/v1/auth/email/verify", json=body)) == {"token": message}
 
     def test_link_page_is_html_without_token_and_does_not_verify(self, client, emails, users):
         register(client)
         token = emails.last_token
 
-        response = client.get(f"/auth/email/verify?token={token}")
+        response = client.get(f"/api/v1/auth/email/verify?token={token}")
 
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/html")
@@ -561,7 +561,7 @@ class TestResendVerification:
     MESSAGE = "Jika email perlu diverifikasi, tautan baru sudah dikirim"
 
     def resend(self, client, email=EMAIL):
-        return client.post("/auth/email/resend", json={"email": email})
+        return client.post("/api/v1/auth/email/resend", json={"email": email})
 
     def test_after_cooldown_sends_new_link(self, client, emails, action_tokens):
         register(client)
@@ -573,8 +573,8 @@ class TestResendVerification:
         assert response.status_code == 200
         assert response.json()["message"] == self.MESSAGE
         assert len(emails.sent) == 2
-        assert_error(client.post("/auth/email/verify", json={"token": old_token}), 400)
-        assert client.post("/auth/email/verify", json={"token": emails.last_token}).status_code == 200
+        assert_error(client.post("/api/v1/auth/email/verify", json={"token": old_token}), 400)
+        assert client.post("/api/v1/auth/email/verify", json={"token": emails.last_token}).status_code == 200
 
     def test_same_response_for_every_case_without_extra_email(self, client, emails):
         register(client)
@@ -599,11 +599,11 @@ class TestForgotPassword:
     MESSAGE = "Jika email terdaftar, tautan reset sudah dikirim"
 
     def forgot(self, client, email=EMAIL):
-        return client.post("/auth/password/forgot", json={"email": email})
+        return client.post("/api/v1/auth/password/forgot", json={"email": email})
 
     def reset(self, client, token, password="SandiBaru2024", confirmation=None):
         return client.post(
-            "/auth/password/reset",
+            "/api/v1/auth/password/reset",
             json={
                 "token": token,
                 "password": password,
@@ -622,7 +622,7 @@ class TestForgotPassword:
         assert known.json() == unknown.json()
         assert known.json()["message"] == self.MESSAGE
         assert len(emails.sent) == before + 1
-        assert f"/auth/password/reset?token={emails.last_token}" in emails.sent[-1].text
+        assert f"/api/v1/auth/password/reset?token={emails.last_token}" in emails.sent[-1].text
 
     def test_within_cooldown_only_one_email(self, client, emails):
         register_verified(client)
@@ -646,7 +646,7 @@ class TestForgotPassword:
         user = users.get_by_email(EMAIL)
         users.update_password(user.id, user.password_hash, datetime.now(UTC) + timedelta(seconds=2))
         assert_error(
-            client.get("/auth/me", headers=auth(old_session)),
+            client.get("/api/v1/auth/me", headers=auth(old_session)),
             401,
             "Kata sandi telah diubah, silakan login kembali",
         )
@@ -660,7 +660,7 @@ class TestForgotPassword:
 
         assert new_session.status_code == 200
         token = new_session.json()["data"]["access_token"]
-        assert client.get("/auth/me", headers=auth(token)).status_code == 200
+        assert client.get("/api/v1/auth/me", headers=auth(token)).status_code == 200
 
     def test_reset_verifies_unverified_account(self, client, emails):
         register(client)
@@ -719,12 +719,12 @@ class TestForgotPassword:
         assert self.reset(client, emails.last_token).status_code == 200
 
     def test_empty_body(self, client):
-        assert set(field_errors(client.post("/auth/password/reset", json={}))) == {
+        assert set(field_errors(client.post("/api/v1/auth/password/reset", json={}))) == {
             "token",
             "password",
             "password_confirmation",
         }
-        assert field_errors(client.post("/auth/password/forgot", json={})) == {"email": "Wajib diisi"}
+        assert field_errors(client.post("/api/v1/auth/password/forgot", json={})) == {"email": "Wajib diisi"}
 
     def test_invalid_email(self, client):
         assert field_errors(self.forgot(client, "bukan-email")) == {"email": INVALID_EMAIL}
@@ -733,7 +733,7 @@ class TestForgotPassword:
         register_verified(client)
         self.forgot(client)
 
-        response = client.get(f"/auth/password/reset?token={emails.last_token}")
+        response = client.get(f"/api/v1/auth/password/reset?token={emails.last_token}")
 
         assert response.status_code == 200
         assert 'name="password_confirmation"' in response.text
@@ -744,7 +744,7 @@ class TestGoogleLogin:
     TOKEN = "google-id-token"
 
     def google_login(self, client, token=TOKEN):
-        return client.post("/auth/google", json={"id_token": token})
+        return client.post("/api/v1/auth/google", json={"id_token": token})
 
     def test_registered_account_gets_session(self, client, google):
         register_verified(client)
@@ -755,7 +755,7 @@ class TestGoogleLogin:
         assert response.status_code == 200
         assert response.json()["message"] == "Login berhasil"
         token = response.json()["data"]["access_token"]
-        assert client.get("/auth/me", headers=auth(token)).status_code == 200
+        assert client.get("/api/v1/auth/me", headers=auth(token)).status_code == 200
 
     def test_unverified_account_is_claimed_and_old_password_stops_working(self, client, google):
         register(client)
@@ -809,4 +809,4 @@ class TestGoogleLogin:
         )
 
     def test_empty_token(self, client):
-        assert field_errors(client.post("/auth/google", json={})) == {"id_token": "Wajib diisi"}
+        assert field_errors(client.post("/api/v1/auth/google", json={})) == {"id_token": "Wajib diisi"}

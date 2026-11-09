@@ -318,8 +318,9 @@ def test_upload_returns_201(context):
     response = upload_example(client)
 
     assert response.status_code == 201
+    assert response.json()["message"] == "Lampiran project berhasil diunggah"
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["id"] == ATTACHMENT_ID
     assert body["project_id"] == PROJECT_ID
@@ -354,8 +355,8 @@ def test_list_returns_200(context):
     response = client.get(BASE_URL)
 
     assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["id"] == ATTACHMENT_ID
+    assert len(response.json()["data"]) == 1
+    assert response.json()["data"][0]["id"] == ATTACHMENT_ID
 
     assert service.calls == ["list"]
 
@@ -402,7 +403,7 @@ def test_download_returns_private_file(context):
 # DELETE SUCCESS
 # ============================================================
 
-def test_delete_returns_204(context):
+def test_delete_returns_200(context):
     app, client, service = context
 
     authenticate(app)
@@ -413,8 +414,8 @@ def test_delete_returns_204(context):
 
     response = client.delete(DELETE_URL)
 
-    assert response.status_code == 204
-    assert response.content == b""
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "message": "Lampiran project berhasil dihapus", "data": None}
 
     assert service.items == []
     assert service.files == {}
@@ -572,5 +573,5 @@ def test_storage_failure_returns_503(context):
 
     # Jangan tampilkan detail internal filesystem.
     assert "Storage tidak tersedia" not in (
-        response.json()["detail"]
+        response.json()["message"]
     )

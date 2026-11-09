@@ -32,9 +32,9 @@ NOW = datetime(
     tzinfo=timezone.utc,
 )
 
-UMKM = ChatActor("u1", "umkm")
-FREELANCER = ChatActor("f1", "freelancer")
-OUTSIDER = ChatActor("u2", "umkm")
+UMKM = ChatActor("u1", "UMKM")
+FREELANCER = ChatActor("f1", "FREELANCER")
+OUTSIDER = ChatActor("u2", "UMKM")
 
 BASE_URL = "/conversations"
 DETAIL_URL = "/conversations/c1"
@@ -82,10 +82,10 @@ class FakeConversationRepository:
         }
 
         self.roles = {
-            "u1": "umkm",
-            "u2": "umkm",
-            "f1": "freelancer",
-            "f2": "freelancer",
+            "u1": "UMKM",
+            "u2": "UMKM",
+            "f1": "FREELANCER",
+            "f2": "FREELANCER",
         }
 
         self.project_owners = {
@@ -424,7 +424,7 @@ def test_invalid_role_rejected(http_context):
 
     authorize(
         app,
-        ChatActor("admin1", "admin"),
+        ChatActor("admin1", "ADMIN"),
     )
 
     response = client.get(BASE_URL)
@@ -445,7 +445,7 @@ def test_umkm_get_own_conversations(http_context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["items"][0]["id"] == "c1"
@@ -463,7 +463,7 @@ def test_freelancer_get_own_conversation(
     response = client.get(DETAIL_URL)
 
     assert response.status_code == 200
-    assert response.json()["freelancer_id"] == "f1"
+    assert response.json()["data"]["freelancer_id"] == "f1"
 
 
 def test_outsider_list_is_empty(http_context):
@@ -474,7 +474,7 @@ def test_outsider_list_is_empty(http_context):
     response = client.get(BASE_URL)
 
     assert response.status_code == 200
-    assert response.json()["items"] == []
+    assert response.json()["data"]["items"] == []
 
 
 def test_outsider_cannot_read_detail(
@@ -537,7 +537,7 @@ def test_create_conversation_and_commit(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["umkm_id"] == "u1"
     assert body["freelancer_id"] == "f2"
@@ -561,7 +561,7 @@ def test_existing_conversation_is_reused(
     )
 
     assert response.status_code == 200
-    assert response.json()["id"] == "c1"
+    assert response.json()["data"]["id"] == "c1"
 
     assert len(context.conversations.conversations) == 1
     assert context.session.commits == 1
@@ -583,7 +583,7 @@ def test_create_project_conversation(
     )
 
     assert response.status_code == 200
-    assert response.json()["project_id"] == "p1"
+    assert response.json()["data"]["project_id"] == "p1"
 
 
 def test_project_owner_mismatch_rejected(
@@ -643,7 +643,7 @@ def test_umkm_sends_text_and_commits(
 
     assert response.status_code == 201
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["sender_user_id"] == "u1"
     assert body["message_text"] == (
@@ -678,7 +678,7 @@ def test_freelancer_can_send_reply(
 
     assert response.status_code == 201
 
-    assert response.json()["sender_user_id"] == "f1"
+    assert response.json()["data"]["sender_user_id"] == "f1"
 
 
 def test_empty_message_returns_400_and_rolls_back(
@@ -736,7 +736,7 @@ def test_sender_identity_cannot_be_overridden(
     )
 
     assert response.status_code == 201
-    assert response.json()["sender_user_id"] == "u1"
+    assert response.json()["data"]["sender_user_id"] == "u1"
 
 
 # ============================================================
@@ -765,7 +765,7 @@ def test_message_history_sorted_descending(
 
     assert [
         item["message"]["id"]
-        for item in response.json()["items"]
+        for item in response.json()["data"]["items"]
     ] == ["m2", "m1"]
 
 
@@ -790,7 +790,7 @@ def test_message_history_keyset_pagination(
 
     assert first.status_code == 200
 
-    body = first.json()
+    body = first.json()["data"]
 
     assert body["has_more"] is True
 
@@ -811,10 +811,10 @@ def test_message_history_keyset_pagination(
 
     assert [
         item["message"]["id"]
-        for item in second.json()["items"]
+        for item in second.json()["data"]["items"]
     ] == ["m1"]
 
-    assert second.json()["has_more"] is False
+    assert second.json()["data"]["has_more"] is False
 
 
 def test_partial_cursor_returns_400(
@@ -883,7 +883,7 @@ def test_message_history_excludes_storage_key(
 
     assert response.status_code == 200
 
-    attachment = response.json()[
+    attachment = response.json()["data"][
         "items"
     ][0]["attachments"][0]
 
@@ -924,7 +924,7 @@ def test_mark_received_message_read_and_commit(
     response = client.patch(READ_URL)
 
     assert response.status_code == 200
-    assert response.json()["marked_count"] == 1
+    assert response.json()["data"]["marked_count"] == 1
 
     assert context.messages.messages[0].read_at is None
     assert context.messages.messages[1].read_at is not None
@@ -949,8 +949,8 @@ def test_mark_read_is_idempotent(
     assert first.status_code == 200
     assert second.status_code == 200
 
-    assert first.json()["marked_count"] == 1
-    assert second.json()["marked_count"] == 0
+    assert first.json()["data"]["marked_count"] == 1
+    assert second.json()["data"]["marked_count"] == 0
 
     assert context.session.commits == 2
 
@@ -1019,14 +1019,14 @@ def test_main_app_registers_chat_router():
 
     paths = app.openapi()["paths"]
 
-    assert "/conversations" in paths
+    assert "/api/v1/conversations" in paths
 
     assert (
-        "/conversations/{conversation_id}/messages"
+        "/api/v1/conversations/{conversation_id}/messages"
         in paths
     )
 
     assert (
-        "/conversations/{conversation_id}/read"
+        "/api/v1/conversations/{conversation_id}/read"
         in paths
     )

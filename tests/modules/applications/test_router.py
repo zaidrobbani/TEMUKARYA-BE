@@ -374,7 +374,7 @@ def test_submit_application_returns_201(context):
 
     assert response.status_code == 201
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["id"] == APPLICATION_ID
     assert body["project_id"] == PROJECT_ID
@@ -483,7 +483,7 @@ def test_submit_business_error_returns_400(context):
     )
 
     assert response.status_code == 400
-    assert "detail" in response.json()
+    assert response.json() == {"success": False, "message": "Pesan lamaran wajib diisi", "data": None}
 
 
 # ============================================================
@@ -555,7 +555,7 @@ def test_get_my_applications_returns_200(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["items"][0]["status"] == "SUBMITTED"
@@ -625,7 +625,7 @@ def test_get_project_applicants_returns_200(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["items"][0]["freelancer_id"] == (
@@ -685,8 +685,8 @@ def test_empty_application_list(context):
 
     assert response.status_code == 200
 
-    assert response.json()["items"] == []
-    assert response.json()["has_more"] is False
+    assert response.json()["data"]["items"] == []
+    assert response.json()["data"]["has_more"] is False
 
 
 # ============================================================

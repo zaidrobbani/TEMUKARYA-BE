@@ -1,5 +1,8 @@
 # Audit dan kontrak profil sendiri
 
+> Semua path di bawah berada di prefix `/api/v1` dan response memakai envelope
+> `{success, message, data}` (lihat `docs/api/README.md`). Autentikasi sudah memakai JWT asli.
+
 Branch: `3-feat/profiles`. Implementasi mempertahankan autentikasi Profiles
 fail-closed dan tidak mengubah JWT, core, users, migration, atau tabel database.
 

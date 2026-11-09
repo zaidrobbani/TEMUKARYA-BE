@@ -152,7 +152,7 @@ def test_create_umkm_returns_201(app):
         )
 
     assert response.status_code == 201
-    assert response.json()["business_name"] == "Kopi Malang"
+    assert response.json()["data"]["business_name"] == "Kopi Malang"
 
 
 def test_create_freelancer_returns_201(app):
@@ -165,7 +165,7 @@ def test_create_freelancer_returns_201(app):
         )
 
     assert response.status_code == 201
-    assert response.json()["professional_title"] == "UI/UX Designer"
+    assert response.json()["data"]["professional_title"] == "UI/UX Designer"
 
 
 def test_wrong_role_returns_403(app):
@@ -234,7 +234,7 @@ def test_update_freelancer_skills_explicit_payload_returns_200(app):
         )
 
     assert response.status_code == 200
-    assert response.json()["skill_ids"] == [
+    assert response.json()["data"]["skill_ids"] == [
         "logo_design",
         "web_programming",
     ]
@@ -298,7 +298,7 @@ def test_update_freelancer_skills_returns_200(app):
         )
 
     assert response.status_code == 200
-    assert response.json()["skill_ids"] == [
+    assert response.json()["data"]["skill_ids"] == [
         "logo_design",
         "web_programming"
     ]
@@ -348,7 +348,7 @@ def test_get_freelancer_skills_returns_200(app):
         )
 
     assert response.status_code == 200
-    assert response.json()["skill_ids"] == [
+    assert response.json()["data"]["skill_ids"] == [
         "logo_design",
         "photo_editing",
     ]
@@ -398,7 +398,7 @@ def test_create_freelancer_experience_returns_201(
         )
 
     assert response.status_code == 201
-    assert response.json() == {
+    assert response.json()["data"] == {
         "id": "experience-uuid-test",
         "freelancer_id": "user-uuid-test",
         **freelancer_experience_payload(),
@@ -429,9 +429,7 @@ def test_create_experience_wrong_role_returns_403(
         )
 
     assert response.status_code == 403
-    assert response.json() == {
-        "detail": "Hanya Freelancer yang dapat menambahkan pengalaman kerja"
-    }
+    assert response.json() == {"success": False, "message": "Hanya Freelancer yang dapat menambahkan pengalaman kerja", "data": None}
     assert fake_create_freelancer_experience.calls == []
 
 
@@ -445,9 +443,7 @@ def test_create_experience_unauthenticated_returns_401(
         )
 
     assert response.status_code == 401
-    assert response.json() == {
-        "detail": "Authentication belum terintegrasi"
-    }
+    assert response.json() == {"success": False, "message": "Silakan login terlebih dahulu", "data": None}
     assert fake_create_freelancer_experience.calls == []
 
 
@@ -465,9 +461,5 @@ def test_create_experience_invalid_payload_returns_422(
         )
 
     assert response.status_code == 422
-    assert any(
-        error["loc"] == ["body", "job_title"]
-        and error["type"] == "string_too_short"
-        for error in response.json()["detail"]
-    )
+    assert {"field": "job_title", "message": "Wajib diisi"} in response.json()["errors"]
     assert fake_create_freelancer_experience.calls == []

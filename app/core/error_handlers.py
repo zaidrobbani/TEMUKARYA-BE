@@ -14,6 +14,7 @@ from app.core.exceptions import (
     ServiceUnavailableError,
     UnauthorizedError,
 )
+from app.core.responses import error_body
 
 _STATUS_CODES: dict[type[AppError], int] = {
     BadRequestError: 400,
@@ -44,19 +45,6 @@ _VALIDATION_MESSAGES: dict[str, str] = {
 }
 
 _LOCATION_PREFIXES = {"body", "query", "path", "header", "cookie"}
-
-
-def _error_content(
-    message: str,
-    errors: list[dict[str, str]] | None = None,
-    code: str | None = None,
-) -> dict[str, Any]:
-    content: dict[str, Any] = {"success": False, "message": message, "data": None}
-    if errors is not None:
-        content["errors"] = errors
-    if code is not None:
-        content["code"] = code
-    return content
 
 
 def _field_name(error: dict[str, Any]) -> str:
@@ -90,7 +78,7 @@ def register_error_handlers(app: FastAPI) -> None:
         )
         return JSONResponse(
             status_code=status_code,
-            content=_error_content(exc.message, code=exc.code),
+            content=error_body(exc.message, code=exc.code),
         )
 
     @app.exception_handler(RequestValidationError)
@@ -98,7 +86,7 @@ def register_error_handlers(app: FastAPI) -> None:
         errors = [{"field": _field_name(err), "message": _field_message(err)} for err in exc.errors()]
         return JSONResponse(
             status_code=422,
-            content=_error_content("Data yang dikirim tidak valid", errors),
+            content=error_body("Data yang dikirim tidak valid", errors),
         )
 
     @app.exception_handler(StarletteHTTPException)
@@ -106,7 +94,7 @@ def register_error_handlers(app: FastAPI) -> None:
         message = _HTTP_MESSAGES.get(exc.status_code, str(exc.detail))
         return JSONResponse(
             status_code=exc.status_code,
-            content=_error_content(message),
+            content=error_body(message),
             headers=getattr(exc, "headers", None),
         )
 
@@ -114,5 +102,5 @@ def register_error_handlers(app: FastAPI) -> None:
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         return JSONResponse(
             status_code=500,
-            content=_error_content("Terjadi kesalahan pada server, silakan coba lagi"),
+            content=error_body("Terjadi kesalahan pada server, silakan coba lagi"),
         )

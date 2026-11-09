@@ -159,17 +159,17 @@ def test_chat_mysql_integration_and_rollback():
 
     actor_umkm = ChatActor(
         user_id=umkm_id,
-        role="umkm",
+        role="UMKM",
     )
 
     actor_freelancer = ChatActor(
         user_id=freelancer_id,
-        role="freelancer",
+        role="FREELANCER",
     )
 
     actor_outsider = ChatActor(
         user_id=outsider_id,
-        role="umkm",
+        role="UMKM",
     )
 
     # IDs untuk validasi rollback.
@@ -223,7 +223,7 @@ def test_chat_mysql_integration_and_rollback():
                                 f"chat-umkm-{tag}@example.invalid"
                             ),
                             "password_hash": "test-only-hash",
-                            "role": "umkm",
+                            "role": "UMKM",
                         },
                         {
                             "id": freelancer_id,
@@ -232,7 +232,7 @@ def test_chat_mysql_integration_and_rollback():
                                 f"chat-freelancer-{tag}@example.invalid"
                             ),
                             "password_hash": "test-only-hash",
-                            "role": "freelancer",
+                            "role": "FREELANCER",
                         },
                         {
                             "id": outsider_id,
@@ -241,7 +241,7 @@ def test_chat_mysql_integration_and_rollback():
                                 f"chat-outsider-{tag}@example.invalid"
                             ),
                             "password_hash": "test-only-hash",
-                            "role": "umkm",
+                            "role": "UMKM",
                         },
                     ],
                 )

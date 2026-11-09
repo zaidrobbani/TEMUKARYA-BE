@@ -52,13 +52,15 @@ def test_create_and_get_portfolio_metadata(portfolio_app):
     with TestClient(app) as client:
         response = client.post(BASE, json=payload(), params={"freelancer_id": "owner-2"})
         assert response.status_code == 201
-        saved = response.json()
+        assert response.json()["message"] == "Portfolio berhasil dibuat"
+        saved = response.json()["data"]
         detail = client.get(BASE + "/" + saved["id"], params={"freelancer_id": "owner-2"})
     UUID(saved["id"])
     assert {key: saved[key] for key in payload()} == payload()
     assert saved["freelancer_id"] == "owner-1"
+    assert saved["created_at"].endswith("Z")
     assert datetime.fromisoformat(saved["created_at"]) == datetime.fromisoformat(saved["updated_at"])
-    assert detail.status_code == 200 and detail.json() == saved
+    assert detail.status_code == 200 and detail.json()["data"] == saved
     profiles.get_by_user_id.assert_called_once_with("owner-1")
     repository.add.assert_called_once()
     uow.commit.assert_called_once()
@@ -78,24 +80,28 @@ def test_update_portfolio_replaces_metadata_and_preserves_owner_and_creation_tim
         response = client.put(BASE + "/own-a", json=body, params={"freelancer_id": "owner-2"})
         detail = client.get(BASE + "/own-a")
     assert response.status_code == 200
-    assert response.json()["title"] == "Updated"
-    assert response.json()["description"] == "Description"
-    assert response.json()["freelancer_id"] == "owner-1"
-    assert response.json()["project_url"] == body.get("project_url")
-    assert datetime.fromisoformat(response.json()["created_at"]) == before.created_at
-    assert detail.json() == response.json()
+    assert response.json()["data"]["title"] == "Updated"
+    assert response.json()["data"]["description"] == "Description"
+    assert response.json()["data"]["freelancer_id"] == "owner-1"
+    assert response.json()["data"]["project_url"] == body.get("project_url")
+    created_at = datetime.fromisoformat(response.json()["data"]["created_at"])
+    assert created_at.replace(tzinfo=None) == before.created_at.replace(
+        microsecond=before.created_at.microsecond // 1000 * 1000
+    )
+    assert detail.json()["data"] == response.json()["data"]
     assert repository.get_by_id("foreign", "owner-2").title == "foreign"
     uow.commit.assert_called_once()
 
 
-def test_delete_portfolio_returns_empty_204_and_then_404(portfolio_app):
+def test_delete_portfolio_returns_200_and_then_404(portfolio_app):
     app, repository, _, uow = portfolio_app
     login_as(app)
     with TestClient(app) as client:
         response = client.delete(BASE + "/own-a", params={"freelancer_id": "owner-2"})
         detail = client.get(BASE + "/own-a")
         repeated = client.delete(BASE + "/own-a")
-    assert response.status_code == 204 and response.content == b""
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "message": "Portfolio berhasil dihapus", "data": None}
     assert detail.status_code == repeated.status_code == 404
     assert repository.get_by_id("own-b", "owner-1") is not None
     assert repository.get_by_id("foreign", "owner-2") is not None
@@ -111,12 +117,12 @@ def test_list_portfolios_returns_private_pages(portfolio_app):
         empty = client.get(BASE, params={"offset": 3})
         maximum = client.get(BASE, params={"limit": 100, "offset": 10000})
     assert first.status_code == second.status_code == empty.status_code == maximum.status_code == 200
-    assert [item["id"] for item in first.json()["items"]] == ["own-a", "own-b"]
-    assert (first.json()["limit"], first.json()["offset"], first.json()["has_more"]) == (2, 0, True)
-    assert [item["id"] for item in second.json()["items"]] == ["own-old"]
-    assert second.json()["has_more"] is False
-    assert empty.json() == {"items": [], "limit": 20, "offset": 3, "has_more": False}
-    assert maximum.json() == {"items": [], "limit": 100, "offset": 10000, "has_more": False}
+    assert [item["id"] for item in first.json()["data"]["items"]] == ["own-a", "own-b"]
+    assert (first.json()["data"]["limit"], first.json()["data"]["offset"], first.json()["data"]["has_more"]) == (2, 0, True)
+    assert [item["id"] for item in second.json()["data"]["items"]] == ["own-old"]
+    assert second.json()["data"]["has_more"] is False
+    assert empty.json()["data"] == {"items": [], "limit": 20, "offset": 3, "has_more": False}
+    assert maximum.json()["data"] == {"items": [], "limit": 100, "offset": 10000, "has_more": False}
     repository.list_by_freelancer_id.assert_any_call("owner-1", 3, 0)
     uow.commit.assert_not_called()
 
@@ -127,7 +133,11 @@ def test_list_portfolios_empty_owner(portfolio_app):
     with TestClient(app) as client:
         response = client.get(BASE)
     assert response.status_code == 200
-    assert response.json() == {"items": [], "limit": 20, "offset": 0, "has_more": False}
+    assert response.json() == {
+        "success": True,
+        "message": "Daftar portfolio berhasil diambil",
+        "data": {"items": [], "limit": 20, "offset": 0, "has_more": False},
+    }
 
 
 @pytest.mark.parametrize("params", [
@@ -170,7 +180,7 @@ def test_portfolio_foreign_or_missing_id_is_404_even_with_forged_owner(portfolio
             json=payload() if method == "PUT" else {"freelancer_id": "owner-2"},
         )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Portfolio tidak ditemukan"}
+    assert response.json() == {"success": False, "message": "Portfolio tidak ditemukan", "data": None}
     assert repository.get_by_id("foreign", "owner-2") == before
     assert repository.get_by_id("own-a", "owner-1") == own_before
     uow.commit.assert_not_called()
@@ -224,6 +234,6 @@ def test_create_portfolio_without_freelancer_profile_returns_404(portfolio_app):
     with TestClient(app) as client:
         response = client.post(BASE, json=payload())
     assert response.status_code == 404
-    assert response.json() == {"detail": "Profil Freelancer tidak ditemukan"}
+    assert response.json() == {"success": False, "message": "Profil Freelancer tidak ditemukan", "data": None}
     repository.add.assert_not_called()
     uow.commit.assert_not_called()

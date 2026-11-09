@@ -150,8 +150,8 @@ def test_freelancer_can_view_public_project(http_context):
     response = client.get(f"/projects/{project.id}")
 
     assert response.status_code == 200
-    assert response.json()["id"] == project.id
-    assert response.json()["title"] == "Website UMKM"
+    assert response.json()["data"]["id"] == project.id
+    assert response.json()["data"]["title"] == "Website UMKM"
 
 
 def test_private_project_returns_404(http_context):
@@ -174,7 +174,7 @@ def test_private_project_returns_404(http_context):
     response = client.get(f"/projects/{project.id}")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == "Proyek tidak ditemukan"
+    assert response.json()["message"] == "Proyek tidak ditemukan"
 
 
 def test_mine_route_not_captured_as_project_id(http_context):

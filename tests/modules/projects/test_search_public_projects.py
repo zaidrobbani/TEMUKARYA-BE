@@ -312,7 +312,7 @@ def test_freelancer_can_search_projects(http_context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["items"][0]["title"] == "Website UMKM"
@@ -358,8 +358,8 @@ def test_search_rejects_invalid_budget_range_http(http_context):
         },
     )
 
-    assert response.status_code == 422
-    assert "budget" in response.json()["detail"].lower()
+    assert response.status_code == 400
+    assert "budget" in response.json()["message"].lower()
 
 
 def test_search_does_not_conflict_with_project_detail(http_context):

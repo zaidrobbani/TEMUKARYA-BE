@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_uow
-from app.core.exceptions import UnauthorizedError
 from app.core.unit_of_work import UnitOfWork
 
-from app.modules.users.domain.entities import UserRole
+from app.modules.auth.presentation.dependencies import get_current_user
+from app.modules.users.domain.entities import User, UserRole
 
 from app.modules.applications.application.use_cases import (
     GetMyApplications,
@@ -37,19 +37,9 @@ class AuthenticatedApplicationUser:
 
 
 def get_authenticated_application_user(
+    user: User = Depends(get_current_user),
 ) -> AuthenticatedApplicationUser:
-    """
-    Fail-closed sampai Auth/JWT Zaid terintegrasi.
-
-    Tidak membuat identitas user palsu.
-    Tidak mengambil user_id dari request body.
-
-    Saat integrasi JWT siap, dependency ini
-    akan dihubungkan ke kontrak Auth tim.
-    """
-    raise UnauthorizedError(
-        "Authentication belum terintegrasi"
-    )
+    return AuthenticatedApplicationUser(user_id=user.id, role=user.role)
 
 
 # ============================================================

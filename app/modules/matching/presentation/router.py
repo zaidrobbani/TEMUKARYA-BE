@@ -1,8 +1,8 @@
 
 from fastapi import APIRouter, Depends, Path, Query
-from fastapi import status
 
 from app.core.exceptions import ForbiddenError
+from app.core.responses import ApiResponse, error_responses, success_response
 
 from app.modules.users.domain.entities import UserRole
 
@@ -44,8 +44,8 @@ router = APIRouter(
 
 @router.get(
     "/projects/{project_id}/recommendations/freelancers",
-    response_model=FreelancerRecommendationsPageResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[FreelancerRecommendationsPageResponse],
+    responses=error_responses(400, 401, 403, 404, 409, 422),
     summary="Recommend Freelancers for Project",
     description=(
         "Mengembalikan rekomendasi Freelancer "
@@ -79,7 +79,7 @@ def recommend_freelancers_for_project(
     use_case: RecommendFreelancersForProject = Depends(
         get_recommend_freelancers_use_case
     ),
-) -> FreelancerRecommendationsPageResponse:
+):
 
     # ========================================================
     # 1. ROLE AUTHORIZATION
@@ -115,9 +115,9 @@ def recommend_freelancers_for_project(
     # 4. RETURN VALIDATED JSON RESPONSE
     # ========================================================
 
-    return (
-        FreelancerRecommendationsPageResponse
-        .model_validate(result)
+    return success_response(
+        "Rekomendasi Freelancer berhasil diambil",
+        FreelancerRecommendationsPageResponse.model_validate(result),
     )
 
 
@@ -127,8 +127,8 @@ def recommend_freelancers_for_project(
 
 @router.get(
     "/freelancers/me/recommendations/projects",
-    response_model=ProjectRecommendationsPageResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[ProjectRecommendationsPageResponse],
+    responses=error_responses(400, 401, 403, 404, 422),
     summary="Recommend Projects for Freelancer",
     description=(
         "Mengembalikan rekomendasi project TERBUKA "
@@ -157,7 +157,7 @@ def recommend_projects_for_freelancer(
     use_case: RecommendProjectsForFreelancer = Depends(
         get_recommend_projects_use_case
     ),
-) -> ProjectRecommendationsPageResponse:
+):
 
     # ========================================================
     # 1. ROLE AUTHORIZATION
@@ -192,7 +192,7 @@ def recommend_projects_for_freelancer(
     # 4. RETURN VALIDATED JSON RESPONSE
     # ========================================================
 
-    return (
-        ProjectRecommendationsPageResponse
-        .model_validate(result)
+    return success_response(
+        "Rekomendasi project berhasil diambil",
+        ProjectRecommendationsPageResponse.model_validate(result),
     )

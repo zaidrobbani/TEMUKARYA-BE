@@ -55,6 +55,9 @@ Aturan:
   contoh test HTTP: `tests/api/test_auth_api.py`.
 
 Kontrak API (untuk Android & admin web):
+- Semua router di-mount di prefix `/api/v1` (`API_PREFIX` di `app/core/config.py`, dirakit di `app/main.py`). Router modul tetap memakai path relatif (`/projects`), jangan tulis prefix di modul. Konvensi umum + daftar endpoint: `docs/api/README.md`.
+- `DELETE` menjawab `200` + `data: null`. Error bisnis `400`, `422` hanya untuk validasi field (`errors[]`).
+- Pembanding role selalu pakai `UserRole` (nilai huruf besar), jangan literal `"umkm"`/`"freelancer"`.
 - Semua response memakai envelope `{"success": bool, "message": str, "data": ...}`. Sukses: router `return success_response("...", data)`
   dengan `response_model=ApiResponse[Schema]` dan `responses=error_responses(...)` (`app/core/responses.py`).
 - Error: `{"success": false, "message": ..., "data": null}`; khusus 422 ditambah `errors: [{field, message}]` dengan pesan Indonesia. Error yang perlu dibedakan client boleh menambah `code` (atribut `code` di subclass `AppError`).
@@ -97,8 +100,10 @@ F4: total bobot milestone harus 100; progres dihitung dari milestone SELESAI (ti
   endpoint enum. Kontrak + skenario error: `docs/api/auth.md`. Menunggu review user atas tabel "Keputusan yang perlu dicek".
 - [x] Auth disamakan dengan Figma (2026-11-04): verifikasi email wajib sebelum login, lupa password via tautan, login Google (akun terdaftar saja),
   `terms_accepted`, tabel `auth_action_tokens`, port `EmailSender` (SMTP + Mailpit di Compose) dan `GoogleTokenVerifier`. Android belum menyesuaikan field & alur baru.
-- [ ] Langkah 2: model + modul `profiles` & `skills` (tabel sudah ada).
-- [ ] Berikutnya: projects + kategori + `project_skills` → applications → agreements/workflow → milestones → payments/wallet → submissions/review → matching → chat, notifications, admin.
+- [x] Integrasi 10 PR ke `dev` (2026-11-09, branch `20-chore/integrate-prs`): skills, profiles, projects, applications, discovery,
+  matching, milestones (baca), chat, admin statistik. Auth stub diganti JWT asli, semua response envelope, prefix `/api/v1`.
+  Keputusan integrasi: tabel di `docs/api/README.md`.
+- [ ] Berikutnya (Zaid): agreements/workflow → payments/wallet → submissions/review → notifications, admin keuangan.
 
 ## Skema database (sudah final di migrasi)
 

@@ -144,7 +144,7 @@ def test_milestones_mysql_integration_and_rollback():
                     :name,
                     :email,
                     :password_hash,
-                    'umkm'
+                    'UMKM'
                 )
                 """,
                 {
@@ -335,7 +335,7 @@ def test_milestones_mysql_integration_and_rollback():
 
             actor = MilestoneActor(
                 user_id=owner_id,
-                role="umkm",
+                role="UMKM",
             )
 
             request = GetMilestonePlanInput(
@@ -445,7 +445,7 @@ def test_milestones_mysql_integration_and_rollback():
                         project_id=project_id,
                         actor=MilestoneActor(
                             user_id=str(uuid4()),
-                            role="umkm",
+                            role="UMKM",
                         ),
                     )
                 )

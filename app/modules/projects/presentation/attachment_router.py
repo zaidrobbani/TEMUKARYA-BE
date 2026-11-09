@@ -1,12 +1,9 @@
-
 import os
 import tempfile
-
-from datetime import datetime
 from functools import wraps
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
@@ -17,6 +14,7 @@ from starlette.concurrency import run_in_threadpool
 from app.core.database import get_db
 from app.core.dependencies import get_uow
 from app.core.exceptions import ForbiddenError
+from app.core.responses import ApiResponse, UtcDateTime, error_body, error_responses, success_response
 from app.core.unit_of_work import UnitOfWork
 
 from app.modules.users.domain.entities import UserRole
@@ -57,7 +55,7 @@ class ProjectAttachmentResponse(BaseModel):
     original_file_name: str
     mime_type: str
     file_size_bytes: int
-    uploaded_at: datetime | None = None
+    uploaded_at: UtcDateTime | None = None
 
 
 # ============================================================
@@ -80,27 +78,27 @@ def attachment_errors(function):
         except OversizedAttachment as exc:
             return JSONResponse(
                 status_code=413,
-                content={"detail": str(exc)},
+                content=error_body(str(exc)),
             )
 
         except UnsupportedAttachment as exc:
             return JSONResponse(
                 status_code=415,
-                content={"detail": str(exc)},
+                content=error_body(str(exc)),
             )
 
         except InvalidAttachment as exc:
             return JSONResponse(
                 status_code=422,
-                content={"detail": str(exc)},
+                content=error_body(str(exc)),
             )
 
         except AttachmentStorageError:
             return JSONResponse(
                 status_code=503,
-                content={
-                    "detail": "Layanan penyimpanan attachment tidak tersedia"
-                },
+                content=error_body(
+                    "Layanan penyimpanan attachment tidak tersedia"
+                ),
             )
 
     return wrapped
@@ -199,7 +197,8 @@ router = APIRouter(
 @router.post(
     "",
     status_code=201,
-    response_model=ProjectAttachmentResponse,
+    response_model=ApiResponse[ProjectAttachmentResponse],
+    responses=error_responses(401, 403, 404, 409, 413, 415, 422, 503),
     summary="Upload Project Attachment",
     openapi_extra={
         "requestBody": {
@@ -254,13 +253,14 @@ async def upload_project_attachment(
 
         # 4. Jalankan validasi file, storage,
         # metadata database, dan commit di worker.
-        return await run_in_threadpool(
+        attachment = await run_in_threadpool(
             service.upload,
             umkm_id,
             project_id,
             filename,
             source,
         )
+        return success_response("Lampiran project berhasil diunggah", attachment)
 
 
 # ============================================================
@@ -269,7 +269,8 @@ async def upload_project_attachment(
 
 @router.get(
     "",
-    response_model=list[ProjectAttachmentResponse],
+    response_model=ApiResponse[list[ProjectAttachmentResponse]],
+    responses=error_responses(401, 403, 404),
     summary="List Project Attachments",
 )
 def list_project_attachments(
@@ -283,9 +284,9 @@ def list_project_attachments(
 ):
     umkm_id = require_umkm(current_user)
 
-    return service.list(
-        umkm_id=umkm_id,
-        project_id=project_id,
+    return success_response(
+        "Daftar lampiran project berhasil diambil",
+        service.list(umkm_id=umkm_id, project_id=project_id),
     )
 
 
@@ -295,6 +296,7 @@ def list_project_attachments(
 
 @router.get(
     "/{attachment_id}/file",
+    responses=error_responses(401, 403, 404, 503),
     summary="Download Project Attachment",
 )
 def download_project_attachment(
@@ -357,8 +359,8 @@ def download_project_attachment(
 
 @router.delete(
     "/{attachment_id}",
-    status_code=204,
-    response_class=Response,
+    response_model=ApiResponse[None],
+    responses=error_responses(401, 403, 404, 409, 503),
     summary="Delete Project Attachment",
 )
 def delete_project_attachment(
@@ -370,7 +372,7 @@ def delete_project_attachment(
     service: ProjectAttachmentService = Depends(
         get_project_attachment_service
     ),
-) -> Response:
+):
     umkm_id = require_umkm(current_user)
 
     service.delete(
@@ -379,4 +381,4 @@ def delete_project_attachment(
         attachment_id=attachment_id,
     )
 
-    return Response(status_code=204)
+    return success_response("Lampiran project berhasil dihapus")

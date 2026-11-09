@@ -221,7 +221,7 @@ def test_search_freelancers_200(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 3
     assert body["limit"] == 20
@@ -244,7 +244,7 @@ def test_search_response_contains_public_fields(context):
 
     assert response.status_code == 200
 
-    freelancer = response.json()["items"][0]
+    freelancer = response.json()["data"]["items"][0]
 
     assert freelancer["professional_title"] == (
         "Backend Developer"
@@ -368,7 +368,7 @@ def test_search_pagination(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 2
     assert body["has_more"] is True
@@ -390,7 +390,7 @@ def test_search_last_page(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["has_more"] is False
@@ -409,7 +409,7 @@ def test_get_freelancer_detail_200(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["user_id"] == FREELANCER_ID
     assert body["name"] == "Andi"
@@ -434,7 +434,7 @@ def test_detail_serializes_dates(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert (
         body["experiences"][0]["start_date"]
@@ -443,7 +443,7 @@ def test_detail_serializes_dates(context):
 
     assert (
         body["reviews"][0]["created_at"]
-        == "2026-11-02T00:00:00"
+        == "2026-11-02T00:00:00.000Z"
     )
 
 
@@ -459,7 +459,7 @@ def test_get_unknown_freelancer_404(context):
     )
 
     assert response.status_code == 404
-    assert "detail" in response.json()
+    assert response.json() == {"success": False, "message": "Profil Freelancer tidak ditemukan", "data": None}
 
 
 # ============================================================

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import API_PREFIX
 from app.core.exceptions import BadRequestError
 from app.core.unit_of_work import UnitOfWork
 from app.modules.profiles.application.dto import (
@@ -99,21 +100,26 @@ def test_every_profile_route_is_registered_once_and_fail_closed(method, path, he
     from app.main import app
 
     registered = Counter(
-        (method, route.path)
-        for route in app.routes if route.path.startswith("/profiles")
+        (method, route.path.removeprefix(API_PREFIX))
+        for route in app.routes if route.path.startswith(f"{API_PREFIX}/profiles")
         for method in route.methods
     )
     assert registered == Counter(PROFILE_ROUTES)
     assert all(count == 1 for count in registered.values())
     assert app.dependency_overrides == {}
-    matching = next(route for route in app.routes if route.path == path and method in route.methods)
+    full_path = f"{API_PREFIX}{path}"
+    matching = next(route for route in app.routes if route.path == full_path and method in route.methods)
     assert any(dep.call is get_authenticated_profile_user for dep in matching.dependant.dependencies)
 
     with TestClient(app) as client:
         response = client.request(
-            method, path.replace("{experience_id}", "foreign").replace("{portfolio_id}", "foreign").replace("{media_id}", "foreign"),
+            method,
+            full_path.replace("{experience_id}", "foreign").replace("{portfolio_id}", "foreign").replace("{media_id}", "foreign"),
             headers=headers, params={"freelancer_id": "owner-2", "user_id": "owner-2"},
             json={"freelancer_id": "owner-2", "user_id": "owner-2"},
         )
     assert response.status_code == 401
-    assert response.json() == {"detail": "Authentication belum terintegrasi"}
+    body = response.json()
+    assert body["success"] is False and body["data"] is None
+    if not headers:
+        assert body["message"] == "Silakan login terlebih dahulu"

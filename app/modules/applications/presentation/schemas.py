@@ -1,7 +1,7 @@
 
-from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.responses import UtcDateTime
 
 
 # ============================================================
@@ -54,9 +54,9 @@ class ApplicationResponse(BaseModel):
     proposal_message: str
     status: str
 
-    submitted_at: datetime | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    submitted_at: UtcDateTime | None = None
+    created_at: UtcDateTime | None = None
+    updated_at: UtcDateTime | None = None
 
 
 # ============================================================

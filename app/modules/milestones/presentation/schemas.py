@@ -1,7 +1,8 @@
-from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.responses import UtcDateTime
 
 from app.modules.milestones.domain.entities import (
     DelayRiskLevel,
@@ -43,7 +44,7 @@ class MilestoneResponse(MilestoneBaseResponse):
     status: MilestoneStatus
     sort_order: int
 
-    completed_at: datetime | None = None
+    completed_at: UtcDateTime | None = None
     updated_by_user_id: str | None = None
 
 

@@ -253,7 +253,7 @@ def test_umkm_recommendations_200(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["project_id"] == PROJECT_ID
     assert body["limit"] == 20
@@ -296,7 +296,7 @@ def test_freelancer_recommendations_200(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["freelancer_id"] == FREELANCER_ID
     assert len(body["items"]) == 3
@@ -324,7 +324,7 @@ def test_matching_response_contains_score_details(
 
     assert response.status_code == 200
 
-    match = response.json()["items"][1]["match"]
+    match = response.json()["data"]["items"][1]["match"]
 
     assert match["score_percent"] == 60.0
     assert match["required_count"] == 5
@@ -350,7 +350,7 @@ def test_freelancer_response_public_fields(context):
 
     response = client.get(FREELANCER_URL)
 
-    freelancer = response.json()["items"][0][
+    freelancer = response.json()["data"]["items"][0][
         "freelancer"
     ]
 
@@ -384,7 +384,7 @@ def test_project_response_public_fields(context):
 
     response = client.get(PROJECT_URL)
 
-    project = response.json()["items"][0]["project"]
+    project = response.json()["data"]["items"][0]["project"]
 
     assert project["project_id"] == PROJECT_ID
     assert project["title"] == "Website UMKM"
@@ -413,7 +413,7 @@ def test_umkm_pagination_first_page(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["has_more"] is True
@@ -434,7 +434,7 @@ def test_umkm_pagination_second_page(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 1
     assert body["has_more"] is False
@@ -454,7 +454,7 @@ def test_umkm_pagination_beyond_results(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["items"] == []
     assert body["has_more"] is False
@@ -483,7 +483,7 @@ def test_freelancer_pagination(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert len(body["items"]) == 2
     assert body["has_more"] is True
@@ -497,8 +497,8 @@ def test_freelancer_pagination(context):
     )
 
     assert next_page.status_code == 200
-    assert len(next_page.json()["items"]) == 1
-    assert next_page.json()["has_more"] is False
+    assert len(next_page.json()["data"]["items"]) == 1
+    assert next_page.json()["data"]["has_more"] is False
 
 
 # ============================================================
@@ -526,7 +526,7 @@ def test_unauthenticated_requests_401(
     response = client.get(url)
 
     assert response.status_code == 401
-    assert "detail" in response.json()
+    assert response.json() == {"success": False, "message": "Silakan login terlebih dahulu", "data": None}
 
     assert repo.project_reads == 0
     assert repo.freelancer_reads == 0
@@ -584,7 +584,7 @@ def test_project_not_found_404(context):
 
     assert response.status_code == 404
 
-    assert response.json()["detail"] == (
+    assert response.json()["message"] == (
         "Project tidak ditemukan"
     )
 
@@ -610,7 +610,7 @@ def test_umkm_cannot_access_another_umkm_project(
 
     assert response.status_code == 404
 
-    assert response.json()["detail"] == (
+    assert response.json()["message"] == (
         "Project tidak ditemukan"
     )
 
@@ -653,7 +653,7 @@ def test_freelancer_profile_not_found_404(context):
 
     assert response.status_code == 404
 
-    assert response.json()["detail"] == (
+    assert response.json()["message"] == (
         "Profil Freelancer tidak ditemukan"
     )
 
@@ -734,7 +734,7 @@ def test_empty_freelancer_recommendations(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["items"] == []
     assert body["has_more"] is False
@@ -755,7 +755,7 @@ def test_empty_project_recommendations(context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["items"] == []
     assert body["has_more"] is False
@@ -784,7 +784,7 @@ def test_freelancer_without_skills_gets_empty_results(
     response = client.get(PROJECT_URL)
 
     assert response.status_code == 200
-    assert response.json()["items"] == []
+    assert response.json()["data"]["items"] == []
 
     assert repo.project_candidate_reads == 0
 
@@ -806,7 +806,7 @@ def test_project_without_skills_gets_empty_results(
     response = client.get(FREELANCER_URL)
 
     assert response.status_code == 200
-    assert response.json()["items"] == []
+    assert response.json()["data"]["items"] == []
 
     assert repo.freelancer_candidate_reads == 0
 
@@ -834,7 +834,7 @@ def test_busy_freelancer_can_view_project_recommendations(
     response = client.get(PROJECT_URL)
 
     assert response.status_code == 200
-    assert len(response.json()["items"]) == 3
+    assert len(response.json()["data"]["items"]) == 3
 
 
 # ============================================================
@@ -985,8 +985,8 @@ def test_recommendation_order_is_deterministic(
     assert first.status_code == 200
     assert second.status_code == 200
 
-    assert first.json()["items"] == (
-        second.json()["items"]
+    assert first.json()["data"]["items"] == (
+        second.json()["data"]["items"]
     )
 
 
@@ -1003,7 +1003,7 @@ def test_only_eligible_matches_are_returned(
 
     assert response.status_code == 200
 
-    for item in response.json()["items"]:
+    for item in response.json()["data"]["items"]:
         assert item["match"]["score_percent"] >= 60
         assert item["match"]["meets_threshold"] is True
 

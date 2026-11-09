@@ -1,6 +1,8 @@
-from datetime import date, datetime
+from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.responses import UtcDateTime
 
 
 # ============================================================
@@ -51,12 +53,12 @@ class ProjectResponse(BaseModel):
     deadline: date
     status: str
 
-    published_at: datetime | None = None
-    started_at: datetime | None = None
-    completed_at: datetime | None = None
+    published_at: UtcDateTime | None = None
+    started_at: UtcDateTime | None = None
+    completed_at: UtcDateTime | None = None
 
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: UtcDateTime | None = None
+    updated_at: UtcDateTime | None = None
 
 
 class UpdateProjectRequest(CreateProjectRequest):

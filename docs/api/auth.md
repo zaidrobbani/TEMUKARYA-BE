@@ -1,6 +1,8 @@
 # Kontrak API: Autentikasi
 
-Base URL lokal: `http://localhost:8000`. Swagger: `/docs`.
+Base URL lokal: `http://localhost:8000/api/v1`. Semua path di dokumen ini relatif terhadap base URL tersebut
+(contoh `POST /auth/login` = `POST http://localhost:8000/api/v1/auth/login`). Swagger: `http://localhost:8000/docs`.
+Konvensi umum seluruh modul: [`README.md`](README.md).
 
 ## Format response
 
@@ -168,7 +170,7 @@ Sukses `200`: sama dengan `/auth/login`. Akun yang belum terverifikasi otomatis 
 
 ## Verifikasi email
 
-Alur: register → email berisi tautan `{PUBLIC_BASE_URL}/auth/email/verify?token=...` → user membuka tautan di browser dan menekan tombol **Verifikasi Email** → login. Tautan berlaku 24 jam.
+Alur: register → email berisi tautan `{PUBLIC_BASE_URL}/api/v1/auth/email/verify?token=...` → user membuka tautan di browser dan menekan tombol **Verifikasi Email** → login. Tautan berlaku 24 jam.
 
 ### POST `/auth/email/verify`
 
@@ -193,7 +195,7 @@ Request: `{ "email": "..." }`. Selalu `200` dengan `message` = `"Jika email perl
 
 ## Lupa password
 
-Alur: layar Lupa Password → layar Tautan Reset Terkirim → email berisi tautan `{PUBLIC_BASE_URL}/auth/password/reset?token=...` → user mengisi sandi baru di halaman web → login. Tautan berlaku 30 menit dan hanya bisa dipakai sekali (sesuai Figma).
+Alur: layar Lupa Password → layar Tautan Reset Terkirim → email berisi tautan `{PUBLIC_BASE_URL}/api/v1/auth/password/reset?token=...` → user mengisi sandi baru di halaman web → login. Tautan berlaku 30 menit dan hanya bisa dipakai sekali (sesuai Figma).
 
 ### POST `/auth/password/forgot`
 

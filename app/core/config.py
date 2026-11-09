@@ -3,6 +3,8 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+API_PREFIX = "/api/v1"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -31,6 +33,10 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "TEMUKARYA <no-reply@temukarya.id>"
 
     GOOGLE_CLIENT_ID: str = ""
+
+    @property
+    def PUBLIC_API_URL(self) -> str:
+        return f"{self.PUBLIC_BASE_URL.rstrip('/')}{API_PREFIX}"
 
     @property
     def DATABASE_URL(self) -> str:

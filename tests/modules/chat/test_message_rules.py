@@ -38,11 +38,11 @@ CONV = Conversation(
 )
 
 UMKM = ChatActor(
-    "u1", "umkm"
+    "u1", "UMKM"
 )
 
 FREELANCER = ChatActor(
-    "f1", "freelancer"
+    "f1", "FREELANCER"
 )
 
 
@@ -309,7 +309,7 @@ def test_sender_outsider_rejected():
     with pytest.raises(PermissionError):
         require_message_sender(
             CONV,
-            ChatActor("other", "umkm"),
+            ChatActor("other", "UMKM"),
         )
 
 
@@ -347,7 +347,7 @@ def test_outsider_cannot_mark_read():
         should_mark_message_read(
             CONV,
             msg(),
-            ChatActor("other", "umkm"),
+            ChatActor("other", "UMKM"),
         )
 
 

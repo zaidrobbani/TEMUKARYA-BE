@@ -7,6 +7,8 @@ from fastapi import (
     Query,
 )
 
+from app.core.responses import ApiResponse, error_responses, success_response
+
 from app.modules.admin_statistics.application.dto import (
     GetAdminProjectInput,
     GetAdminStatisticsInput,
@@ -62,7 +64,8 @@ router = APIRouter(
 
 @router.get(
     "/users",
-    response_model=AdminUserPageResponse,
+    response_model=ApiResponse[AdminUserPageResponse],
+    responses=error_responses(400, 401, 403, 422),
 )
 def list_admin_users(
     actor: Annotated[
@@ -118,8 +121,9 @@ def list_admin_users(
         )
     )
 
-    return AdminUserPageResponse.model_validate(
-        result
+    return success_response(
+        "Daftar pengguna berhasil diambil",
+        AdminUserPageResponse.model_validate(result),
     )
 
 
@@ -130,7 +134,8 @@ def list_admin_users(
 
 @router.get(
     "/users/{user_id}",
-    response_model=AdminUserDetailResponse,
+    response_model=ApiResponse[AdminUserDetailResponse],
+    responses=error_responses(400, 401, 403, 404, 409),
 )
 def get_admin_user_detail(
     user_id: str,
@@ -166,8 +171,9 @@ def get_admin_user_detail(
         )
     )
 
-    return AdminUserDetailResponse.model_validate(
-        result
+    return success_response(
+        "Detail pengguna berhasil diambil",
+        AdminUserDetailResponse.model_validate(result),
     )
 
 
@@ -178,7 +184,8 @@ def get_admin_user_detail(
 
 @router.get(
     "/projects",
-    response_model=AdminProjectPageResponse,
+    response_model=ApiResponse[AdminProjectPageResponse],
+    responses=error_responses(400, 401, 403, 422),
 )
 def list_admin_projects(
     actor: Annotated[
@@ -234,8 +241,9 @@ def list_admin_projects(
         )
     )
 
-    return AdminProjectPageResponse.model_validate(
-        result
+    return success_response(
+        "Daftar project berhasil diambil",
+        AdminProjectPageResponse.model_validate(result),
     )
 
 
@@ -246,7 +254,8 @@ def list_admin_projects(
 
 @router.get(
     "/projects/{project_id}",
-    response_model=AdminProjectDetailResponse,
+    response_model=ApiResponse[AdminProjectDetailResponse],
+    responses=error_responses(400, 401, 403, 404, 409),
 )
 def get_admin_project_detail(
     project_id: str,
@@ -282,8 +291,9 @@ def get_admin_project_detail(
         )
     )
 
-    return AdminProjectDetailResponse.model_validate(
-        result
+    return success_response(
+        "Detail project berhasil diambil",
+        AdminProjectDetailResponse.model_validate(result),
     )
 
 
@@ -294,7 +304,8 @@ def get_admin_project_detail(
 
 @router.get(
     "/statistics",
-    response_model=AdminSystemStatisticsResponse,
+    response_model=ApiResponse[AdminSystemStatisticsResponse],
+    responses=error_responses(401, 403, 409),
 )
 def get_admin_system_statistics(
     actor: Annotated[
@@ -330,6 +341,7 @@ def get_admin_system_statistics(
         )
     )
 
-    return AdminSystemStatisticsResponse.model_validate(
-        result
+    return success_response(
+        "Statistik sistem berhasil diambil",
+        AdminSystemStatisticsResponse.model_validate(result),
     )

@@ -150,8 +150,9 @@ def test_umkm_can_create_project(
     )
 
     assert response.status_code == 201
+    assert response.json()["message"] == "Project berhasil dibuat"
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["title"] == valid_payload["title"]
     assert body["budget"] == 3000000
@@ -234,8 +235,9 @@ def test_handles_business_validation_error(
         json=valid_payload,
     )
 
-    assert response.status_code == 422
-    assert "Kategori" in response.json()["detail"]
+    assert response.status_code == 400
+    assert "Kategori" in response.json()["message"]
+    assert response.json()["success"] is False
     assert fake_use_case.calls == []
 
 
@@ -326,7 +328,7 @@ def test_umkm_only_sees_own_projects(test_context):
 
     assert response.status_code == 200
 
-    data = response.json()
+    data = response.json()["data"]
 
     assert len(data) == 1
     assert data[0]["title"] == "Project UMKM A"
@@ -345,7 +347,7 @@ def test_umkm_with_no_projects_gets_empty_list(test_context):
     response = client.get("/projects/mine")
 
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {"success": True, "message": "Daftar project berhasil diambil", "data": []}
     assert len(fake.calls) == 1
 
 
@@ -449,8 +451,9 @@ def test_umkm_can_update_project(
     )
 
     assert response.status_code == 200
+    assert response.json()["message"] == "Project berhasil diperbarui"
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["id"] == UPDATE_PROJECT_ID
     assert body["umkm_id"] == UPDATE_UMKM_ID
@@ -526,8 +529,9 @@ def test_update_handles_business_validation_error(
         json=valid_payload,
     )
 
-    assert response.status_code == 422
-    assert "Kategori" in response.json()["detail"]
+    assert response.status_code == 400
+    assert "Kategori" in response.json()["message"]
+    assert response.json()["success"] is False
 
 
 def test_update_returns_404_when_project_not_found(
@@ -548,7 +552,7 @@ def test_update_returns_404_when_project_not_found(
     )
 
     assert response.status_code == 404
-    assert response.json()["detail"] == (
+    assert response.json()["message"] == (
         "Proyek tidak ditemukan"
     )
 
@@ -572,5 +576,5 @@ def test_update_returns_409_when_project_started(
 
     assert response.status_code == 409
     assert "tidak dapat diubah" in (
-        response.json()["detail"]
+        response.json()["message"]
     )

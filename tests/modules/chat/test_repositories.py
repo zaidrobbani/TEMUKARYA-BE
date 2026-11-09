@@ -129,10 +129,10 @@ def db():
             text("""
                 INSERT INTO users
                 VALUES
-                    ('u1', 'umkm'),
-                    ('u2', 'umkm'),
-                    ('f1', 'freelancer'),
-                    ('f2', 'freelancer')
+                    ('u1', 'UMKM'),
+                    ('u2', 'UMKM'),
+                    ('f1', 'FREELANCER'),
+                    ('f2', 'FREELANCER')
             """)
         )
 
@@ -233,9 +233,9 @@ def test_user_roles_and_project_owner(db):
 
     _, conv_repo, _ = db
 
-    assert conv_repo.get_user_role("u1") == "umkm"
+    assert conv_repo.get_user_role("u1") == "UMKM"
 
-    assert conv_repo.get_user_role("f1") == "freelancer"
+    assert conv_repo.get_user_role("f1") == "FREELANCER"
 
     assert conv_repo.get_user_role("missing") is None
 

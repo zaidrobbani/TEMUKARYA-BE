@@ -42,16 +42,16 @@ def test_self_profile_http_get_put_ignore_forged_query_and_headers(self_profile_
     query = {"user_id": "owner-2", "freelancer_id": "owner-2", "id": "owner-2", "role": "ADMIN"}
     headers = {"X-User-Id": "owner-2", "X-Role": "ADMIN"}
     response = client.get(path, params=query, headers=headers)
-    assert response.status_code == 200 and response.json()["user_id"] == "owner-1"
+    assert response.status_code == 200 and response.json()["data"]["user_id"] == "owner-1"
     uow.commit.assert_not_called()
     updated = client.put(path, json={**PAYLOADS[kind], "city": " Surabaya "}, params=query, headers=headers)
     assert updated.status_code == 200
-    assert updated.json()["user_id"] == "owner-1" and updated.json()["city"] == "Surabaya"
+    assert updated.json()["data"]["user_id"] == "owner-1" and updated.json()["data"]["city"] == "Surabaya"
     if kind == "freelancer":
-        assert all(updated.json()[field] is None for field in ("bio", "service_price_min", "service_price_max"))
-    assert client.get(path).json() == updated.json()
+        assert all(updated.json()["data"][field] is None for field in ("bio", "service_price_min", "service_price_max"))
+    assert client.get(path).json()["data"] == updated.json()["data"]
     assert repository.get_by_user_id("owner-2") == foreign
-    assert "created_at" not in updated.json() and "updated_at" not in updated.json()
+    assert "created_at" not in updated.json()["data"] and "updated_at" not in updated.json()["data"]
     uow.commit.assert_called_once_with()
 
 
@@ -144,6 +144,6 @@ def test_freelancer_http_explicit_optional_values_and_null(self_profile_store):
         ):
             response = client.put("/profiles/freelancer/me", json={**PAYLOADS["freelancer"], **values})
             assert response.status_code == 200
-            assert response.json()["bio"] == (values["bio"].strip() if values["bio"] else None)
-            assert response.json()["service_price_min"] == values["service_price_min"]
-            assert response.json()["service_price_max"] == values["service_price_max"]
+            assert response.json()["data"]["bio"] == (values["bio"].strip() if values["bio"] else None)
+            assert response.json()["data"]["service_price_min"] == values["service_price_min"]
+            assert response.json()["data"]["service_price_max"] == values["service_price_max"]

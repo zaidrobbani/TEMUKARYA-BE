@@ -5,7 +5,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.exceptions import UnauthorizedError
+from app.modules.auth.presentation.dependencies import get_current_user
 
 from app.modules.milestones.application.dto import (
     MilestoneActor,
@@ -15,28 +15,17 @@ from app.modules.milestones.infrastructure.repositories import (
     SqlAlchemyMilestoneRepository,
 )
 
+from app.modules.users.domain.entities import User
+
 
 # ============================================================
 # 1. AUTHENTICATED USER DEPENDENCY
 # ============================================================
 
-def get_authenticated_milestone_actor() -> MilestoneActor:
-    """
-    FAIL-CLOSED AUTHENTICATION.
-
-    Belum terhubung ke JWT Zaid.
-
-    Jangan mengambil user_id / role dari
-    Header, Query, atau Body tanpa JWT valid.
-
-    Dependency ini hanya boleh diganti
-    dengan integrasi autentikasi resmi.
-    """
-
-    raise UnauthorizedError(
-        "Autentikasi Milestones belum "
-        "terintegrasi dengan JWT"
-    )
+def get_authenticated_milestone_actor(
+    user: Annotated[User, Depends(get_current_user)],
+) -> MilestoneActor:
+    return MilestoneActor(user_id=user.id, role=user.role)
 
 
 # ============================================================

@@ -5,33 +5,22 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.exceptions import UnauthorizedError
-
+from app.modules.auth.presentation.dependencies import get_current_user
 from app.modules.chat.domain.entities import ChatActor
 
 from app.modules.chat.infrastructure.repositories import (
     SqlAlchemyConversationRepository,
     SqlAlchemyMessageRepository,
 )
+from app.modules.users.domain.entities import User
 
 
-# 1. CHAT ACTOR - FAIL CLOSED
+# 1. CHAT ACTOR (dari JWT)
 
-def get_authenticated_chat_actor() -> ChatActor:
-    """
-    Identitas pengguna harus berasal dari JWT.
-
-    Sampai Auth Module milik Zaid terintegrasi,
-    semua request ditolak dengan 401.
-
-    Jangan menerima user_id atau role
-    langsung dari body/header buatan client.
-    """
-
-    raise UnauthorizedError(
-        "Autentikasi Chat belum "
-        "terintegrasi dengan JWT"
-    )
+def get_authenticated_chat_actor(
+    user: Annotated[User, Depends(get_current_user)],
+) -> ChatActor:
+    return ChatActor(user_id=user.id, role=user.role)
 
 
 # 2. CHAT DATABASE CONTEXT

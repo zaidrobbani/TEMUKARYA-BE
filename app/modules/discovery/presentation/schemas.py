@@ -1,6 +1,8 @@
-from datetime import date, datetime
+from datetime import date
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.responses import UtcDateTime
 
 
 # ============================================================
@@ -53,7 +55,7 @@ class FreelancerReviewResponse(BaseModel):
     project_id: str
     rating: int = Field(ge=1, le=5)
     review_text: str | None = None
-    created_at: datetime | None = None
+    created_at: UtcDateTime | None = None
 
 
 # ============================================================

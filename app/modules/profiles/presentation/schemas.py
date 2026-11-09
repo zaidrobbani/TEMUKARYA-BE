@@ -1,5 +1,8 @@
-from datetime import date, datetime
+from datetime import date
+
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.responses import UtcDateTime
 
 
 class CreateUmkmProfileRequest(BaseModel):
@@ -154,8 +157,8 @@ class PortfolioResponse(BaseModel):
     title: str
     description: str
     project_url: str | None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
 
 
 class PortfolioPageResponse(BaseModel):

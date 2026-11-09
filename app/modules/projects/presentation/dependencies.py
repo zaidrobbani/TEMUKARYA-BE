@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_uow
-from app.core.exceptions import UnauthorizedError
 from app.core.unit_of_work import UnitOfWork
 
-from app.modules.users.domain.entities import UserRole
+from app.modules.auth.presentation.dependencies import get_current_user
+from app.modules.users.domain.entities import User, UserRole
 
 from app.modules.projects.application.use_cases import GetMyProjects
 
@@ -41,16 +41,10 @@ class AuthenticatedProjectUser:
     role: UserRole
 
 
-def get_authenticated_project_user() -> AuthenticatedProjectUser:
-    """
-    Fail-closed sampai Auth/JWT Zaid terintegrasi.
-
-    Tidak membuat identitas palsu atau menerima
-    user_id dari request body.
-    """
-    raise UnauthorizedError(
-        "Authentication belum terintegrasi"
-    )
+def get_authenticated_project_user(
+    user: User = Depends(get_current_user),
+) -> AuthenticatedProjectUser:
+    return AuthenticatedProjectUser(user_id=user.id, role=user.role)
 
 
 # 2. REPOSITORY DEPENDENCY

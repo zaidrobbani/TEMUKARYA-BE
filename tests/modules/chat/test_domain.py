@@ -38,10 +38,10 @@ def test_message_type_values():
 # ============================================================
 
 def test_chat_actor():
-    actor = ChatActor("u1", "umkm")
+    actor = ChatActor("u1", "UMKM")
 
     assert actor.user_id == "u1"
-    assert actor.role == "umkm"
+    assert actor.role == "UMKM"
 
 
 # ============================================================

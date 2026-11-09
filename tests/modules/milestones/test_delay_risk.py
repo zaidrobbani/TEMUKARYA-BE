@@ -156,18 +156,19 @@ def test_deadline_today_and_unfinished():
     )
 
 
-def test_invalid_deadline():
+def test_deadline_before_start_is_overdue():
     schedule = make_schedule(
         start=datetime(2026, 11, 10),
         deadline=date(2026, 11, 1),
     )
 
-    with pytest.raises(ValueError):
-        evaluate_delay_risk(
-            schedule,
-            make_progress("0"),
-            date(2026, 11, 5),
-        )
+    result = evaluate_delay_risk(
+        schedule,
+        make_progress("0"),
+        date(2026, 11, 5),
+    )
+
+    assert result.risk_level == DelayRiskLevel.OVERDUE
 
 
 def test_wrong_project_rejected():
@@ -183,3 +184,17 @@ def test_wrong_project_rejected():
             make_progress("30"),
             date(2026, 11, 5),
         )
+
+def test_project_started_after_deadline_is_overdue_not_error():
+    result = evaluate_delay_risk(
+        make_schedule(
+            start=datetime(2026, 11, 12),
+            deadline=date(2026, 11, 11),
+        ),
+        make_progress("20"),
+        date(2026, 11, 13),
+    )
+
+    assert result.risk_level == DelayRiskLevel.OVERDUE
+    assert result.total_days == 1
+    assert result.expected_progress_percent == Decimal("100.00")

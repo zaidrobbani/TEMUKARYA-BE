@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.exceptions import ForbiddenError
+from app.core.responses import ApiResponse, error_responses, success_response
 
 from app.modules.users.domain.entities import UserRole
 
@@ -39,14 +40,27 @@ router = APIRouter(
 )
 
 
+def _page_response(message: str, result) -> dict:
+    return success_response(message, ApplicationsPageResponse(
+        items=[
+            ApplicationResponse.model_validate(item)
+            for item in result.items
+        ],
+        limit=result.limit,
+        offset=result.offset,
+        has_more=result.has_more,
+    ))
+
+
 # ============================================================
 # 1. SUBMIT PROJECT APPLICATION
 # ============================================================
 
 @router.post(
     "/projects/{project_id}/applications",
-    response_model=ApplicationResponse,
+    response_model=ApiResponse[ApplicationResponse],
     status_code=status.HTTP_201_CREATED,
+    responses=error_responses(400, 401, 403, 404, 409, 422),
     summary="Submit Project Application",
     description=(
         "Freelancer mengirim proposal untuk proyek "
@@ -62,7 +76,7 @@ def submit_project_application(
     use_case: SubmitApplication = Depends(
         get_submit_application_use_case
     ),
-) -> ApplicationResponse:
+):
 
     # ========================================================
     # 1. AUTHORIZATION
@@ -93,8 +107,9 @@ def submit_project_application(
         data=data,
     )
 
-    return ApplicationResponse.model_validate(
-        application
+    return success_response(
+        "Lamaran berhasil dikirim",
+        ApplicationResponse.model_validate(application),
     )
 
 
@@ -104,8 +119,8 @@ def submit_project_application(
 
 @router.get(
     "/applications/mine",
-    response_model=ApplicationsPageResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[ApplicationsPageResponse],
+    responses=error_responses(401, 403, 422),
     summary="Get My Applications",
     description=(
         "Freelancer melihat daftar lamaran "
@@ -129,7 +144,7 @@ def get_my_applications(
     use_case: GetMyApplications = Depends(
         get_my_applications_use_case
     ),
-) -> ApplicationsPageResponse:
+):
 
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
@@ -143,15 +158,8 @@ def get_my_applications(
         offset=offset,
     )
 
-    return ApplicationsPageResponse(
-        items=[
-            ApplicationResponse.model_validate(item)
-            for item in result.items
-        ],
-        limit=result.limit,
-        offset=result.offset,
-        has_more=result.has_more,
-    )
+    return _page_response("Daftar lamaran berhasil diambil", result)
+
 
 
 # ============================================================
@@ -160,8 +168,8 @@ def get_my_applications(
 
 @router.get(
     "/projects/{project_id}/applications",
-    response_model=ApplicationsPageResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[ApplicationsPageResponse],
+    responses=error_responses(401, 403, 404, 422),
     summary="Get Project Applicants",
     description=(
         "UMKM melihat daftar Freelancer yang "
@@ -186,7 +194,7 @@ def get_project_applicants(
     use_case: GetProjectApplicants = Depends(
         get_project_applicants_use_case
     ),
-) -> ApplicationsPageResponse:
+):
 
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
@@ -201,12 +209,4 @@ def get_project_applicants(
         offset=offset,
     )
 
-    return ApplicationsPageResponse(
-        items=[
-            ApplicationResponse.model_validate(item)
-            for item in result.items
-        ],
-        limit=result.limit,
-        offset=result.offset,
-        has_more=result.has_more,
-    )
+    return _page_response("Daftar pelamar project berhasil diambil", result)

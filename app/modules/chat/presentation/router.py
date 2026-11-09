@@ -9,6 +9,7 @@ from fastapi import (
 )
 
 from app.core.exceptions import BadRequestError
+from app.core.responses import ApiResponse, error_responses, success_response
 
 from app.modules.chat.application.dto import (
     CreateConversationInput,
@@ -65,8 +66,9 @@ router = APIRouter(
 
 @router.post(
     "",
-    response_model=ConversationResponse,
+    response_model=ApiResponse[ConversationResponse],
     status_code=status.HTTP_200_OK,
+    responses=error_responses(400, 401, 403, 404, 409, 422),
 )
 def create_or_get_conversation(
     body: CreateConversationRequest,
@@ -101,8 +103,9 @@ def create_or_get_conversation(
             )
         )
 
-        response = ConversationResponse.model_validate(
-            result
+        response = success_response(
+            "Percakapan berhasil dibuka",
+            ConversationResponse.model_validate(result),
         )
 
         db.session.commit()
@@ -120,7 +123,8 @@ def create_or_get_conversation(
 
 @router.get(
     "",
-    response_model=ConversationListResponse,
+    response_model=ApiResponse[ConversationListResponse],
+    responses=error_responses(400, 401, 403, 422),
 )
 def list_my_conversations(
     actor: Annotated[
@@ -158,8 +162,9 @@ def list_my_conversations(
         )
     )
 
-    return ConversationListResponse.model_validate(
-        result
+    return success_response(
+        "Daftar percakapan berhasil diambil",
+        ConversationListResponse.model_validate(result),
     )
 
 
@@ -169,7 +174,8 @@ def list_my_conversations(
 
 @router.get(
     "/{conversation_id}",
-    response_model=ConversationResponse,
+    response_model=ApiResponse[ConversationResponse],
+    responses=error_responses(400, 401, 403, 404),
 )
 def get_conversation_detail(
     conversation_id: str,
@@ -200,8 +206,9 @@ def get_conversation_detail(
         )
     )
 
-    return ConversationResponse.model_validate(
-        result
+    return success_response(
+        "Detail percakapan berhasil diambil",
+        ConversationResponse.model_validate(result),
     )
 
 
@@ -211,8 +218,9 @@ def get_conversation_detail(
 
 @router.post(
     "/{conversation_id}/messages",
-    response_model=MessageResponse,
+    response_model=ApiResponse[MessageResponse],
     status_code=status.HTTP_201_CREATED,
+    responses=error_responses(400, 401, 403, 404, 422),
 )
 def send_text_message(
     conversation_id: str,
@@ -250,8 +258,9 @@ def send_text_message(
             )
         )
 
-        response = MessageResponse.model_validate(
-            result
+        response = success_response(
+            "Pesan berhasil dikirim",
+            MessageResponse.model_validate(result),
         )
 
         db.session.commit()
@@ -269,7 +278,8 @@ def send_text_message(
 
 @router.get(
     "/{conversation_id}/messages",
-    response_model=MessagePageResponse,
+    response_model=ApiResponse[MessagePageResponse],
+    responses=error_responses(400, 401, 403, 404, 422),
 )
 def get_message_history(
     conversation_id: str,
@@ -360,11 +370,14 @@ def get_message_history(
             message_id=result.next_before[1],
         )
 
-    return MessagePageResponse(
-        conversation_id=result.conversation_id,
-        items=items,
-        has_more=result.has_more,
-        next_before=next_cursor,
+    return success_response(
+        "Riwayat pesan berhasil diambil",
+        MessagePageResponse(
+            conversation_id=result.conversation_id,
+            items=items,
+            has_more=result.has_more,
+            next_before=next_cursor,
+        ),
     )
 
 
@@ -374,7 +387,8 @@ def get_message_history(
 
 @router.patch(
     "/{conversation_id}/read",
-    response_model=MarkConversationReadResponse,
+    response_model=ApiResponse[MarkConversationReadResponse],
+    responses=error_responses(400, 401, 403, 404, 409),
 )
 def mark_conversation_read(
     conversation_id: str,
@@ -408,10 +422,9 @@ def mark_conversation_read(
             )
         )
 
-        response = (
-            MarkConversationReadResponse.model_validate(
-                result
-            )
+        response = success_response(
+            "Percakapan berhasil ditandai sudah dibaca",
+            MarkConversationReadResponse.model_validate(result),
         )
 
         db.session.commit()

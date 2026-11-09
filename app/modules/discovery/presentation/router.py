@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
-from fastapi import status
 
-from app.core.exceptions import ForbiddenError
+from app.core.exceptions import BadRequestError, ForbiddenError
+from app.core.responses import ApiResponse, error_responses, success_response
 
 from app.modules.users.domain.entities import UserRole
 
@@ -44,8 +44,8 @@ router = APIRouter(
 
 @router.get(
     "",
-    response_model=FreelancersPageResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[FreelancersPageResponse],
+    responses=error_responses(400, 401, 403, 422),
     summary="Search Freelancers",
     description=(
         "UMKM dapat mencari Freelancer berdasarkan "
@@ -124,7 +124,7 @@ def search_freelancers(
     use_case: SearchFreelancers = Depends(
         get_search_freelancers_use_case
     ),
-) -> FreelancersPageResponse:
+):
 
     # ========================================================
     # 1. ROLE AUTHORIZATION
@@ -150,8 +150,6 @@ def search_freelancers(
         "AVAILABLE",
         "BUSY",
     ):
-        from app.core.exceptions import BadRequestError
-
         raise BadRequestError(
             "Availability status harus AVAILABLE, "
             "BUSY, atau ALL"
@@ -190,16 +188,19 @@ def search_freelancers(
     # 5. BUILD HTTP RESPONSE
     # ========================================================
 
-    return FreelancersPageResponse(
-        items=[
-            FreelancerSummaryResponse.model_validate(
-                freelancer
-            )
-            for freelancer in page.items
-        ],
-        limit=page.limit,
-        offset=page.offset,
-        has_more=page.has_more,
+    return success_response(
+        "Daftar Freelancer berhasil diambil",
+        FreelancersPageResponse(
+            items=[
+                FreelancerSummaryResponse.model_validate(
+                    freelancer
+                )
+                for freelancer in page.items
+            ],
+            limit=page.limit,
+            offset=page.offset,
+            has_more=page.has_more,
+        ),
     )
 
 
@@ -209,8 +210,8 @@ def search_freelancers(
 
 @router.get(
     "/{freelancer_id}",
-    response_model=FreelancerDetailResponse,
-    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[FreelancerDetailResponse],
+    responses=error_responses(400, 401, 403, 404),
     summary="Get Freelancer Detail",
     description=(
         "UMKM melihat profil profesional, skill, "
@@ -228,7 +229,7 @@ def get_freelancer_detail(
     use_case: GetFreelancerDetail = Depends(
         get_freelancer_detail_use_case
     ),
-) -> FreelancerDetailResponse:
+):
 
     # ========================================================
     # 1. ROLE AUTHORIZATION
@@ -252,6 +253,7 @@ def get_freelancer_detail(
     # 3. BUILD HTTP RESPONSE
     # ========================================================
 
-    return FreelancerDetailResponse.model_validate(
-        freelancer
+    return success_response(
+        "Detail Freelancer berhasil diambil",
+        FreelancerDetailResponse.model_validate(freelancer),
     )

@@ -23,7 +23,7 @@ Lalu buka:
 | URL | Isi |
 |-----|-----|
 | http://localhost:8000/docs | Swagger UI |
-| http://localhost:8000/health | Cek API + koneksi database |
+| http://localhost:8000/api/v1/health | Cek API + koneksi database |
 | http://localhost:8025 | Mailpit: email verifikasi & reset saat development |
 
 Kode di-mount ke container, jadi setiap file `.py` yang diubah langsung reload otomatis.
@@ -55,7 +55,8 @@ docker compose --profile tools up -d
 
 Migrasi juga otomatis dijalankan setiap container API start (`RUN_MIGRATIONS=true` di `.env`).
 
-Kontrak API per fitur (format response, skenario error, status code) ada di `docs/api/`.
+Semua endpoint REST berada di prefix `/api/v1` (contoh `POST /api/v1/auth/login`).
+Konvensi umum + daftar endpoint: `docs/api/README.md`; kontrak per fitur ada di `docs/api/`.
 
 ## Troubleshooting
 

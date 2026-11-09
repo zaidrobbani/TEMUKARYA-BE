@@ -58,12 +58,12 @@ ALL_URLS = (
 
 UMKM = MilestoneActor(
     user_id="umkm-1",
-    role="umkm",
+    role="UMKM",
 )
 
 FREELANCER = MilestoneActor(
     user_id="freelancer-1",
-    role="freelancer",
+    role="FREELANCER",
 )
 
 
@@ -261,7 +261,7 @@ def test_umkm_can_get_own_plan(http_context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["project_id"] == PROJECT_ID
     assert body["total_weight"] == "100.00"
@@ -289,7 +289,7 @@ def test_assigned_freelancer_can_read_plan(
     response = client.get(PLAN_URL)
 
     assert response.status_code == 200
-    assert len(response.json()["items"]) == 3
+    assert len(response.json()["data"]["items"]) == 3
 
 
 def test_outside_umkm_cannot_read_plan(
@@ -301,7 +301,7 @@ def test_outside_umkm_cannot_read_plan(
         app,
         MilestoneActor(
             user_id="other-umkm",
-            role="umkm",
+            role="UMKM",
         ),
     )
 
@@ -319,7 +319,7 @@ def test_unassigned_freelancer_cannot_read_plan(
         app,
         MilestoneActor(
             user_id="other-freelancer",
-            role="freelancer",
+            role="FREELANCER",
         ),
     )
 
@@ -335,7 +335,7 @@ def test_invalid_role_rejected(http_context):
         app,
         MilestoneActor(
             user_id="admin-1",
-            role="admin",
+            role="ADMIN",
         ),
     )
 
@@ -381,7 +381,7 @@ def test_empty_milestone_plan(http_context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["items"] == []
     assert body["total_weight"] == "0.00"
@@ -424,7 +424,7 @@ def test_progress_returns_weighted_values(
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["total_weight"] == "100.00"
     assert body["completed_weight"] == "50.00"
@@ -446,7 +446,7 @@ def test_outsider_cannot_read_progress(
         app,
         MilestoneActor(
             user_id="another-umkm",
-            role="umkm",
+            role="UMKM",
         ),
     )
 
@@ -468,7 +468,7 @@ def test_delay_risk_at_risk(http_context):
 
     assert response.status_code == 200
 
-    body = response.json()
+    body = response.json()["data"]
 
     assert body["risk_level"] == "AT_RISK"
     assert body["expected_progress_percent"] == (
@@ -492,7 +492,7 @@ def test_delay_risk_overdue(http_context):
     response = client.get(RISK_URL)
 
     assert response.status_code == 200
-    assert response.json()["risk_level"] == "OVERDUE"
+    assert response.json()["data"]["risk_level"] == "OVERDUE"
 
 
 def test_delay_risk_completed(http_context):
@@ -509,7 +509,7 @@ def test_delay_risk_completed(http_context):
     response = client.get(RISK_URL)
 
     assert response.status_code == 200
-    assert response.json()["risk_level"] == (
+    assert response.json()["data"]["risk_level"] == (
         "COMPLETED"
     )
 
@@ -523,7 +523,7 @@ def test_outsider_cannot_read_delay_risk(
         app,
         MilestoneActor(
             user_id="other-freelancer",
-            role="freelancer",
+            role="FREELANCER",
         ),
     )
 
@@ -594,16 +594,16 @@ def test_main_app_registers_milestones_router():
     paths = app.openapi()["paths"]
 
     assert (
-        "/projects/{project_id}/milestones"
+        "/api/v1/projects/{project_id}/milestones"
         in paths
     )
 
     assert (
-        "/projects/{project_id}/milestones/progress"
+        "/api/v1/projects/{project_id}/milestones/progress"
         in paths
     )
 
     assert (
-        "/projects/{project_id}/milestones/delay-risk"
+        "/api/v1/projects/{project_id}/milestones/delay-risk"
         in paths
     )
