@@ -15,6 +15,11 @@ from app.modules.profiles.infrastructure import models as profiles_models
 from app.modules.projects.infrastructure import models as projects_models
 from app.modules.skills.infrastructure import models as skills_models
 from app.modules.users.infrastructure import models as users_models
+from app.modules.workflow.infrastructure import models as workflow_models
+from app.modules.payments.infrastructure import models as payments_models
+from app.modules.submissions.infrastructure import models as submissions_models
+from app.modules.reviews.infrastructure import models as reviews_models
+from app.modules.notifications.infrastructure import models as notifications_models
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))

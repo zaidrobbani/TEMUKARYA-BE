@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Annotated
 
@@ -12,6 +13,7 @@ from app.modules.chat.infrastructure.repositories import (
     SqlAlchemyConversationRepository,
     SqlAlchemyMessageRepository,
 )
+from app.modules.notifications.infrastructure.hooks import notify_new_message
 from app.modules.users.domain.entities import User
 
 
@@ -64,3 +66,20 @@ def get_chat_database_context(
             session
         ),
     )
+
+
+# 4. NOTIFIKASI PESAN BARU (ikut transaksi pengiriman pesan)
+
+NewMessageHook = Callable[[str, str, str], None]
+
+
+def get_new_message_hook(
+    db: Annotated[
+        ChatDatabaseContext,
+        Depends(get_chat_database_context),
+    ],
+) -> NewMessageHook:
+    def hook(conversation_id: str, sender_id: str, message_text: str) -> None:
+        notify_new_message(db.session, conversation_id, sender_id, message_text)
+
+    return hook

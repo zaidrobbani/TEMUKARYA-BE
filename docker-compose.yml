@@ -40,6 +40,7 @@ services:
       SMTP_PORT: ${SMTP_PORT:-1025}
       PORTFOLIO_STORAGE_ROOT: ${PORTFOLIO_STORAGE_ROOT:-/app/storage/portfolios}
       PROJECT_ATTACHMENT_STORAGE_ROOT: ${PROJECT_ATTACHMENT_STORAGE_ROOT:-/app/storage/projects}
+      SUBMISSION_STORAGE_ROOT: ${SUBMISSION_STORAGE_ROOT:-/app/storage/submissions}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:

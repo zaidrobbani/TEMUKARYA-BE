@@ -18,6 +18,7 @@ from app.modules.chat.domain.entities import (
 from app.modules.chat.presentation.dependencies import (
     get_authenticated_chat_actor,
     get_chat_database_context,
+    get_new_message_hook,
 )
 
 from app.modules.chat.presentation.router import router
@@ -329,6 +330,10 @@ def http_context():
     app.dependency_overrides[
         get_chat_database_context
     ] = lambda: context
+
+    app.dependency_overrides[
+        get_new_message_hook
+    ] = lambda: lambda *args: None
 
     with TestClient(app) as client:
         yield app, client, context

@@ -196,22 +196,6 @@ def _require_project_access(
         )
 
 
-def _require_project_owner(
-    project: ProjectMilestoneContext,
-    actor: MilestoneActor,
-) -> None:
-    _require_project_access(project, actor)
-
-    if (
-        actor.role != UserRole.UMKM
-        or actor.user_id != project.umkm_id
-    ):
-        raise ForbiddenError(
-            "Hanya pemilik UMKM yang dapat "
-            "mengubah rencana milestone"
-        )
-
-
 # ============================================================
 # 4. GET MILESTONE PLAN
 # ============================================================
@@ -457,7 +441,9 @@ class ReplaceMilestonePlan:
             project_id,
         )
 
-        _require_project_owner(
+        # PRD & Figma: freelancer terpilih mengusulkan rencana,
+        # UMKM pemilik meninjau/mengubah sebelum pembayaran.
+        _require_project_access(
             project,
             data.actor,
         )

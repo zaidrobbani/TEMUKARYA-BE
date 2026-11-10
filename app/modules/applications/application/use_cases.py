@@ -1,4 +1,4 @@
-
+from collections.abc import Callable
 from uuid import uuid4
 
 from app.core.exceptions import (
@@ -81,9 +81,12 @@ class SubmitApplication:
         self,
         repository: ApplicationRepository,
         uow: UnitOfWork,
+        on_submitted: Callable[[ProjectApplication], None] | None = None,
     ):
         self._repository = repository
         self._uow = uow
+        # Hook notifikasi ke UMKM; dijalankan sebelum commit agar satu transaksi.
+        self._on_submitted = on_submitted
 
     def execute(
         self,
@@ -211,6 +214,9 @@ class SubmitApplication:
         saved_application = self._repository.add(
             application
         )
+
+        if self._on_submitted is not None:
+            self._on_submitted(saved_application)
 
         # ====================================================
         # 9. COMMIT TRANSAKSI
