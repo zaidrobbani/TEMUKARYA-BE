@@ -50,6 +50,7 @@ Aturan:
 - Use case yang mengubah data wajib `uow.commit()`; tanpa itu perubahan di-rollback.
 - Error bisnis = subclass `AppError` (`app/core/exceptions.py`), dipetakan ke HTTP di `error_handlers.py`. Jangan raise `HTTPException` dari use case.
 - Model baru wajib di-import di `alembic/env.py` agar terdeteksi autogenerate; router baru didaftarkan di `app/main.py`.
+- Swagger `/docs` dikelompokkan per role (Umum / UMKM / Freelancer / Admin) di `app/openapi.py`: endpoint baru wajib ditambahkan ke `GROUPS` (dicek `tests/api/test_openapi_groups.py`).
 - Test use case di `tests/modules/<modul>/` memakai fake repository in-memory (tanpa DB). Contoh: `tests/modules/users/test_use_cases.py`.
 - Modul `users` + `auth` adalah contoh pola yang harus ditiru. Fake repository bersama ada di `tests/fakes.py`;
   contoh test HTTP: `tests/api/test_auth_api.py`.

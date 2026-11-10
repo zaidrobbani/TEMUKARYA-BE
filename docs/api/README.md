@@ -1,6 +1,6 @@
 # Kontrak API TEMUKARYA (umum)
 
-Base URL: `http://localhost:8000/api/v1`. Swagger: `http://localhost:8000/docs`.
+Base URL: `http://localhost:8000/api/v1`. Swagger: `http://localhost:8000/docs` (dikelompokkan per role: Umum, UMKM, Freelancer, Admin; endpoint bersama muncul di beberapa grup).
 Path tanpa prefix (mis. `/projects`, `/health`) sudah tidak dipakai dan menjawab `404`.
 
 ## Format response
