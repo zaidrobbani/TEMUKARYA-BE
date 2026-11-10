@@ -103,7 +103,12 @@ F4: total bobot milestone harus 100; progres dihitung dari milestone SELESAI (ti
 - [x] Integrasi 10 PR ke `dev` (2026-11-09, branch `20-chore/integrate-prs`): skills, profiles, projects, applications, discovery,
   matching, milestones (baca), chat, admin statistik. Auth stub diganti JWT asli, semua response envelope, prefix `/api/v1`.
   Keputusan integrasi: tabel di `docs/api/README.md`.
-- [ ] Berikutnya (Zaid): agreements/workflow → payments/wallet → submissions/review → notifications, admin keuangan.
+- [x] Fitur Zaid (2026-11-10, branch `21-feat/workflow-payments`, migrasi `workflow_payment_details`): workflow F2 (pilih freelancer,
+  kesepakatan, Lanjut/Minta Ubah, batal, mulai, riwayat status, `GET /workflow/projects`), payments F3 (tagihan, simulasi QRIS + idempotensi,
+  dana HELD/RELEASED, wallet, riwayat transaksi), submissions + revisi + approve (pelepasan dana), reviews, notifications (kontrak `Notifier.notify`),
+  admin keuangan, endpoint tulis milestone + kontrak `reset_approvals`. Kontrak: `docs/api/{workflow,payments,submissions,notifications,admin-finance}.md`.
+  Menunggu review user atas tabel "Keputusan yang perlu dicek" di dokumen tersebut.
+- [ ] Di luar scope (keputusan PRD): pencairan dana & rekening bank (Figma Dompet: Cairkan Dana), push notification.
 
 ## Skema database (sudah final di migrasi)
 
@@ -126,7 +131,7 @@ Keputusan yang sudah diambil:
   `conversations.project_key` (kolom generated agar chat tanpa project tidak dobel).
 
 Belum diputuskan:
-- Penyimpanan file (`storage_key`): folder lokal/volume Docker atau object storage.
+- Penyimpanan file (`storage_key`): saat ini folder lokal di volume Docker `uploads` (`/app/storage/{portfolios,projects,submissions}`); object storage belum.
 
 ## Git
 

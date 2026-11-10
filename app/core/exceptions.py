@@ -28,3 +28,11 @@ class ConflictError(AppError):
 
 class ServiceUnavailableError(AppError):
     pass
+
+
+class PayloadTooLargeError(AppError):
+    pass
+
+
+class UnsupportedMediaTypeError(AppError):
+    pass

@@ -557,3 +557,27 @@ CREATE INDEX ix_auth_action_tokens_user_purpose_created ON auth_action_tokens (u
 
 UPDATE alembic_version SET version_num='a1d4e7c29b63' WHERE alembic_version.version_num = '5b8d3f1a9e27';
 
+-- Running upgrade a1d4e7c29b63 -> 17a58015bd8b
+
+ALTER TABLE payments ADD COLUMN transaction_number VARCHAR(30);
+
+ALTER TABLE payments ADD COLUMN expires_at DATETIME(3);
+
+ALTER TABLE payments ADD CONSTRAINT uq_payments_transaction_number UNIQUE (transaction_number);
+
+ALTER TABLE project_agreements ADD COLUMN change_request_note TEXT;
+
+ALTER TABLE project_agreements ADD COLUMN change_requested_at DATETIME(3);
+
+ALTER TABLE project_status_history ADD COLUMN reason_code VARCHAR(40);
+
+ALTER TABLE submission_reviews ADD COLUMN focus_areas JSON;
+
+ALTER TABLE submission_reviews ADD COLUMN revision_items JSON;
+
+ALTER TABLE freelancer_reviews ADD COLUMN highlights JSON;
+
+CREATE INDEX ix_notifications_user_read_at ON notifications (user_id, read_at);
+
+UPDATE alembic_version SET version_num='17a58015bd8b' WHERE alembic_version.version_num = 'a1d4e7c29b63';
+

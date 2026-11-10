@@ -81,17 +81,45 @@ Status code:
 | matching | `GET /projects/{project_id}/recommendations/freelancers` | UMKM pemilik | 200 |
 | | `GET /freelancers/me/recommendations/projects` | FREELANCER | 200 |
 | milestones | `GET /projects/{project_id}/milestones`, `/milestones/progress`, `/milestones/delay-risk` | UMKM pemilik / freelancer terpilih | 200 |
+| | `PUT /projects/{project_id}/milestones` (rencana pengerjaan) | UMKM pemilik / freelancer terpilih | 200 |
+| | `PATCH /projects/{project_id}/milestones/{milestone_id}/complete` | freelancer terpilih | 200 |
 | chat | `POST /conversations` (buat atau ambil yang sudah ada) | UMKM / FREELANCER | 200 |
 | | `GET /conversations`, `GET /conversations/{conversation_id}` | peserta | 200 |
 | | `POST /conversations/{conversation_id}/messages` | peserta | 201 |
 | | `GET /conversations/{conversation_id}/messages` (`limit`, `before_at` + `before_id`) | peserta | 200 |
 | | `PATCH /conversations/{conversation_id}/read` | peserta | 200 |
+| workflow | `GET /workflow/projects` (Project Saya / Project Aktif) | UMKM / FREELANCER | 200 |
+| | `GET /projects/{project_id}/workflow` (detail alur + tombol yang tersedia) | UMKM pemilik / freelancer terpilih | 200 |
+| | `POST /projects/{project_id}/agreement` (pilih freelancer) | UMKM pemilik | 201 |
+| | `GET`, `PATCH /projects/{project_id}/agreement` | UMKM pemilik / freelancer terpilih | 200 |
+| | `POST /projects/{project_id}/agreement/approve` (Lanjut Project) | UMKM pemilik / freelancer terpilih | 200 |
+| | `POST /projects/{project_id}/agreement/request-changes` (Minta Ubah) | UMKM pemilik | 200 |
+| | `POST /projects/{project_id}/cancel` | UMKM pemilik / freelancer terpilih | 200 |
+| | `POST /projects/{project_id}/start` (Mulai Pengerjaan) | freelancer terpilih | 200 |
+| payments | `GET /projects/{project_id}/payment` (detail & bukti) | UMKM pemilik / freelancer terpilih | 200 |
+| | `POST /projects/{project_id}/payment/simulate` (header `Idempotency-Key`), `POST …/payment/qris` | UMKM pemilik | 200 |
+| | `GET /payments/history` (`group`, `search`) | UMKM | 200 |
+| | `GET /wallet`, `GET /wallet/transactions` (`type`) | FREELANCER | 200 |
+| submissions | `POST /projects/{project_id}/submissions` (multipart `files`, `note`, `result_url`) | freelancer terpilih | 201 |
+| | `GET /projects/{project_id}/submissions`, `GET …/{submission_id}`, `GET …/{submission_id}/files/{file_id}` | UMKM pemilik / freelancer terpilih | 200 |
+| | `POST …/submissions/{submission_id}/request-revision`, `POST …/approve` | UMKM pemilik | 200 |
+| reviews | `POST /projects/{project_id}/review` | UMKM pemilik | 201 |
+| | `GET /projects/{project_id}/review` | UMKM pemilik / freelancer terpilih | 200 |
+| | `GET /freelancers/{freelancer_id}/reviews` | semua user login | 200 |
+| notifications | `GET /notifications` (`category`, `unread_only`), `GET /notifications/unread-count` | semua user login | 200 |
+| | `PATCH /notifications/{notification_id}/read`, `PATCH /notifications/read-all` | pemilik notifikasi | 200 |
 | admin | `GET /admin/users` (`role`, `search`), `GET /admin/users/{user_id}` | ADMIN | 200 |
 | | `GET /admin/projects` (`status`, `search`), `GET /admin/projects/{project_id}` | ADMIN | 200 |
 | | `GET /admin/statistics` | ADMIN | 200 |
+| | `GET /admin/finance/summary`, `/transactions`, `/transactions/{payment_id}`, `/commissions`, `/income-chart` | ADMIN | 200 |
 
-Detail aturan tiap modul: [auth.md](auth.md), [`../self-profiles.md`](../self-profiles.md), [`../portfolio-media.md`](../portfolio-media.md),
+Detail aturan tiap modul: [auth.md](auth.md), [workflow.md](workflow.md), [payments.md](payments.md),
+[submissions.md](submissions.md) (hasil kerja & ulasan), [notifications.md](notifications.md), [admin-finance.md](admin-finance.md),
+[`../self-profiles.md`](../self-profiles.md), [`../portfolio-media.md`](../portfolio-media.md),
 serta deskripsi PR masing-masing modul di GitHub.
+
+Error yang perlu dibedakan Android memakai field `code` (selain `message`): `MILESTONE_PLAN_INCOMPLETE`, `AGREEMENT_CHANGED`,
+`QRIS_EXPIRED`, `QRIS_REFRESH_REQUIRED`, `PAYMENT_ALREADY_PAID`.
 
 ## Keputusan yang perlu dicek
 
@@ -112,3 +140,12 @@ Diambil saat integrasi 10 PR (2026-11-09).
 | 11 | Pesan sukses | Setiap endpoint modul baru punya `message` Indonesia singkat (mis. `"Lamaran berhasil dikirim"`) | Dibuat saat integrasi, boleh diganti tim |
 | 12 | Lampiran project | Hanya UMKM pemilik yang bisa melihat/mengunduh, freelancer belum bisa | Perilaku asli PR #7, belum diubah; perlu diputuskan untuk alur kerja |
 | 13 | Pesan error media | Beberapa pesan masih bahasa Inggris campur (mis. `"Upload gagal; file perlu orphan cleanup"`) | Perilaku asli PR #5, belum diubah |
+
+Fitur Zaid (workflow, pembayaran, hasil kerja, ulasan, notifikasi, admin keuangan; 2026-11-10). Keputusan per modul ada di dokumen masing-masing; yang menyentuh modul lain:
+
+| # | Hal | Keputusan | Alasan |
+|---|---|---|---|
+| 14 | Modul milestones | Freelancer terpilih kini bisa membaca & menyusun rencana; deadline risiko = deadline kesepakatan; endpoint tulis `PUT /milestones` dan `PATCH …/complete` dibuat (memakai use case Faruqi + kontrak `reset_approvals`) | Sebelumnya fail-closed menunggu kontrak workflow; tanpa ini Lanjut Project tidak pernah bisa (butuh bobot 100%) |
+| 15 | Modul applications & chat | Ditambah hook notifikasi (lamaran baru ke UMKM, pesan baru ke lawan bicara), ikut transaksi yang sama | Layar Notifikasi Figma |
+| 16 | Pesan validasi 422 | Ditambah terjemahan untuk batas angka, jumlah item, tanggal, desimal | Pesan Pydantic bawaan berbahasa Inggris |
+| 17 | Status code baru | `413` (file > 50 MB) dan `415` (format file) untuk upload hasil kerja lewat `PayloadTooLargeError` / `UnsupportedMediaTypeError` di core | Sudah tercantum di tabel status code |

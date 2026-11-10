@@ -24,6 +24,7 @@ from app.modules.applications.domain.repositories import (
 from app.modules.applications.infrastructure.repositories import (
     SqlAlchemyApplicationRepository,
 )
+from app.modules.notifications.infrastructure.hooks import notify_application_received
 
 
 # ============================================================
@@ -61,11 +62,15 @@ def get_submit_application_use_case(
         get_application_repository
     ),
     uow: UnitOfWork = Depends(get_uow),
+    db: Session = Depends(get_db),
 ) -> SubmitApplication:
 
     return SubmitApplication(
         repository=repository,
         uow=uow,
+        on_submitted=lambda application: notify_application_received(
+            db, application.project_id, application.freelancer_id
+        ),
     )
 
 

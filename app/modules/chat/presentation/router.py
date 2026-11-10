@@ -33,8 +33,10 @@ from app.modules.chat.domain.entities import ChatActor
 
 from app.modules.chat.presentation.dependencies import (
     ChatDatabaseContext,
+    NewMessageHook,
     get_authenticated_chat_actor,
     get_chat_database_context,
+    get_new_message_hook,
 )
 
 from app.modules.chat.presentation.schemas import (
@@ -233,6 +235,10 @@ def send_text_message(
         ChatDatabaseContext,
         Depends(get_chat_database_context),
     ],
+    notify: Annotated[
+        NewMessageHook,
+        Depends(get_new_message_hook),
+    ],
 ):
     """
     Mengirim pesan teks.
@@ -262,6 +268,8 @@ def send_text_message(
             "Pesan berhasil dikirim",
             MessageResponse.model_validate(result),
         )
+
+        notify(conversation_id, actor.user_id, result.message_text or "")
 
         db.session.commit()
 

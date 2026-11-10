@@ -456,7 +456,7 @@ class TestEnums:
         body = client.get("/api/v1/enums").json()
 
         assert body["success"] is True
-        assert set(body["data"]) == {"user_roles", "registration_roles"}
+        assert {"user_roles", "registration_roles", "project_statuses", "payment_statuses"} <= set(body["data"])
 
     def test_registration_roles_exclude_admin(self, client):
         response = client.get("/api/v1/enums/registration_roles")
