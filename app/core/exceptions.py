@@ -1,8 +1,6 @@
-# Error aplikasi bebas framework, supaya boleh di-raise dari layer domain & application.
-# Pemetaan ke HTTP status ada di app/core/error_handlers.py.
-
-
 class AppError(Exception):
+    code: str | None = None
+
     def __init__(self, message: str):
         super().__init__(message)
         self.message = message
@@ -25,4 +23,16 @@ class NotFoundError(AppError):
 
 
 class ConflictError(AppError):
+    pass
+
+
+class ServiceUnavailableError(AppError):
+    pass
+
+
+class PayloadTooLargeError(AppError):
+    pass
+
+
+class UnsupportedMediaTypeError(AppError):
     pass

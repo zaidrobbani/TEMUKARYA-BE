@@ -1,7 +1,11 @@
 from collections.abc import Generator
+from datetime import UTC, datetime
+from typing import Annotated
+from uuid import uuid4
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy import CHAR, FetchedValue, create_engine, text
+from sqlalchemy.dialects import mysql
+from sqlalchemy.orm import DeclarativeBase, Session, mapped_column, sessionmaker
 
 from app.core.config import settings
 
@@ -17,6 +21,42 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 class Base(DeclarativeBase):
     pass
+
+
+UuidPk = Annotated[
+    str,
+    mapped_column(
+        CHAR(36),
+        primary_key=True,
+        default=lambda: str(uuid4()),
+        server_default=text("(UUID())"),
+    ),
+]
+
+CreatedAt = Annotated[
+    datetime,
+    mapped_column(
+        mysql.DATETIME(fsp=3),
+        server_default=text("CURRENT_TIMESTAMP(3)"),
+    ),
+]
+
+UpdatedAt = Annotated[
+    datetime,
+    mapped_column(
+        mysql.DATETIME(fsp=3),
+        server_default=text("CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)"),
+        server_onupdate=FetchedValue(),
+    ),
+]
+
+
+def to_db_utc(value: datetime) -> datetime:
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
+def from_db_utc(value: datetime | None) -> datetime | None:
+    return value.replace(tzinfo=UTC) if value is not None else None
 
 
 def get_db() -> Generator[Session, None, None]:

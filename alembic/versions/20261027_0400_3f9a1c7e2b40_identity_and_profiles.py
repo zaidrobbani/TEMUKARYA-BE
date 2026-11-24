@@ -1,10 +1,3 @@
-"""identity and profiles: users -> UUID, umkm/freelancer profiles, skills, portfolio
-
-Revision ID: 3f9a1c7e2b40
-Revises: c34c4e3c9286
-Create Date: 2026-10-27 04:00:00
-
-"""
 from typing import Sequence, Union
 
 from alembic import op
@@ -18,8 +11,6 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-# Helper kolom; sengaja diduplikasi di tiap file migrasi supaya migrasi lama tidak ikut berubah
-# kalau helper diubah di kemudian hari.
 def uuid_pk() -> sa.Column:
     return sa.Column("id", sa.CHAR(36), primary_key=True, server_default=sa.text("(UUID())"))
 
@@ -43,7 +34,6 @@ def file_columns() -> list[sa.Column]:
     ]
 
 
-# 26 skill tetap dari PRD (Analisis Sistem, Fungsi 1A). ID dipakai bersama oleh profil freelancer & project.
 SKILLS = [
     ("logo_design", "Desain Logo"),
     ("brand_identity_design", "Desain Identitas Merek"),
@@ -82,7 +72,6 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("profile_image_url", sa.String(500), nullable=True))
     op.add_column("users", timestamp("updated_at", on_update=True))
 
-    # ===== profil (PK = user_id, relasi 1:1 dengan users) =====
     op.create_table(
         "umkm_profiles",
         uuid_fk("user_id", "users.id", ondelete="CASCADE"),
@@ -113,7 +102,6 @@ def upgrade() -> None:
         ),
     )
 
-    # ===== skills (master) + junction freelancer_skills =====
     skills = op.create_table(
         "skills",
         sa.Column("id", sa.String(50), primary_key=True),
@@ -128,7 +116,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("freelancer_id", "skill_id"),
     )
 
-    # ===== pengalaman & portofolio freelancer =====
     op.create_table(
         "freelancer_experiences",
         uuid_pk(),
@@ -179,7 +166,6 @@ def downgrade() -> None:
     op.drop_column("users", "profile_image_url")
     op.drop_column("users", "phone_number")
     op.execute("ALTER TABLE users MODIFY created_at DATETIME NOT NULL DEFAULT now()")
-    # UUID tidak bisa dikembalikan ke id lama; beri nomor urut baru sesuai waktu daftar.
     op.execute("SET @n := 0")
     op.execute("UPDATE users SET id = (@n := @n + 1) ORDER BY created_at")
     op.execute("ALTER TABLE users MODIFY id INT NOT NULL AUTO_INCREMENT")

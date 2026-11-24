@@ -9,3 +9,11 @@ class RegisterUserInput:
     email: str
     password: str
     role: UserRole
+    phone_number: str | None = None
+
+
+@dataclass(frozen=True)
+class CreateAdminInput:
+    name: str
+    email: str
+    password: str
