@@ -623,18 +623,36 @@ def test_replace_plan_duplicate_order_rejected(
     assert repo.replace_calls == 0
 
 
-def test_replace_plan_freelancer_cannot_edit(
+def test_replace_plan_selected_freelancer_can_edit(
     context,
 ):
     repo, policy = context
 
-    with pytest.raises(ForbiddenError):
+    result = ReplaceMilestonePlan(
+        repo,
+        policy,
+    ).execute(
+        make_plan_input(
+            actor=FREELANCER
+        )
+    )
+
+    assert result.is_plan_complete is True
+    assert repo.replace_calls == 1
+
+
+def test_replace_plan_outsider_cannot_edit(
+    context,
+):
+    repo, policy = context
+
+    with pytest.raises(NotFoundError):
         ReplaceMilestonePlan(
             repo,
             policy,
         ).execute(
             make_plan_input(
-                actor=FREELANCER
+                actor=OUTSIDER
             )
         )
 

@@ -11,8 +11,10 @@ from app.core.exceptions import (
     ConflictError,
     ForbiddenError,
     NotFoundError,
+    PayloadTooLargeError,
     ServiceUnavailableError,
     UnauthorizedError,
+    UnsupportedMediaTypeError,
 )
 from app.core.responses import error_body
 
@@ -22,6 +24,8 @@ _STATUS_CODES: dict[type[AppError], int] = {
     ForbiddenError: 403,
     NotFoundError: 404,
     ConflictError: 409,
+    PayloadTooLargeError: 413,
+    UnsupportedMediaTypeError: 415,
     ServiceUnavailableError: 503,
 }
 
@@ -42,6 +46,15 @@ _VALIDATION_MESSAGES: dict[str, str] = {
     "json_invalid": "Format JSON tidak valid",
     "model_attributes_type": "Body harus berupa objek JSON",
     "dict_type": "Body harus berupa objek JSON",
+    "list_type": "Harus berupa daftar",
+    "date_type": "Format tanggal harus YYYY-MM-DD",
+    "date_parsing": "Format tanggal harus YYYY-MM-DD",
+    "date_from_datetime_parsing": "Format tanggal harus YYYY-MM-DD",
+    "uuid_parsing": "Format ID tidak valid",
+    "extra_forbidden": "Field tidak dikenal",
+    "decimal_parsing": "Harus berupa angka",
+    "decimal_max_places": "Maksimal 2 angka desimal",
+    "decimal_type": "Harus berupa angka",
 }
 
 _LOCATION_PREFIXES = {"body", "query", "path", "header", "cookie"}
@@ -62,6 +75,14 @@ def _field_message(error: dict[str, Any]) -> str:
         return "Wajib diisi" if ctx["min_length"] == 1 else f"Minimal {ctx['min_length']} karakter"
     if error_type == "string_too_long":
         return f"Maksimal {ctx['max_length']} karakter"
+    if error_type in ("greater_than", "greater_than_equal", "less_than", "less_than_equal"):
+        symbol = {"greater_than": ">", "greater_than_equal": ">=", "less_than": "<", "less_than_equal": "<="}
+        limit = next(iter(ctx.values()))
+        return f"Nilai harus {symbol[error_type]} {limit}"
+    if error_type == "too_short":
+        return f"Minimal {ctx['min_length']} item"
+    if error_type == "too_long":
+        return f"Maksimal {ctx['max_length']} item"
     if error_type == "enum":
         return f"Pilihan tidak valid, gunakan salah satu dari {ctx['expected']}"
     if error_type == "value_error":

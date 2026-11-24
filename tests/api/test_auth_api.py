@@ -456,7 +456,7 @@ class TestEnums:
         body = client.get("/api/v1/enums").json()
 
         assert body["success"] is True
-        assert set(body["data"]) == {"user_roles", "registration_roles"}
+        assert {"user_roles", "registration_roles", "project_statuses", "payment_statuses"} <= set(body["data"])
 
     def test_registration_roles_exclude_admin(self, client):
         response = client.get("/api/v1/enums/registration_roles")
@@ -810,3 +810,49 @@ class TestGoogleLogin:
 
     def test_empty_token(self, client):
         assert field_errors(client.post("/api/v1/auth/google", json={})) == {"id_token": "Wajib diisi"}
+
+
+class TestUpdateMe:
+    def test_updates_name_and_returns_user(self, client):
+        token = token_of(client)
+
+        response = client.patch("/api/v1/auth/me", headers=auth(token), json={"name": "  Rina Pratiwi Baru  "})
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["message"] == "Data akun berhasil diperbarui"
+        assert body["data"]["name"] == "Rina Pratiwi Baru"
+        assert client.get("/api/v1/auth/me", headers=auth(token)).json()["data"]["name"] == "Rina Pratiwi Baru"
+
+    def test_token_stays_valid_after_update(self, client):
+        token = token_of(client)
+        client.patch("/api/v1/auth/me", headers=auth(token), json={"name": "Nama Baru"})
+
+        assert client.get("/api/v1/auth/me", headers=auth(token)).status_code == 200
+
+    @pytest.mark.parametrize(
+        ("payload", "message"),
+        [
+            ({"name": ""}, "Wajib diisi"),
+            ({"name": "   "}, "Wajib diisi"),
+            ({"name": "a" * 101}, "Maksimal 100 karakter"),
+            ({}, "Wajib diisi"),
+        ],
+    )
+    def test_invalid_name_returns_422(self, client, payload, message):
+        token = token_of(client)
+
+        errors = field_errors(client.patch("/api/v1/auth/me", headers=auth(token), json=payload))
+
+        assert errors.get("name") == message
+
+    def test_other_fields_are_rejected(self, client):
+        token = token_of(client)
+
+        response = client.patch("/api/v1/auth/me", headers=auth(token), json={"name": "Rina", "role": "ADMIN"})
+
+        assert response.status_code == 422
+        assert client.get("/api/v1/auth/me", headers=auth(token)).json()["data"]["role"] == "UMKM"
+
+    def test_requires_login(self, client):
+        assert_error(client.patch("/api/v1/auth/me", json={"name": "Rina"}), 401, "Silakan login terlebih dahulu")

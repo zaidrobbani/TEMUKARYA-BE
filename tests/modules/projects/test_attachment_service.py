@@ -64,6 +64,11 @@ class FakeAttachmentRepository:
         self.fail_add = False
         self.authorization_calls = []
 
+    viewable_by = {"freelancer-boleh"}
+
+    def freelancer_can_view(self, project_id, freelancer_id):
+        return project_id == PROJECT_ID and freelancer_id in self.viewable_by
+
     def owns_project(
         self,
         project_id,
@@ -564,3 +569,13 @@ def test_delete_storage_failure_is_reported(context):
     assert saved.storage_key in storage.files
 
     assert uow.commit_count == 2
+
+
+def test_freelancer_read_access_is_checked(context):
+    service, repository, storage, uow = context
+    upload_file(service)
+    assert len(service.list_as_freelancer(freelancer_id="freelancer-boleh", project_id=PROJECT_ID)) == 1
+    with pytest.raises(NotFoundError):
+        service.list_as_freelancer(freelancer_id="freelancer-lain", project_id=PROJECT_ID)
+    with pytest.raises(NotFoundError):
+        service.file_as_freelancer(freelancer_id="freelancer-lain", project_id=PROJECT_ID, attachment_id="x")

@@ -189,6 +189,32 @@ class ProjectAttachmentService:
             project_id=project_id,
         )
 
+    def list_as_freelancer(
+        self,
+        freelancer_id: str,
+        project_id: str,
+    ) -> "list[AttachmentRecord]":
+        """Freelancer melihat lampiran proyek yang boleh ia baca (hanya baca)."""
+
+        self._authorize_freelancer(freelancer_id, project_id)
+        return self._repository.list_by_project(project_id=project_id)
+
+    def file_as_freelancer(
+        self,
+        freelancer_id: str,
+        project_id: str,
+        attachment_id: str,
+    ) -> tuple[AttachmentRecord, BinaryIO]:
+        self._authorize_freelancer(freelancer_id, project_id)
+        attachment = self._repository.get_by_id(project_id=project_id, attachment_id=attachment_id)
+        if attachment is None:
+            raise NotFoundError("Attachment tidak ditemukan")
+        return attachment, self._storage.open(attachment.storage_key)
+
+    def _authorize_freelancer(self, freelancer_id: str, project_id: str) -> None:
+        if not self._repository.freelancer_can_view(project_id=project_id, freelancer_id=freelancer_id):
+            raise NotFoundError("Project tidak ditemukan")
+
     # ========================================================
     # DOWNLOAD ATTACHMENT
     # ========================================================

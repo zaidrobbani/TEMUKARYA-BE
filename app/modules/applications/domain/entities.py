@@ -1,8 +1,23 @@
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 
 
-APPLICATION_SUBMITTED = "SUBMITTED"
+class ApplicationStatus(StrEnum):
+    SUBMITTED = "SUBMITTED"
+    ACCEPTED = "ACCEPTED"
+    NOT_SELECTED = "NOT_SELECTED"
+    CANCELLED = "CANCELLED"
+
+
+APPLICATION_STATUS_LABELS = {
+    ApplicationStatus.SUBMITTED: "Menunggu",
+    ApplicationStatus.ACCEPTED: "Disetujui",
+    ApplicationStatus.NOT_SELECTED: "Tidak dipilih",
+    ApplicationStatus.CANCELLED: "Dibatalkan",
+}
+
+APPLICATION_SUBMITTED = ApplicationStatus.SUBMITTED.value
 
 
 @dataclass(frozen=True)

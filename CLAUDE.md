@@ -50,6 +50,7 @@ Aturan:
 - Use case yang mengubah data wajib `uow.commit()`; tanpa itu perubahan di-rollback.
 - Error bisnis = subclass `AppError` (`app/core/exceptions.py`), dipetakan ke HTTP di `error_handlers.py`. Jangan raise `HTTPException` dari use case.
 - Model baru wajib di-import di `alembic/env.py` agar terdeteksi autogenerate; router baru didaftarkan di `app/main.py`.
+- Swagger `/docs` dikelompokkan per role (Umum / UMKM / Freelancer / Admin) di `app/openapi.py`: endpoint baru wajib ditambahkan ke `GROUPS` (dicek `tests/api/test_openapi_groups.py`).
 - Test use case di `tests/modules/<modul>/` memakai fake repository in-memory (tanpa DB). Contoh: `tests/modules/users/test_use_cases.py`.
 - Modul `users` + `auth` adalah contoh pola yang harus ditiru. Fake repository bersama ada di `tests/fakes.py`;
   contoh test HTTP: `tests/api/test_auth_api.py`.
@@ -103,7 +104,15 @@ F4: total bobot milestone harus 100; progres dihitung dari milestone SELESAI (ti
 - [x] Integrasi 10 PR ke `dev` (2026-11-09, branch `20-chore/integrate-prs`): skills, profiles, projects, applications, discovery,
   matching, milestones (baca), chat, admin statistik. Auth stub diganti JWT asli, semua response envelope, prefix `/api/v1`.
   Keputusan integrasi: tabel di `docs/api/README.md`.
-- [ ] Berikutnya (Zaid): agreements/workflow → payments/wallet → submissions/review → notifications, admin keuangan.
+- [x] Fitur Zaid (2026-11-10, branch `21-feat/workflow-payments`, migrasi `workflow_payment_details`): workflow F2 (pilih freelancer,
+  kesepakatan, Lanjut/Minta Ubah, batal, mulai, riwayat status, `GET /workflow/projects`), payments F3 (tagihan, simulasi QRIS + idempotensi,
+  dana HELD/RELEASED, wallet, riwayat transaksi), submissions + revisi + approve (pelepasan dana), reviews, notifications (kontrak `Notifier.notify`),
+  admin keuangan, endpoint tulis milestone + kontrak `reset_approvals`. Kontrak: `docs/api/{workflow,payments,submissions,notifications,admin-finance}.md`.
+  Menunggu review user atas tabel "Keputusan yang perlu dicek" di dokumen tersebut.
+- [x] Ubah nama akun `PATCH /auth/me` (2026-11-23, branch `22-feat/update-account-name`): dipakai Nama Pemilik/Nama Lengkap di Android. Foto profil `PUT/DELETE /users/me/photo`, `GET /users/{id}/photo` (server kompres ke WebP 512 px ≤ 150 KB, maks unggah 2 MB). Kontrak: `docs/api/auth.md`.
+- [x] Chat real-time WebSocket `WS /conversations/{id}/ws` (2026-11-23): hub in-memory satu proses, REST send/read ikut di-push. Kontrak: `docs/api/chat-realtime.md`.
+- [x] Lampiran chat `POST /conversations/{id}/attachments` (foto dikompres WebP 1600 px ≤ 400 KB + thumbnail, dokumen PDF/Office/TXT/CSV/ZIP ≤ 10 MB). Kontrak: `docs/api/chat-attachments.md`.
+- [ ] Di luar scope (keputusan PRD): pencairan dana & rekening bank (Figma Dompet: Cairkan Dana), push notification.
 
 ## Skema database (sudah final di migrasi)
 
@@ -126,7 +135,7 @@ Keputusan yang sudah diambil:
   `conversations.project_key` (kolom generated agar chat tanpa project tidak dobel).
 
 Belum diputuskan:
-- Penyimpanan file (`storage_key`): folder lokal/volume Docker atau object storage.
+- Penyimpanan file (`storage_key`): saat ini folder lokal di volume Docker `uploads` (`/app/storage/{portfolios,projects,submissions}`); object storage belum.
 
 ## Git
 

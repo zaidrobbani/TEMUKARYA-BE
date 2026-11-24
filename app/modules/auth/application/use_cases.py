@@ -37,6 +37,7 @@ from app.modules.auth.domain.repositories import AuthActionTokenRepository, Revo
 from app.modules.users.application.dto import RegisterUserInput
 from app.modules.users.application.use_cases import RegisterUser
 from app.modules.users.domain.entities import User
+from app.modules.users.domain.exceptions import UserNotFoundError
 from app.modules.users.domain.repositories import UserRepository
 
 
@@ -122,6 +123,22 @@ class AuthenticateToken:
         if user.password_changed_at and claims.issued_at < user.password_changed_at.replace(microsecond=0):
             raise PasswordChangedError()
         return AuthSession(user=user, claims=claims)
+
+
+class UpdateAccountName:
+    """Ubah nama akun (Nama Pemilik UMKM / Nama Lengkap freelancer). Email, role, dan nomor tidak ikut diubah."""
+
+    def __init__(self, users: UserRepository, uow: UnitOfWork):
+        self._users = users
+        self._uow = uow
+
+    def execute(self, user: User, name: str) -> User:
+        self._users.update_name(user.id, name, datetime.now(UTC))
+        self._uow.commit()
+        updated = self._users.get_by_id(user.id)
+        if updated is None:
+            raise UserNotFoundError(user.id)
+        return updated
 
 
 class LogoutUser:

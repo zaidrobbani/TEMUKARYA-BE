@@ -112,9 +112,19 @@ def get_project_detail_use_case(
     repository: ProjectRepository = Depends(
         get_project_repository
     ),
+    db: Session = Depends(get_db),
 ) -> GetProjectDetail:
+    from sqlalchemy import text
+
+    def is_selected_freelancer(project_id: str, user_id: str) -> bool:
+        return db.execute(
+            text("SELECT 1 FROM project_agreements WHERE project_id = :pid AND freelancer_id = :uid LIMIT 1"),
+            {"pid": project_id, "uid": user_id},
+        ).first() is not None
+
     return GetProjectDetail(
         project_repository=repository,
+        is_selected_freelancer=is_selected_freelancer,
     )
 
 
@@ -148,3 +158,9 @@ def get_search_public_projects_use_case(
     return SearchPublicProjects(
         project_repository=repository,
     )
+
+
+def get_project_owner_reader(db: Session = Depends(get_db)):
+    from app.modules.projects.infrastructure.owner_reader import SqlProjectOwnerReader
+
+    return SqlProjectOwnerReader(db)

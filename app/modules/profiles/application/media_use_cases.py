@@ -56,6 +56,13 @@ class PortfolioMediaService:
         item = self._find(self.list(owner, portfolio_id), media_id)
         return item, self.storage.open(item.storage_key)
 
+    def public_file(self, portfolio_id, media_id):
+        """Portofolio memang publik bagi user yang login (lihat discovery), jadi tanpa cek pemilik."""
+        item = self.repository.find(portfolio_id, media_id)
+        if item is None:
+            raise NotFoundError("Media portfolio tidak ditemukan")
+        return item, self.storage.open(item.storage_key)
+
     def cover(self, owner, portfolio_id, media_id):
         items = self.list(owner, portfolio_id)
         self._find(items, media_id)

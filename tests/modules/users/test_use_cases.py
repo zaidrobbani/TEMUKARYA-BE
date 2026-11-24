@@ -125,3 +125,70 @@ def test_get_user_raises_not_found_for_admin():
 
     with pytest.raises(UserNotFoundError):
         GetUser(repo).execute(str(uuid4()), requester=admin)
+
+
+class FakeAvatarStorage:
+    def __init__(self):
+        self.files: dict[str, bytes] = {}
+
+    def save(self, source):
+        key = f"{len(self.files) + 1:032x}.webp"
+        self.files[key] = source.read()
+        return key
+
+    def open(self, key):
+        import io
+        from app.modules.users.domain.avatar import AvatarNotFoundError
+        if key not in self.files:
+            raise AvatarNotFoundError()
+        return io.BytesIO(self.files[key])
+
+    def delete(self, key):
+        self.files.pop(key, None)
+
+
+class TestProfilePhotoUseCases:
+    def _user(self, repo):
+        from app.modules.users.domain.entities import User, UserRole
+        return repo.add(User(name="Rina", email="rina@mail.com", password_hash="x", role=UserRole.UMKM))
+
+    def test_update_stores_versioned_url_and_removes_old_file(self):
+        import io
+        from app.modules.users.application.use_cases import UpdateProfilePhoto
+        from tests.fakes import FakeUnitOfWork, FakeUserRepository
+        repo, storage, uow = FakeUserRepository(), FakeAvatarStorage(), FakeUnitOfWork()
+        user = self._user(repo)
+        use_case = UpdateProfilePhoto(repo, storage, uow, "/api/v1")
+
+        first = use_case.execute(user, io.BytesIO(b"a"))
+        second = use_case.execute(first, io.BytesIO(b"b"))
+
+        assert second.profile_image_url == f"/api/v1/users/{user.id}/photo?v={'2'.zfill(32)}"
+        assert list(storage.files) == [f"{'2'.zfill(32)}.webp"]
+        assert uow.commits == 2
+
+    def test_failed_commit_removes_new_file(self):
+        import io
+        from app.modules.users.application.use_cases import UpdateProfilePhoto
+        from tests.fakes import FakeUnitOfWork, FakeUserRepository
+
+        class BrokenUow(FakeUnitOfWork):
+            def commit(self):
+                raise RuntimeError("db down")
+
+        repo, storage = FakeUserRepository(), FakeAvatarStorage()
+        user = self._user(repo)
+
+        with pytest.raises(RuntimeError):
+            UpdateProfilePhoto(repo, storage, BrokenUow(), "/api/v1").execute(user, io.BytesIO(b"a"))
+        assert storage.files == {}
+
+    def test_get_photo_without_photo_raises_not_found(self):
+        from app.modules.users.application.use_cases import GetProfilePhoto
+        from app.modules.users.domain.avatar import AvatarNotFoundError
+        from tests.fakes import FakeUserRepository
+        repo = FakeUserRepository()
+        user = self._user(repo)
+
+        with pytest.raises(AvatarNotFoundError):
+            GetProfilePhoto(repo, FakeAvatarStorage()).execute(user.id)

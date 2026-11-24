@@ -58,6 +58,7 @@ class FreelancerPortfolio:
     title: str
     description: str
     project_url: str | None = None
+    cover_image_url: str | None = None
 
 
 # ============================================================
@@ -108,6 +109,9 @@ class FreelancerSummary:
 
     average_rating: float | None = None
     review_count: int = 0
+
+    # Path foto profil (`/api/v1/users/{id}/photo?v=...`), null bila belum ada foto.
+    profile_image_url: str | None = None
 
 
 # ============================================================

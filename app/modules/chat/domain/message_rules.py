@@ -29,14 +29,21 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 # 2. ALLOWED MIME TYPES
 # ============================================================
 
+DOCUMENT_MIME_TYPES = frozenset({
+    "application/pdf",
+    "text/plain",
+    "text/csv",
+    "application/zip",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+})
+
 ALLOWED_MIME_TYPES = frozenset({
     "image/jpeg",
     "image/png",
     "image/webp",
-    "application/pdf",
-    "text/plain",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-})
+}) | DOCUMENT_MIME_TYPES
 
 IMAGE_MIME_TYPES = frozenset(
     mime

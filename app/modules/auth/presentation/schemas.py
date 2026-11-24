@@ -1,7 +1,7 @@
 import re
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, StringConstraints, ValidationInfo, field_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, StringConstraints, ValidationInfo, field_validator
 
 from app.core.responses import UtcDateTime
 from app.modules.users.domain.entities import UserRole
@@ -52,6 +52,12 @@ class _NewPasswordFields(BaseModel):
         if "password" in info.data and value != info.data["password"]:
             raise ValueError("Konfirmasi kata sandi tidak sama dengan kata sandi")
         return value
+
+
+class UpdateAccountRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: Name
 
 
 class RegisterRequest(_NewPasswordFields):

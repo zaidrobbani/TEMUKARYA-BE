@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -7,6 +8,7 @@ from app.core.security import ScryptPasswordHasher
 from app.core.tokens import ExpiredTokenError, InvalidTokenError, JwtTokenService
 from app.modules.auth.application.dto import LoginInput
 from app.modules.auth.application.use_cases import (
+    UpdateAccountName,
     AuthenticateToken,
     LoginUser,
     LoginWithGoogle,
@@ -43,6 +45,7 @@ from app.modules.auth.domain.exceptions import (
 from app.modules.users.application.dto import RegisterUserInput
 from app.modules.users.application.use_cases import RegisterUser
 from app.modules.users.domain.entities import User, UserRole
+from app.modules.users.domain.exceptions import UserNotFoundError
 from tests.fakes import (
     FakeAuthActionTokenRepository,
     FakeEmailSender,
@@ -575,3 +578,27 @@ class TestLoginWithGoogle:
     def test_invalid_token_propagates(self, users, hasher, tokens):
         with pytest.raises(InvalidGoogleTokenError):
             self.use_case(users, hasher, tokens).execute("token-lain")
+
+
+class TestUpdateAccountName:
+    def test_updates_name_and_commits(self, users, hasher):
+        user = add_user(users, hasher)
+        uow = FakeUnitOfWork()
+
+        updated = UpdateAccountName(users, uow).execute(user, "Rina Pratiwi Baru")
+
+        assert updated.name == "Rina Pratiwi Baru"
+        assert users.get_by_id(user.id).name == "Rina Pratiwi Baru"
+        assert updated.email == user.email and updated.role == user.role
+        assert uow.committed
+
+    def test_missing_user_raises_not_found(self, users, hasher):
+        user = add_user(users, hasher)
+        ghost = replace(user, id="tidak-ada")
+        users.users[ghost.id] = ghost
+        uow = FakeUnitOfWork()
+        use_case = UpdateAccountName(users, uow)
+        users.update_name = lambda *_: users.users.pop(ghost.id)
+
+        with pytest.raises(UserNotFoundError):
+            use_case.execute(ghost, "Nama")

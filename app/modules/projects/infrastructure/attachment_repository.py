@@ -1,5 +1,4 @@
-
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from app.modules.projects.domain.attachments import (
@@ -63,6 +62,23 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
         result = self._session.scalar(statement)
 
         return result is not None
+
+    def freelancer_can_view(
+        self,
+        project_id: str,
+        freelancer_id: str,
+    ) -> bool:
+        row = self._session.execute(
+            text(
+                "SELECT 1 FROM projects p "
+                "LEFT JOIN project_agreements a ON a.project_id = p.id "
+                "WHERE p.id = :pid AND ("
+                "(p.status = 'TERBUKA' AND p.published_at IS NOT NULL) "
+                "OR a.freelancer_id = :fid) LIMIT 1"
+            ),
+            {"pid": project_id, "fid": freelancer_id},
+        ).first()
+        return row is not None
 
     # ========================================================
     # LIST ATTACHMENTS

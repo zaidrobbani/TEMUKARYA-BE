@@ -52,6 +52,36 @@ def freelancer(user):
     return user.user_id
 
 
+def stream_media(item, stream, cache_control):
+    def chunks():
+        try:
+            while chunk := stream.read(64 * 1024):
+                yield chunk
+        finally:
+            stream.close()
+
+    return StreamingResponse(chunks(), media_type=item.mime_type, headers={
+        "Content-Length": str(item.file_size_bytes), "Cache-Control": cache_control,
+        "X-Content-Type-Options": "nosniff", "Content-Disposition": "inline",
+    }, background=BackgroundTask(stream.close))
+
+
+def build_public_media_router(service_dependency):
+    """Gambar portofolio untuk semua user yang login (mis. UMKM di halaman profil freelancer)."""
+    router = APIRouter(prefix="/portfolios/{portfolio_id}/media", route_class=MediaRoute)
+
+    @router.get("/{media_id}/file", responses=error_responses(401, 404, 503),
+                summary="File gambar portofolio; boleh diakses semua user yang login")
+    def public_file(portfolio_id: str, media_id: str,
+                    _: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
+                    service=Depends(service_dependency)):
+        item, stream = service.public_file(portfolio_id, media_id)
+        # media_id tidak pernah dipakai ulang untuk isi lain, jadi aman di-cache client.
+        return stream_media(item, stream, "private, max-age=86400")
+
+    return router
+
+
 def build_media_router(service_dependency):
     router = APIRouter(prefix="/freelancer/portfolios/{portfolio_id}/media", route_class=MediaRoute)
 
@@ -81,18 +111,7 @@ def build_media_router(service_dependency):
              current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
              service=Depends(service_dependency)):
         item, stream = service.file(freelancer(current_user), portfolio_id, media_id)
-
-        def chunks():
-            try:
-                while chunk := stream.read(64 * 1024):
-                    yield chunk
-            finally:
-                stream.close()
-
-        return StreamingResponse(chunks(), media_type=item.mime_type, headers={
-            "Content-Length": str(item.file_size_bytes), "Cache-Control": "private, no-store",
-            "X-Content-Type-Options": "nosniff", "Content-Disposition": "inline",
-        }, background=BackgroundTask(stream.close))
+        return stream_media(item, stream, "private, no-store")
 
     @router.patch("/{media_id}/cover", response_model=ApiResponse[list[MediaResponse]],
                   responses=error_responses(401, 403, 404))

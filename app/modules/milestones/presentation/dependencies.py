@@ -15,7 +15,10 @@ from app.modules.milestones.infrastructure.repositories import (
     SqlAlchemyMilestoneRepository,
 )
 
+from app.modules.milestones.infrastructure.workflow_repository import WorkflowMilestoneRepository
 from app.modules.users.domain.entities import User
+from app.modules.workflow.application.services import ApprovalResetter
+from app.modules.workflow.infrastructure.repositories import SqlAlchemyWorkflowRepository
 
 
 # ============================================================
@@ -40,9 +43,8 @@ def get_milestone_repository(
     SQLAlchemy Session dari app/core/database.py.
     """
 
-    return SqlAlchemyMilestoneRepository(
-        session=session,
-    )
+    resetter = ApprovalResetter(SqlAlchemyWorkflowRepository(session))
+    return WorkflowMilestoneRepository(session, resetter.reset)
 
 
 # ============================================================

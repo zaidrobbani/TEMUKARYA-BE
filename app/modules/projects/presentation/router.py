@@ -34,7 +34,22 @@ from app.modules.projects.presentation.dependencies import (
 
 from app.modules.projects.application.use_cases import SearchPublicProjects
 from app.modules.projects.presentation.dependencies import get_search_public_projects_use_case
-from app.modules.projects.presentation.schemas import PublicProjectsPageResponse
+from app.modules.projects.presentation.schemas import ProjectOwnerResponse, PublicProjectsPageResponse
+from app.modules.projects.presentation.dependencies import get_project_owner_reader
+
+
+def _with_owners(projects, reader) -> list[ProjectResponse]:
+    owners = reader.owners([p.umkm_id for p in projects])
+    skills = reader.skill_ids([p.id for p in projects])
+    out = []
+    for project in projects:
+        response = ProjectResponse.model_validate(project)
+        owner = owners.get(response.umkm_id)
+        if owner is not None:
+            response.umkm = ProjectOwnerResponse(**owner.__dict__)
+        response.skill_ids = skills.get(response.id, [])
+        out.append(response)
+    return out
 
 
 router = APIRouter(
@@ -146,6 +161,7 @@ def get_project_detail(
     use_case: GetProjectDetail = Depends(
         get_project_detail_use_case
     ),
+    owner_reader=Depends(get_project_owner_reader),
 ):
 
     project = use_case.execute(
@@ -153,7 +169,7 @@ def get_project_detail(
         requester_id=current_user.user_id,
     )
 
-    return success_response("Detail project berhasil diambil", ProjectResponse.model_validate(project))
+    return success_response("Detail project berhasil diambil", _with_owners([project], owner_reader)[0])
 
 
 # ============================================================
@@ -279,6 +295,7 @@ def search_public_projects(
     use_case: SearchPublicProjects = Depends(
         get_search_public_projects_use_case
     ),
+    owner_reader=Depends(get_project_owner_reader),
 ):
 
     if current_user.role != UserRole.FREELANCER:
@@ -301,10 +318,7 @@ def search_public_projects(
     return success_response(
         "Daftar project berhasil diambil",
         PublicProjectsPageResponse(
-            items=[
-                ProjectResponse.model_validate(project)
-                for project in result.items
-            ],
+            items=_with_owners(list(result.items), owner_reader),
             limit=result.limit,
             offset=result.offset,
             has_more=result.has_more,

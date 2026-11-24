@@ -164,3 +164,27 @@ def test_storage_is_not_publicly_mounted():
     with TestClient(app) as client:
         assert client.get("/storage/portfolios/example.png").status_code == 404
         assert client.get("/api/v1/storage/portfolios/example.png").status_code == 404
+
+
+PUBLIC = "/profiles/portfolios/own-a/media"
+
+
+def test_public_file_readable_by_any_logged_in_role(media_client):
+    client, app, _, _ = media_client
+    item = post(client).json()["data"]
+    for user in [AuthenticatedProfileUser("umkm-9", UserRole.UMKM),
+                 AuthenticatedProfileUser("owner-2", UserRole.FREELANCER)]:
+        app.dependency_overrides[get_authenticated_profile_user] = lambda user=user: user
+        response = client.get(f"{PUBLIC}/{item['id']}/file")
+        assert response.status_code == 200 and response.content.startswith(b"\x89PNG")
+        assert response.headers["cache-control"] == "private, max-age=86400"
+        assert response.headers["x-content-type-options"] == "nosniff"
+
+
+def test_public_file_requires_login_and_matching_portfolio(media_client):
+    client, app, _, _ = media_client
+    item = post(client).json()["data"]
+    assert client.get(f"/profiles/portfolios/own-b/media/{item['id']}/file").status_code == 404
+    assert client.get(f"{PUBLIC}/missing/file").status_code == 404
+    app.dependency_overrides.pop(get_authenticated_profile_user)
+    assert client.get(f"{PUBLIC}/{item['id']}/file").status_code == 401

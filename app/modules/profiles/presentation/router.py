@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status
 from app.core.exceptions import ServiceUnavailableError
 from app.core.responses import ApiResponse, error_responses, success_response
 from app.modules.profiles.domain.media import StorageFailure
-from app.modules.profiles.presentation.media_router import build_media_router
+from app.modules.profiles.presentation.media_router import build_media_router, build_public_media_router
 
 from app.core.exceptions import ForbiddenError
 from app.modules.profiles.application.dto import UpdateUmkmProfileInput, UpdateFreelancerProfileInput
@@ -454,3 +454,4 @@ def delete_portfolio(
 
 
 router.include_router(build_media_router(get_media_service))
+router.include_router(build_public_media_router(get_media_service))

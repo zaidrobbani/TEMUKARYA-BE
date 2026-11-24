@@ -42,6 +42,8 @@ class FreelancerPortfolioResponse(BaseModel):
     title: str
     description: str
     project_url: str | None = None
+    # Path relatif (seperti profile_image_url) ke gambar cover; butuh Bearer token. null bila belum ada gambar.
+    cover_image_url: str | None = None
 
 
 # ============================================================
@@ -75,6 +77,7 @@ class FreelancerSummaryResponse(BaseModel):
 
     user_id: str
     name: str
+    profile_image_url: str | None = None
     professional_title: str
     city: str
     availability_status: str

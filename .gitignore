@@ -9,3 +9,5 @@ htmlcov/
 .idea/
 .vscode/
 /storage/
+# Kredensial Firebase service account (FIREBASE_CREDENTIALS_FILE)
+/secrets/

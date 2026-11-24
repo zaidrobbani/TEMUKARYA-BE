@@ -3,6 +3,8 @@ from datetime import date, datetime
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
+from app.core.config import API_PREFIX
+from app.modules.profiles.domain.media import public_media_path
 from app.modules.discovery.domain.entities import (
     FreelancerDetail,
     FreelancerPortfolio,
@@ -30,6 +32,7 @@ _BASE_QUERY = """
     SELECT
         fp.user_id,
         u.name,
+        u.profile_image_url,
         fp.professional_title,
         fp.city,
         fp.availability_status,
@@ -226,6 +229,7 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
         return FreelancerSummary(
             user_id=str(row["user_id"]),
             name=row["name"],
+            profile_image_url=row["profile_image_url"],
             professional_title=(
                 row["professional_title"]
             ),
@@ -566,16 +570,22 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
         portfolios = self._session.execute(
             text("""
                 SELECT
-                    id,
-                    title,
-                    description,
-                    project_url
+                    p.id,
+                    p.title,
+                    p.description,
+                    p.project_url,
+                    (
+                        SELECT m.id
+                        FROM portfolio_media m
+                        WHERE m.portfolio_id = p.id AND m.is_cover = 1
+                        LIMIT 1
+                    ) AS cover_media_id
 
-                FROM portfolios
+                FROM portfolios p
 
-                WHERE freelancer_id = :freelancer_id
+                WHERE p.freelancer_id = :freelancer_id
 
-                ORDER BY created_at DESC, id
+                ORDER BY p.created_at DESC, p.id
             """),
             {
                 "freelancer_id": freelancer_id,
@@ -621,6 +631,7 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 for name in (
                     "user_id",
                     "name",
+                    "profile_image_url",
                     "professional_title",
                     "city",
                     "availability_status",
@@ -656,6 +667,10 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                     title=item["title"],
                     description=item["description"],
                     project_url=item["project_url"],
+                    cover_image_url=(
+                        public_media_path(API_PREFIX, str(item["id"]), str(item["cover_media_id"]))
+                        if item["cover_media_id"] else None
+                    ),
                 )
                 for item in portfolios
             ),

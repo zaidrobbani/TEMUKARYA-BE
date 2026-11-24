@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import BinaryIO
 
 from app.core.security import PasswordHasher
 from app.core.unit_of_work import UnitOfWork
@@ -10,6 +11,7 @@ from app.modules.users.domain.exceptions import (
     UserAccessDeniedError,
     UserNotFoundError,
 )
+from app.modules.users.domain.avatar import AvatarNotFoundError, AvatarStorage, avatar_key_from_url, avatar_url
 from app.modules.users.domain.repositories import UserRepository
 
 
@@ -87,3 +89,63 @@ class GetUser:
         if user is None:
             raise UserNotFoundError(user_id)
         return user
+
+
+class UpdateProfilePhoto:
+    """Ganti foto profil: simpan WebP baru, perbarui `profile_image_url`, lalu hapus file lama."""
+
+    def __init__(self, users: UserRepository, storage: AvatarStorage, uow: UnitOfWork, api_prefix: str):
+        self._users = users
+        self._storage = storage
+        self._uow = uow
+        self._api_prefix = api_prefix
+
+    def execute(self, user: User, source: BinaryIO) -> User:
+        old_key = avatar_key_from_url(user.profile_image_url)
+        key = self._storage.save(source)
+        try:
+            self._users.update_profile_image(user.id, avatar_url(self._api_prefix, user.id, key), datetime.now(UTC))
+            self._uow.commit()
+        except Exception:
+            # DB gagal: file baru jangan sampai yatim.
+            self._storage.delete(key)
+            raise
+        if old_key:
+            self._storage.delete(old_key)
+        updated = self._users.get_by_id(user.id)
+        if updated is None:
+            raise UserNotFoundError(user.id)
+        return updated
+
+
+class RemoveProfilePhoto:
+    def __init__(self, users: UserRepository, storage: AvatarStorage, uow: UnitOfWork):
+        self._users = users
+        self._storage = storage
+        self._uow = uow
+
+    def execute(self, user: User) -> User:
+        old_key = avatar_key_from_url(user.profile_image_url)
+        self._users.update_profile_image(user.id, None, datetime.now(UTC))
+        self._uow.commit()
+        if old_key:
+            self._storage.delete(old_key)
+        updated = self._users.get_by_id(user.id)
+        if updated is None:
+            raise UserNotFoundError(user.id)
+        return updated
+
+
+class GetProfilePhoto:
+    """Foto profil boleh dilihat semua user yang login (tampil di chat, pengajuan, pembayaran, dsb.)."""
+
+    def __init__(self, users: UserRepository, storage: AvatarStorage):
+        self._users = users
+        self._storage = storage
+
+    def execute(self, user_id: str) -> BinaryIO:
+        user = self._users.get_by_id(user_id)
+        key = avatar_key_from_url(user.profile_image_url) if user else None
+        if key is None:
+            raise AvatarNotFoundError()
+        return self._storage.open(key)

@@ -42,6 +42,13 @@ class SqlAlchemyMediaRepository:
             .with_for_update().execution_options(populate_existing=True)).all()
         return [self._entity(row) for row in rows]
 
+    def find(self, portfolio_id, media_id):
+        """Baca tanpa lock untuk tampilan publik (UMKM melihat portofolio freelancer)."""
+        row = self.session.scalar(select(PortfolioMediaModel).where(
+            PortfolioMediaModel.portfolio_id == portfolio_id, PortfolioMediaModel.id == media_id,
+        ))
+        return self._entity(row) if row is not None else None
+
     def add(self, media):
         row = PortfolioMediaModel(**{key: value for key, value in vars(media).items() if key != "uploaded_at"})
         self.session.add(row)

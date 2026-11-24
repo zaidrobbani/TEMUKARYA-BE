@@ -18,6 +18,7 @@ from app.modules.chat.domain.entities import (
 from app.modules.chat.presentation.dependencies import (
     get_authenticated_chat_actor,
     get_chat_database_context,
+    get_new_message_hook,
 )
 
 from app.modules.chat.presentation.router import router
@@ -234,6 +235,13 @@ class FakeMessageRepository:
 
         return tuple(items[:limit])
 
+    def get_attachment(self, attachment_id):
+        for item in self.attachments:
+            if item.id == attachment_id:
+                message = next(m for m in self.messages if m.id == item.message_id)
+                return item, message.conversation_id
+        return None
+
     def list_attachments(
         self,
         message_ids,
@@ -329,6 +337,10 @@ def http_context():
     app.dependency_overrides[
         get_chat_database_context
     ] = lambda: context
+
+    app.dependency_overrides[
+        get_new_message_hook
+    ] = lambda: lambda *args: None
 
     with TestClient(app) as client:
         yield app, client, context

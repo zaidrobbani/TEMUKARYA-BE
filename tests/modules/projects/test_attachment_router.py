@@ -80,6 +80,16 @@ class FakeAttachmentService:
                 "Proyek tidak ditemukan"
             )
 
+    def list_as_freelancer(self, freelancer_id, project_id):
+        self.calls.append(("list_as_freelancer", freelancer_id))
+        if project_id != PROJECT_ID:
+            raise NotFoundError("Project tidak ditemukan")
+        return list(self.items)
+
+    def file_as_freelancer(self, freelancer_id, project_id, attachment_id):
+        self.calls.append(("file_as_freelancer", freelancer_id))
+        raise NotFoundError("Attachment tidak ditemukan")
+
     def list(self, umkm_id, project_id):
         self.calls.append("list")
 
@@ -279,8 +289,6 @@ def test_attachment_requires_authentication(
     "method,url",
     [
         ("POST", BASE_URL),
-        ("GET", BASE_URL),
-        ("GET", FILE_URL),
         ("DELETE", DELETE_URL),
     ],
 )
@@ -575,3 +583,13 @@ def test_storage_failure_returns_503(context):
     assert "Storage tidak tersedia" not in (
         response.json()["message"]
     )
+
+
+def test_freelancer_reads_attachments_through_freelancer_access_check(context):
+    app, client, service = context
+    authenticate(app, role=UserRole.FREELANCER, user_id=OTHER_USER_ID)
+    response = client.get(BASE_URL)
+    assert response.status_code == 200
+    assert service.calls == [("list_as_freelancer", OTHER_USER_ID)]
+    assert client.get(FILE_URL).status_code == 404
+    assert service.calls[-1] == ("file_as_freelancer", OTHER_USER_ID)

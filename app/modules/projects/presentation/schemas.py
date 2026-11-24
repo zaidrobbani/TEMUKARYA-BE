@@ -39,6 +39,16 @@ class CreateProjectRequest(BaseModel):
 # ============================================================
 # PROJECT RESPONSE
 
+class ProjectOwnerResponse(BaseModel):
+    """UMKM pemilik proyek, ditampilkan ke freelancer di daftar & detail proyek."""
+
+    user_id: str
+    owner_name: str
+    business_name: str | None = None
+    city: str | None = None
+    profile_image_url: str | None = None
+
+
 class ProjectResponse(BaseModel):
     """Schema response informasi proyek."""
 
@@ -59,6 +69,10 @@ class ProjectResponse(BaseModel):
 
     created_at: UtcDateTime | None = None
     updated_at: UtcDateTime | None = None
+
+    # Hanya diisi di detail & pencarian proyek publik.
+    umkm: ProjectOwnerResponse | None = None
+    skill_ids: list[str] | None = None
 
 
 class UpdateProjectRequest(CreateProjectRequest):
