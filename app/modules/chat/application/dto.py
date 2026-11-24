@@ -1,3 +1,4 @@
+from typing import BinaryIO
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -111,3 +112,20 @@ class MarkConversationReadInput:
 class MarkConversationReadResult:
     conversation_id: str
     marked_count: int
+
+@dataclass(frozen=True, slots=True)
+class SendAttachmentMessageInput:
+    conversation_id: str
+    actor: ChatActor
+    file_name: str
+    source: BinaryIO
+    is_image: bool
+    caption: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GetAttachmentFileInput:
+    conversation_id: str
+    attachment_id: str
+    actor: ChatActor
+    thumbnail: bool = False

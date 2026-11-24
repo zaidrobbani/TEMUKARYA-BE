@@ -30,6 +30,22 @@ Navigasi saat diketuk: `reference_type = PROJECT` → detail alur project (`GET 
 - `PATCH /notifications/{id}/read` → notifikasi yang sudah ditandai dibaca (idempoten). Milik user lain → `404 Notifikasi tidak ditemukan`.
 - `PATCH /notifications/read-all` → `{ "updated": 3 }`.
 
+## Push FCM (notifikasi HP)
+
+| Endpoint | Body | Keterangan |
+|---|---|---|
+| `PUT /notifications/devices` | `{"token": "<token FCM>", "platform": "ANDROID"}` | Dipanggil setelah login & tiap token berganti. Idempoten; token milik akun lain dipindah ke akun ini |
+| `DELETE /notifications/devices` | `{"token": "<token FCM>"}` | Dipanggil sebelum logout |
+
+Pengiriman: notifikasi baru → setelah COMMIT → thread latar mengirim **data message** prioritas tinggi lewat
+FCM HTTP v1 ke semua token user penerima (tanpa field `notification`, jadi aplikasi yang menampilkan).
+Isi `data` (semua string): `notification_id`, `type`, `category`, `title`, `body`, `reference_type`, `reference_id`
+(kosong = tidak ada). Token yang ditolak FCM (`UNREGISTERED`/`INVALID_ARGUMENT`) dihapus otomatis.
+
+Konfigurasi: `FIREBASE_CREDENTIALS_FILE` = path file JSON service account di dalam container, mis.
+`/app/secrets/firebase-service-account.json` (folder `secrets/` di root repo, sudah di-.gitignore).
+Kosong / file tidak valid → push nonaktif, endpoint lain tetap jalan. Test selalu menonaktifkan push.
+
 ## Jenis notifikasi
 
 | `type` | Kategori | Penerima | Kapan |
@@ -64,4 +80,4 @@ Kontrak untuk modul lain: `Notifier.notify(user_id, type, title, body, reference
 |---|---|---|---|
 | N1 | Notifikasi lamaran & pesan chat | Ditambahkan ke modul applications (Faruqi) lewat hook opsional dan ke router chat | Figma Notifikasi menampilkan "freelancer mengajukan diri" dan "Pesan baru" |
 | N2 | "3 freelancer mengajukan diri" (digabung) | Satu notifikasi per lamaran, tidak digabung | Penggabungan bisa dilakukan Android per project; menghindari update notifikasi lama |
-| N3 | Push notification (FCM) | Belum ada; Android menarik data (`unread-count`) | Tidak ada di PRD |
+| N3 | Push notification (FCM) | Ada: setiap notifikasi yang ter-COMMIT juga dikirim ke HP lewat FCM (lihat bagian Push FCM). Nonaktif bila `FIREBASE_CREDENTIALS_FILE` kosong | Permintaan Zaid: notifikasi masuk ke HP walau aplikasi ditutup |

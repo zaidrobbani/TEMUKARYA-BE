@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.responses import UtcDateTime
 from app.modules.notifications.domain.entities import Notification
@@ -54,3 +56,18 @@ class UnreadCountResponse(BaseModel):
 
 class MarkAllReadResponse(BaseModel):
     updated: int
+
+
+class DeviceTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=20, max_length=512, pattern=r"^\S+$")
+    platform: Literal["ANDROID"] = "ANDROID"
+
+
+class DeviceTokenDeleteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=512)
+    # Android mengirim body yang sama dengan pendaftaran; platform diterima tapi tidak dipakai.
+    platform: Literal["ANDROID"] | None = None

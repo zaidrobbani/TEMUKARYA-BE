@@ -42,7 +42,8 @@ def context():
                 name TEXT NOT NULL,
                 role TEXT NOT NULL,
                 email TEXT,
-                password_hash TEXT
+                password_hash TEXT,
+                profile_image_url TEXT
             )
             """,
             """
@@ -88,6 +89,13 @@ def context():
                 description TEXT,
                 project_url TEXT,
                 created_at TEXT
+            )
+            """,
+            """
+            CREATE TABLE portfolio_media (
+                id TEXT PRIMARY KEY,
+                portfolio_id TEXT NOT NULL,
+                is_cover INTEGER NOT NULL DEFAULT 0
             )
             """,
             """
@@ -366,6 +374,19 @@ def context():
                     "project_url": None,
                     "created_at": "2026-10-01 00:00:00",
                 },
+            ],
+        )
+
+        # Cover hanya untuk po1; po2 punya media non-cover saja.
+        connection.execute(
+            text("""
+                INSERT INTO portfolio_media (id, portfolio_id, is_cover)
+                VALUES (:id, :portfolio_id, :is_cover)
+            """),
+            [
+                {"id": "m1", "portfolio_id": "po1", "is_cover": 1},
+                {"id": "m2", "portfolio_id": "po1", "is_cover": 0},
+                {"id": "m3", "portfolio_id": "po2", "is_cover": 0},
             ],
         )
 
@@ -735,6 +756,8 @@ def test_detail_includes_related_data(context):
 
     assert len(detail.portfolios) == 2
     assert detail.portfolios[0].title == "Store API"
+    assert detail.portfolios[0].cover_image_url == "/api/v1/profiles/portfolios/po1/media/m1/file"
+    assert detail.portfolios[1].cover_image_url is None
 
     assert len(detail.reviews) == 2
     assert detail.reviews[0].rating == 4
@@ -824,3 +847,14 @@ def test_read_only_repository(context):
     ).scalar_one()
 
     assert before == after
+
+
+def test_detail_and_search_include_profile_image_url(context):
+    repository, session = context
+    url = "/api/v1/users/f1/photo?v=abc"
+    session.execute(text("UPDATE users SET profile_image_url = :url WHERE id = 'f1'"), {"url": url})
+
+    detail = repository.get_freelancer_detail("f1")
+
+    assert detail.profile_image_url == url
+    assert repository.get_freelancer_detail("f2").profile_image_url is None

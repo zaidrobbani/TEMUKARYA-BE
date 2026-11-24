@@ -1,19 +1,31 @@
-from datetime import datetime
+import json
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import (
+    File,
+    Form,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
     APIRouter,
     Depends,
     Query,
     status,
 )
 
-from app.core.exceptions import BadRequestError
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
+
+from app.core.exceptions import AppError, BadRequestError
 from app.core.responses import ApiResponse, error_responses, success_response
 
 from app.modules.chat.application.dto import (
     CreateConversationInput,
+    GetAttachmentFileInput,
     GetConversationInput,
+    SendAttachmentMessageInput,
     ListConversationsInput,
     ListMessagesInput,
     MarkConversationReadInput,
@@ -23,6 +35,8 @@ from app.modules.chat.application.dto import (
 from app.modules.chat.application.use_cases import (
     CreateOrGetConversation,
     GetConversation,
+    GetMessageAttachmentFile,
+    SendAttachmentMessage,
     ListUserConversations,
     ListConversationMessages,
     MarkConversationRead,
@@ -31,7 +45,11 @@ from app.modules.chat.application.use_cases import (
 
 from app.modules.chat.domain.entities import ChatActor
 
+from app.core.config import API_PREFIX
+from app.modules.chat.domain.attachment_storage import ChatAttachmentStorage, thumbnail_key_of
+from app.modules.chat.domain.entities import MessageType
 from app.modules.chat.presentation.dependencies import (
+    get_chat_attachment_storage,
     ChatDatabaseContext,
     NewMessageHook,
     get_authenticated_chat_actor,
@@ -39,11 +57,25 @@ from app.modules.chat.presentation.dependencies import (
     get_new_message_hook,
 )
 
+from app.modules.chat.presentation.realtime import (
+    CLOSE_NOT_FOUND,
+    CLOSE_UNAUTHORIZED,
+    ChatContextFactory,
+    ChatHub,
+    MessageNotifier,
+    SocketAuthenticator,
+    get_chat_context_factory,
+    get_chat_hub,
+    get_socket_authenticator,
+    get_socket_message_notifier,
+    token_from,
+)
 from app.modules.chat.presentation.schemas import (
     ConversationListResponse,
     ConversationResponse,
     CreateConversationRequest,
     MarkConversationReadResponse,
+    MessageAttachmentResponse,
     MessageCursorResponse,
     MessagePageResponse,
     MessageResponse,
@@ -239,6 +271,7 @@ def send_text_message(
         NewMessageHook,
         Depends(get_new_message_hook),
     ],
+    hub: Annotated[ChatHub, Depends(get_chat_hub)],
 ):
     """
     Mengirim pesan teks.
@@ -272,6 +305,8 @@ def send_text_message(
         notify(conversation_id, actor.user_id, result.message_text or "")
 
         db.session.commit()
+
+        hub.broadcast_from_thread(conversation_id, _message_event(result))
 
         return response
 
@@ -364,8 +399,9 @@ def get_message_history(
     # Convert Domain DTO into safe response.
     # storage_key sengaja tidak diekspos.
     items = [
-        MessageWithAttachmentsResponse.model_validate(
-            item
+        MessageWithAttachmentsResponse(
+            message=MessageResponse.model_validate(item.message),
+            attachments=[_attachment_response(conversation_id, a) for a in item.attachments],
         )
         for item in result.items
     ]
@@ -408,6 +444,7 @@ def mark_conversation_read(
         ChatDatabaseContext,
         Depends(get_chat_database_context),
     ],
+    hub: Annotated[ChatHub, Depends(get_chat_hub)],
 ):
     """
     Menandai pesan masuk yang belum dibaca.
@@ -437,8 +474,260 @@ def mark_conversation_read(
 
         db.session.commit()
 
+        hub.broadcast_from_thread(conversation_id, _read_event(conversation_id, actor, result.marked_count))
+
         return response
 
     except Exception:
         db.session.rollback()
         raise
+
+
+# ============================================================
+# 7. REAL-TIME (WEBSOCKET)
+# ============================================================
+
+def _attachment_response(conversation_id: str, attachment) -> MessageAttachmentResponse:
+    base = f"{API_PREFIX}/conversations/{conversation_id}/attachments/{attachment.id}/file"
+    response = MessageAttachmentResponse.model_validate(attachment)
+    response.download_path = base
+    response.thumbnail_path = f"{base}?thumbnail=true" if thumbnail_key_of(attachment.storage_key) else None
+    return response
+
+
+def _message_event(message, attachments=()) -> dict:
+    return {
+        "type": "message",
+        "message": MessageResponse.model_validate(message).model_dump(mode="json"),
+        "attachments": [
+            _attachment_response(message.conversation_id, a).model_dump(mode="json") for a in attachments
+        ],
+    }
+
+
+def _read_event(conversation_id: str, actor: ChatActor, marked_count: int) -> dict:
+    return {
+        "type": "read",
+        "conversation_id": conversation_id,
+        "reader_user_id": actor.user_id,
+        "marked_count": marked_count,
+        "read_at": datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+    }
+
+
+def _error_event(message: str, code: str | None = None) -> dict:
+    event = {"type": "error", "message": message}
+    if code:
+        event["code"] = code
+    return event
+
+
+@router.websocket("/{conversation_id}/ws")
+async def conversation_socket(
+    websocket: WebSocket,
+    conversation_id: str,
+    hub: Annotated[ChatHub, Depends(get_chat_hub)],
+    open_context: Annotated[ChatContextFactory, Depends(get_chat_context_factory)],
+    authenticate: Annotated[SocketAuthenticator, Depends(get_socket_authenticator)],
+    notify: Annotated[MessageNotifier, Depends(get_socket_message_notifier)],
+):
+    """
+    Chat real-time satu percakapan. Token: header `Authorization: Bearer` atau query `?token=`.
+
+    Client → server: `{"type":"message","text":"..."}`, `{"type":"read"}`, `{"type":"ping"}`.
+    Server → client: `ready`, `message`, `read`, `pong`, `error`. Close 4401 = token tidak valid,
+    4404 = percakapan tidak ada / bukan peserta.
+    """
+    token = token_from(websocket)
+    try:
+        actor = await run_in_threadpool(authenticate, token) if token else None
+    except AppError:
+        actor = None
+    # Handshake diterima dulu: bila ditolak sebelum accept, uvicorn menjawab HTTP 403 dan kode close tidak sampai ke client.
+    await websocket.accept()
+    if actor is None:
+        await websocket.close(code=CLOSE_UNAUTHORIZED, reason="Token tidak valid, silakan login kembali")
+        return
+
+    def check_access() -> None:
+        with open_context() as db:
+            GetConversation(db.conversations).execute(GetConversationInput(conversation_id=conversation_id, actor=actor))
+
+    try:
+        await run_in_threadpool(check_access)
+    except AppError:
+        await websocket.close(code=CLOSE_NOT_FOUND, reason="Percakapan tidak ditemukan")
+        return
+
+    await hub.join(conversation_id, websocket)
+    try:
+        await websocket.send_json({"type": "ready", "conversation_id": conversation_id})
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                data = json.loads(raw)
+                kind = data.get("type") if isinstance(data, dict) else None
+            except ValueError:
+                kind = None
+            if kind == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif kind == "message":
+                text = data.get("text")
+                if not isinstance(text, str):
+                    await websocket.send_json(_error_event("Pesan harus berupa teks"))
+                    continue
+                try:
+                    message = await run_in_threadpool(_send_message, open_context, notify, conversation_id, actor, text)
+                except AppError as exc:
+                    await websocket.send_json(_error_event(exc.message, exc.code))
+                    continue
+                await hub.broadcast(conversation_id, _message_event(message))
+            elif kind == "read":
+                try:
+                    marked = await run_in_threadpool(_mark_read, open_context, conversation_id, actor)
+                except AppError as exc:
+                    await websocket.send_json(_error_event(exc.message, exc.code))
+                    continue
+                await hub.broadcast(conversation_id, _read_event(conversation_id, actor, marked))
+            else:
+                await websocket.send_json(_error_event("Tipe event tidak dikenal (gunakan message, read, atau ping)"))
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await hub.leave(conversation_id, websocket)
+
+
+def _send_message(
+    open_context: ChatContextFactory, notify: MessageNotifier, conversation_id: str, actor: ChatActor, text: str
+):
+    # Sama seperti REST: simpan pesan + notifikasi dalam satu transaksi.
+    with open_context() as db:
+        try:
+            result = SendTextMessage(
+                conversation_repository=db.conversations,
+                message_repository=db.messages,
+            ).execute(SendTextMessageInput(conversation_id=conversation_id, actor=actor, message_text=text))
+            notify(db.session, conversation_id, actor.user_id, result.message_text or "")
+            db.session.commit()
+            return result
+        except Exception:
+            db.session.rollback()
+            raise
+
+
+def _mark_read(open_context: ChatContextFactory, conversation_id: str, actor: ChatActor) -> int:
+    with open_context() as db:
+        try:
+            result = MarkConversationRead(
+                conversation_repository=db.conversations,
+                message_repository=db.messages,
+            ).execute(MarkConversationReadInput(conversation_id=conversation_id, actor=actor))
+            db.session.commit()
+            return result.marked_count
+        except Exception:
+            db.session.rollback()
+            raise
+
+
+
+# ============================================================
+# 8. LAMPIRAN (FOTO / DOKUMEN)
+# ============================================================
+
+_IMAGE_SIGNATURES = (b"\xff\xd8", b"\x89PNG\r\n\x1a\n")
+
+
+def _looks_like_image(upload: UploadFile) -> bool:
+    head = upload.file.read(12)
+    upload.file.seek(0)
+    return head.startswith(_IMAGE_SIGNATURES) or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")
+
+
+@router.post(
+    "/{conversation_id}/attachments",
+    response_model=ApiResponse[MessageWithAttachmentsResponse],
+    status_code=status.HTTP_201_CREATED,
+    responses=error_responses(400, 401, 403, 404, 413, 415, 422, 503),
+    summary="Kirim foto (dikompres ke WebP + thumbnail) atau dokumen, dengan caption opsional",
+)
+def send_attachment_message(
+    conversation_id: str,
+    actor: Annotated[ChatActor, Depends(get_authenticated_chat_actor)],
+    db: Annotated[ChatDatabaseContext, Depends(get_chat_database_context)],
+    notify: Annotated[NewMessageHook, Depends(get_new_message_hook)],
+    hub: Annotated[ChatHub, Depends(get_chat_hub)],
+    storage: Annotated[ChatAttachmentStorage, Depends(get_chat_attachment_storage)],
+    file: UploadFile = File(..., description="Foto JPG/PNG/WebP (maks 10 MB) atau dokumen PDF/Office/TXT/CSV/ZIP (maks 10 MB)"),
+    caption: str | None = Form(None, description="Keterangan opsional"),
+):
+    try:
+        message, attachments = SendAttachmentMessage(
+            conversation_repository=db.conversations,
+            message_repository=db.messages,
+            storage=storage,
+        ).execute(
+            SendAttachmentMessageInput(
+                conversation_id=conversation_id,
+                actor=actor,
+                file_name=file.filename or "",
+                source=file.file,
+                is_image=_looks_like_image(file),
+                caption=caption,
+            )
+        )
+        preview = message.message_text or (
+            "📷 Foto" if message.message_type == MessageType.IMAGE else f"📄 {attachments[0].original_file_name}"
+        )
+        notify(conversation_id, actor.user_id, preview)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    hub.broadcast_from_thread(conversation_id, _message_event(message, attachments))
+    return success_response(
+        "Lampiran berhasil dikirim",
+        MessageWithAttachmentsResponse(
+            message=MessageResponse.model_validate(message),
+            attachments=[_attachment_response(conversation_id, a) for a in attachments],
+        ),
+    )
+
+
+@router.get(
+    "/{conversation_id}/attachments/{attachment_id}/file",
+    response_class=StreamingResponse,
+    responses=error_responses(401, 404, 503),
+    summary="Unduh lampiran chat (biner). thumbnail=true untuk pratinjau foto",
+)
+def download_attachment(
+    conversation_id: str,
+    attachment_id: str,
+    actor: Annotated[ChatActor, Depends(get_authenticated_chat_actor)],
+    db: Annotated[ChatDatabaseContext, Depends(get_chat_database_context)],
+    storage: Annotated[ChatAttachmentStorage, Depends(get_chat_attachment_storage)],
+    thumbnail: bool = False,
+):
+    attachment, mime, stream = GetMessageAttachmentFile(
+        conversation_repository=db.conversations,
+        message_repository=db.messages,
+        storage=storage,
+    ).execute(
+        GetAttachmentFileInput(
+            conversation_id=conversation_id,
+            attachment_id=attachment_id,
+            actor=actor,
+            thumbnail=thumbnail,
+        )
+    )
+    safe_name = "".join(c if c.isascii() and c not in '"\\' else "_" for c in attachment.original_file_name)
+    return StreamingResponse(
+        iter(lambda: stream.read(64 * 1024), b""),
+        media_type=mime,
+        # File lampiran tidak pernah berubah setelah dikirim, aman di-cache client.
+        headers={
+            "Cache-Control": "private, max-age=604800, immutable",
+            "Content-Disposition": f'inline; filename="{safe_name}"',
+        },
+        background=BackgroundTask(stream.close),
+    )

@@ -282,12 +282,12 @@ def list_project_attachments(
         get_project_attachment_service
     ),
 ):
-    umkm_id = require_umkm(current_user)
+    if current_user.role == UserRole.FREELANCER:
+        items = service.list_as_freelancer(freelancer_id=current_user.user_id, project_id=project_id)
+    else:
+        items = service.list(umkm_id=require_umkm(current_user), project_id=project_id)
 
-    return success_response(
-        "Daftar lampiran project berhasil diambil",
-        service.list(umkm_id=umkm_id, project_id=project_id),
-    )
+    return success_response("Daftar lampiran project berhasil diambil", items)
 
 
 # ============================================================
@@ -309,15 +309,19 @@ def download_project_attachment(
         get_project_attachment_service
     ),
 ):
-    umkm_id = require_umkm(current_user)
-
-    # Service memeriksa kepemilikan sebelum
-    # membuka stream file fisik.
-    attachment, stream = service.file(
-        umkm_id=umkm_id,
-        project_id=project_id,
-        attachment_id=attachment_id,
-    )
+    # Service memeriksa hak baca sebelum membuka stream file fisik.
+    if current_user.role == UserRole.FREELANCER:
+        attachment, stream = service.file_as_freelancer(
+            freelancer_id=current_user.user_id,
+            project_id=project_id,
+            attachment_id=attachment_id,
+        )
+    else:
+        attachment, stream = service.file(
+            umkm_id=require_umkm(current_user),
+            project_id=project_id,
+            attachment_id=attachment_id,
+        )
 
     def chunks():
         try:

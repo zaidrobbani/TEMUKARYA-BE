@@ -7,6 +7,7 @@ from app.core.database import from_db_utc, to_db_utc
 from app.modules.notifications.domain.entities import Notification
 from app.modules.notifications.domain.repositories import NotificationRepository
 from app.modules.notifications.infrastructure.models import NotificationModel
+from app.modules.notifications.infrastructure.realtime import queue_after_commit
 
 
 def _to_entity(model: NotificationModel) -> Notification:
@@ -41,6 +42,9 @@ class SqlAlchemyNotificationRepository(NotificationRepository):
             )
         )
         self._session.flush()
+
+        # Dikirim ke WebSocket pemilik notifikasi setelah transaksi commit.
+        queue_after_commit(self._session, notification)
 
     def list_for_user(
         self, user_id: str, types: tuple[str, ...] | None, unread_only: bool, limit: int, offset: int

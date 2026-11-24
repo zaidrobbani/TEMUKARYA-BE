@@ -54,8 +54,10 @@ Status code:
 | Modul | Method & path | Role | Sukses |
 |---|---|---|---|
 | core | `GET /health` | - | 200 |
-| auth | `/auth/...` (register, login, google, admin/login, me, logout, email, password) | lihat [auth.md](auth.md) | |
+| auth | `/auth/...` (register, login, google, admin/login, me, `PATCH /auth/me` ubah nama, logout, email, password) | lihat [auth.md](auth.md) | |
 | users | `GET /users/{user_id}` | diri sendiri / ADMIN | 200 |
+| | `PUT`, `DELETE /users/me/photo` (foto profil, dikompres ke WebP) | user login | 200 |
+| | `GET /users/{user_id}/photo` (biner `image/webp`) | semua user login | 200 |
 | enums | `GET /enums`, `GET /enums/{name}` | - | 200 |
 | skills | `GET /skills`, `GET /project-categories` | - | 200 |
 | profiles | `POST /profiles/umkm` | UMKM | 201 |
@@ -88,6 +90,8 @@ Status code:
 | | `POST /conversations/{conversation_id}/messages` | peserta | 201 |
 | | `GET /conversations/{conversation_id}/messages` (`limit`, `before_at` + `before_id`) | peserta | 200 |
 | | `PATCH /conversations/{conversation_id}/read` | peserta | 200 |
+| | `POST /conversations/{conversation_id}/attachments` (foto/dokumen), `GET …/attachments/{attachment_id}/file` (lihat [chat-attachments.md](chat-attachments.md)) | peserta | 201 / 200 |
+| | `WS /conversations/{conversation_id}/ws` (chat real-time, lihat [chat-realtime.md](chat-realtime.md)) | peserta | 101 |
 | workflow | `GET /workflow/projects` (Project Saya / Project Aktif) | UMKM / FREELANCER | 200 |
 | | `GET /projects/{project_id}/workflow` (detail alur + tombol yang tersedia) | UMKM pemilik / freelancer terpilih | 200 |
 | | `POST /projects/{project_id}/agreement` (pilih freelancer) | UMKM pemilik | 201 |

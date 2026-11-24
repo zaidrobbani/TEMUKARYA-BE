@@ -573,6 +573,23 @@ class SqlAlchemyMessageRepository:
             for row in rows
         )
 
+    def get_attachment(
+        self,
+        attachment_id: str,
+    ) -> tuple[MessageAttachment, str] | None:
+        row = self._session.execute(
+            text(
+                "SELECT a.id, a.message_id, a.original_file_name, a.storage_key, "
+                "a.mime_type, a.file_size_bytes, a.uploaded_at, m.conversation_id "
+                "FROM message_attachments a JOIN messages m ON m.id = a.message_id "
+                "WHERE a.id = :id"
+            ),
+            {"id": attachment_id},
+        ).mappings().one_or_none()
+        if row is None:
+            return None
+        return _attachment_from_row(row), str(row["conversation_id"])
+
     # ========================================================
     # D. CREATE MESSAGE WITH ATTACHMENTS
     # ========================================================

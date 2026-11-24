@@ -28,6 +28,7 @@ from app.modules.auth.application.use_cases import (
     ResendEmailVerification,
     ResetPassword,
     SendEmailVerification,
+    UpdateAccountName,
     VerifyEmail,
 )
 from app.modules.auth.domain.entities import AuthSession
@@ -95,6 +96,13 @@ def request_password_reset_use_case(
     uow: UnitOfWork = Depends(get_uow),
 ) -> RequestPasswordReset:
     return RequestPasswordReset(users, action_tokens, email_sender, uow, settings.PUBLIC_API_URL)
+
+
+def update_account_name_use_case(
+    users: UserRepository = Depends(get_user_repository),
+    uow: UnitOfWork = Depends(get_uow),
+) -> UpdateAccountName:
+    return UpdateAccountName(users, uow)
 
 
 def verify_email_use_case(

@@ -29,3 +29,19 @@ class NotificationRepository(ABC):
 
     @abstractmethod
     def mark_all_read(self, user_id: str, read_at: datetime) -> int: ...
+
+
+class DeviceTokenRepository(ABC):
+    @abstractmethod
+    def upsert(self, user_id: str, token: str, platform: str) -> None:
+        """Token yang sudah ada dipindah ke user ini (perangkat dipakai login akun lain)."""
+
+    @abstractmethod
+    def remove(self, user_id: str, token: str) -> None: ...
+
+    @abstractmethod
+    def tokens_for(self, user_id: str) -> list[str]: ...
+
+    @abstractmethod
+    def remove_tokens(self, tokens: list[str]) -> None:
+        """Hapus token yang ditolak FCM (aplikasi di-uninstall / token kedaluwarsa)."""

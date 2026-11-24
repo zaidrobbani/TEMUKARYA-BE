@@ -235,6 +235,13 @@ class FakeMessageRepository:
 
         return tuple(items[:limit])
 
+    def get_attachment(self, attachment_id):
+        for item in self.attachments:
+            if item.id == attachment_id:
+                message = next(m for m in self.messages if m.id == item.message_id)
+                return item, message.conversation_id
+        return None
+
     def list_attachments(
         self,
         message_ids,

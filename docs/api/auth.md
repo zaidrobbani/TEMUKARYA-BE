@@ -241,6 +241,51 @@ docker compose exec api python -m app.scripts.create_admin --name "Admin" --emai
 
 Butuh token. Sukses `200`: `message` = `"Data akun berhasil diambil"`, `data` = objek `User`.
 
+## PATCH `/auth/me`
+
+Butuh token. Mengubah nama akun yang tampil sebagai **Nama Pemilik** (Kelola Profil Usaha, UMKM) dan
+**Nama Lengkap** (Profil Profesional, freelancer). Email, nomor WhatsApp, role, dan kata sandi tidak bisa diubah di sini.
+
+Request: `{ "name": "Rina Pratiwi" }`. Field lain ditolak (`422`).
+
+Sukses `200`: `message` = `"Data akun berhasil diperbarui"`, `data` = objek `User` terbaru. Token lama tetap berlaku.
+
+| Kode | Kapan | `message` |
+|---|---|---|
+| 422 | `name` kosong / hanya spasi / tidak dikirim | `errors[].message` = `Wajib diisi` |
+| 422 | `name` > 100 karakter | `Maksimal 100 karakter` |
+| 422 | Mengirim field lain (mis. `role`) | per field |
+| 401 | Token tidak ada / tidak valid | lihat tabel error token |
+
+## Foto profil
+
+Dipakai foto di Kelola Profil Usaha (UMKM) dan Profil Profesional (freelancer). Semua butuh token.
+
+| Endpoint | Fungsi | Sukses |
+|---|---|---|
+| `PUT /users/me/photo` (multipart `file`) | Unggah/ganti foto | `200`, `data` = objek `User` dengan `profile_image_url` baru |
+| `DELETE /users/me/photo` | Hapus foto (kembali ke avatar inisial) | `200`, `profile_image_url: null` |
+| `GET /users/{user_id}/photo` | File foto (biner `image/webp`) | `200`, boleh dibaca semua user yang login |
+
+Server selalu mengompres ulang: orientasi EXIF diterapkan, metadata (EXIF/GPS/ICC) dibuang, sisi terpanjang diperkecil
+ke **512 px**, disimpan sebagai **WebP** dengan kualitas turun bertahap (80→40) sampai **≤ 150 KB**. Foto lama dihapus
+setelah foto baru tersimpan. `profile_image_url` berbentuk `/api/v1/users/{id}/photo?v=<versi>`; `v` berganti setiap
+unggahan sehingga client aman menyimpan cache. Android juga mengompres ke WebP sebelum mengirim.
+
+| Kode | Kapan | `message` |
+|---|---|---|
+| 413 | File > 2 MB | `Ukuran foto maksimal 2 MB` |
+| 415 | Bukan JPG/PNG/WebP (dicek dari isi file) | `Format foto harus JPG, PNG, atau WebP` |
+| 400 | File kosong / rusak / animasi / > 4096×4096 | `File foto kosong`, `Foto rusak atau tidak dapat dibaca`, … |
+| 404 | `GET` untuk user tanpa foto / user tidak ada | `Foto profil tidak ditemukan` |
+| 401 | Tanpa token | lihat tabel error token |
+| 503 | Penyimpanan tidak tersedia | `Penyimpanan foto sedang tidak tersedia, silakan coba lagi` |
+
+File disimpan di volume Docker `uploads` (`/app/storage/avatars`, env `AVATAR_STORAGE_ROOT`).
+
+`profile_image_url` juga ikut di response `GET /freelancers` dan `GET /freelancers/{freelancer_id}` (discovery), supaya UMKM
+bisa melihat foto freelancer di Cari Freelancer, Rekomendasi, Pengajuan, dan Profil Freelancer.
+
 ## POST `/auth/logout`
 
 Butuh token. Sukses `200`: `{"success": true, "message": "Logout berhasil", "data": null}`.
@@ -331,3 +376,5 @@ Item enum: `{ "value": "UMKM", "label": "Pemilik UMKM" }`. Nama enum yang tidak 
 | 26 | Ubah kata sandi saat login | **Belum dibuat.** Ada menu "Keamanan & Kata Sandi" di layar Profil, di luar section Auth | Figma Profil |
 | 27 | Email sungguhan | Belum ada SMTP produksi. Domain pengirim `temukarya.id` hanya contoh | — |
 | 28 | Email hanya teks polos, tanpa HTML dan tombol | Saat diuji lewat Gmail SMTP ke akun `student.ub.ac.id`, email teks + HTML dijawab `250 OK` tetapi tidak terlihat di mailbox, sedangkan teks polos sampai. Penyebab pastinya belum diketahui, email teks + HTML bisa jadi masuk Spam. Tautan `localhost` bisa saja tidak otomatis bisa diklik, jadi salin ke browser kalau perlu | Hasil uji 2026-11-04 |
+| 29 | Ubah nama akun | `PATCH /auth/me` hanya untuk `name` (1–100 karakter, spasi depan/belakang dibuang). Dipakai field Nama Pemilik & Nama Lengkap di Figma, yang sebelumnya tidak punya endpoint | Figma Kelola Profil Usaha & Profil Profesional |
+| 30 | Foto profil | Endpoint di `/users/me/photo` (bukan `/auth`), dikompres server ke WebP 512 px ≤ 150 KB, batas unggah 2 MB, dapat dilihat semua user login; tidak perlu migrasi (`profile_image_url` sudah ada) | Figma "JPG atau PNG, maks. 2 MB"; permintaan Zaid agar server ringan |

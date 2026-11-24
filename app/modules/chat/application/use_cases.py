@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from datetime import datetime, timezone
+from typing import BinaryIO
 from uuid import uuid4
 
 from app.core.exceptions import (
@@ -20,12 +21,15 @@ from app.modules.chat.application.dto import (
     MessagePage,
     MarkConversationReadInput,
     MarkConversationReadResult,
+    SendAttachmentMessageInput,
+    GetAttachmentFileInput,
 )
 
 from app.modules.chat.domain.entities import (
     ChatActor,
     Conversation,
     Message,
+    MessageAttachment,
     MessageType,
 )
 
@@ -41,7 +45,13 @@ from app.modules.chat.domain.conversation_rules import (
     validate_chat_id,
 )
 
+from app.modules.chat.domain.attachment_storage import (
+    ChatAttachmentStorage,
+    ChatFileNotFoundError,
+    thumbnail_key_of,
+)
 from app.modules.chat.domain.message_rules import (
+    normalize_message_text,
     require_attachment_belongs_to_message,
     validate_message_payload,
 )
@@ -841,3 +851,117 @@ class MarkConversationRead:
             conversation_id=conversation.id,
             marked_count=count,
         )
+
+# ============================================================
+# 8. SEND ATTACHMENT MESSAGE (foto / dokumen)
+# ============================================================
+
+class SendAttachmentMessage:
+    """
+    Satu lampiran per pesan (seperti WhatsApp), caption opsional.
+
+    Foto dikompres storage ke WebP + thumbnail; dokumen disimpan apa adanya setelah isinya dicek.
+    File yang sudah tersimpan dihapus lagi bila penyimpanan pesan gagal.
+    """
+
+    def __init__(
+        self,
+        conversation_repository: ConversationRepository,
+        message_repository: MessageRepository,
+        storage: ChatAttachmentStorage,
+        clock: Callable[[], datetime] = _utc_now,
+    ):
+        self.message_repository = message_repository
+        self.storage = storage
+        self.clock = clock
+        self.get_conversation = GetConversation(conversation_repository)
+
+    def execute(self, data: SendAttachmentMessageInput) -> tuple[Message, tuple[MessageAttachment, ...]]:
+        conversation = self.get_conversation.execute(
+            GetConversationInput(conversation_id=data.conversation_id, actor=data.actor)
+        )
+        try:
+            caption = normalize_message_text(data.caption, required=False)
+        except ValueError as exc:
+            raise BadRequestError(str(exc)) from exc
+
+        stored = (
+            self.storage.save_image(data.source)
+            if data.is_image
+            else self.storage.save_document(data.source, data.file_name)
+        )
+        try:
+            now = self.clock()
+            message = Message(
+                id=str(uuid4()),
+                conversation_id=conversation.id,
+                sender_user_id=data.actor.user_id,
+                message_text=caption,
+                message_type=MessageType.IMAGE if data.is_image else MessageType.FILE,
+                sent_at=now,
+                created_at=now,
+                read_at=None,
+            )
+            attachment = MessageAttachment(
+                id=str(uuid4()),
+                message_id=message.id,
+                original_file_name=_display_name(data.file_name, stored.key, data.is_image),
+                storage_key=stored.key,
+                mime_type=stored.mime_type,
+                file_size_bytes=stored.size,
+                uploaded_at=now,
+            )
+            try:
+                saved = self.message_repository.create_with_attachments(message=message, attachments=(attachment,))
+            except ValueError as exc:
+                raise BadRequestError(str(exc)) from exc
+            return saved, (attachment,)
+        except Exception:
+            self.storage.delete(stored.key)
+            if stored.thumbnail_key:
+                self.storage.delete(stored.thumbnail_key)
+            raise
+
+
+def _display_name(file_name: str, key: str, is_image: bool) -> str:
+    name = (file_name or "").replace("/", "_").replace("\\", "_").replace("\x00", "").strip()[:200]
+    if is_image:
+        # Foto disimpan ulang sebagai WebP, nama mengikuti format tersimpan.
+        stem = name.rsplit(".", 1)[0] if "." in name else (name or "foto")
+        return f"{stem or 'foto'}.webp"
+    return name or key
+
+
+# ============================================================
+# 9. GET ATTACHMENT FILE
+# ============================================================
+
+class GetMessageAttachmentFile:
+    """Hanya peserta percakapan yang boleh mengunduh. Thumbnail hanya ada untuk foto."""
+
+    def __init__(
+        self,
+        conversation_repository: ConversationRepository,
+        message_repository: MessageRepository,
+        storage: ChatAttachmentStorage,
+    ):
+        self.message_repository = message_repository
+        self.storage = storage
+        self.get_conversation = GetConversation(conversation_repository)
+
+    def execute(self, data: GetAttachmentFileInput) -> tuple[MessageAttachment, str, BinaryIO]:
+        conversation = self.get_conversation.execute(
+            GetConversationInput(conversation_id=data.conversation_id, actor=data.actor)
+        )
+        found = self.message_repository.get_attachment(data.attachment_id)
+        if found is None or found[1] != conversation.id:
+            raise ChatFileNotFoundError()
+        attachment = found[0]
+        key = attachment.storage_key
+        mime = attachment.mime_type
+        if data.thumbnail:
+            key = thumbnail_key_of(key)
+            if key is None:
+                raise ChatFileNotFoundError()
+            mime = "image/webp"
+        return attachment, mime, self.storage.open(key)

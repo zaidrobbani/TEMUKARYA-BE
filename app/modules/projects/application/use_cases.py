@@ -117,8 +117,11 @@ class GetProjectDetail:
     def __init__(
         self,
         project_repository: ProjectRepository,
+        is_selected_freelancer=None,
     ):
         self._repository = project_repository
+        # (project_id, user_id) -> bool; freelancer terpilih tetap boleh melihat proyeknya.
+        self._is_selected_freelancer = is_selected_freelancer or (lambda project_id, user_id: False)
 
     def execute(
         self,
@@ -132,6 +135,9 @@ class GetProjectDetail:
 
         # Pemilik dapat melihat proyeknya sendiri.
         if project.umkm_id == requester_id:
+            return project
+
+        if self._is_selected_freelancer(project_id, requester_id):
             return project
 
         # Pengguna lain hanya dapat melihat proyek publik

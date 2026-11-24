@@ -31,6 +31,12 @@ class FakeUserRepository(UserRepository):
     def mark_email_verified(self, user_id: str, verified_at: datetime) -> None:
         self.users[user_id] = replace(self.users[user_id], email_verified_at=verified_at)
 
+    def update_name(self, user_id: str, name: str, updated_at: datetime) -> None:
+        self.users[user_id] = replace(self.users[user_id], name=name, updated_at=updated_at)
+
+    def update_profile_image(self, user_id: str, url: str | None, updated_at: datetime) -> None:
+        self.users[user_id] = replace(self.users[user_id], profile_image_url=url, updated_at=updated_at)
+
     def update_password(self, user_id: str, password_hash: str, changed_at: datetime) -> None:
         self.users[user_id] = replace(
             self.users[user_id], password_hash=password_hash, password_changed_at=changed_at

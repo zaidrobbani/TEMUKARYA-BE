@@ -11,6 +11,7 @@ from app.modules.auth.application.use_cases import (
     RequestPasswordReset,
     ResendEmailVerification,
     ResetPassword,
+    UpdateAccountName,
     VerifyEmail,
 )
 from app.modules.auth.domain.entities import AuthSession, LoginPortal
@@ -24,6 +25,7 @@ from app.modules.auth.presentation.dependencies import (
     request_password_reset_use_case,
     resend_email_verification_use_case,
     reset_password_use_case,
+    update_account_name_use_case,
     verify_email_use_case,
 )
 from app.modules.auth.presentation.pages import reset_password_page, verify_email_page
@@ -34,6 +36,7 @@ from app.modules.auth.presentation.schemas import (
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    UpdateAccountRequest,
     VerifyEmailRequest,
 )
 from app.modules.users.application.dto import RegisterUserInput
@@ -104,6 +107,16 @@ def admin_login(body: LoginRequest, use_case: LoginUser = Depends(login_use_case
 @router.get("/me", response_model=ApiResponse[UserResponse], responses=error_responses(401))
 def me(current_user: User = Depends(get_current_user)):
     return success_response("Data akun berhasil diambil", current_user)
+
+
+@router.patch("/me", response_model=ApiResponse[UserResponse], responses=error_responses(401, 422))
+def update_me(
+    body: UpdateAccountRequest,
+    current_user: User = Depends(get_current_user),
+    use_case: UpdateAccountName = Depends(update_account_name_use_case),
+):
+    """Ubah nama akun: Nama Pemilik (Kelola Profil Usaha) / Nama Lengkap (Profil Profesional)."""
+    return success_response("Data akun berhasil diperbarui", use_case.execute(current_user, body.name))
 
 
 @router.post("/logout", response_model=ApiResponse[None], responses=error_responses(401))

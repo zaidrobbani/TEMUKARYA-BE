@@ -138,6 +138,13 @@ class MessageRepository(Protocol):
     ) -> tuple[MessageAttachment, ...]:
         ...
 
+    def get_attachment(
+        self,
+        attachment_id: str,
+    ) -> tuple[MessageAttachment, str] | None:
+        """Lampiran beserta conversation_id pesannya (untuk cek akses peserta)."""
+        ...
+
     # --------------------------------------------------------
     # Create message and attachments
     # --------------------------------------------------------

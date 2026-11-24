@@ -4,7 +4,7 @@ from sqlalchemy import CHAR, ForeignKey, Index, String, Text
 from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.database import Base, CreatedAt, UuidPk
+from app.core.database import Base, CreatedAt, UpdatedAt, UuidPk
 from app.modules.users.infrastructure import models as _users_models  # noqa: F401
 
 
@@ -24,3 +24,17 @@ class NotificationModel(Base):
     reference_id: Mapped[str | None] = mapped_column(CHAR(36))
     created_at: Mapped[CreatedAt]
     read_at: Mapped[datetime | None] = mapped_column(mysql.DATETIME(fsp=3))
+
+
+class DeviceTokenModel(Base):
+    """Token FCM per perangkat. Satu token hanya milik satu user (login ulang akun lain memindahkannya)."""
+
+    __tablename__ = "device_tokens"
+    __table_args__ = (Index("ix_device_tokens_user_id", "user_id"),)
+
+    id: Mapped[UuidPk]
+    user_id: Mapped[str] = mapped_column(CHAR(36), ForeignKey("users.id", ondelete="CASCADE"))
+    token: Mapped[str] = mapped_column(String(512), unique=True)
+    platform: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[CreatedAt]
+    updated_at: Mapped[UpdatedAt]

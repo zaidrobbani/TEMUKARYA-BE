@@ -152,6 +152,10 @@ class MessageAttachmentResponse(ChatResponseBase):
 
     uploaded_at: UtcDateTime
 
+    # Path unduh (butuh token). thumbnail_path hanya untuk foto.
+    download_path: str | None = None
+    thumbnail_path: str | None = None
+
 
 # ============================================================
 # 8. MESSAGE WITH ATTACHMENTS RESPONSE

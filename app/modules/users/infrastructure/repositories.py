@@ -54,6 +54,18 @@ class SqlAlchemyUserRepository(UserRepository):
             .values(email_verified_at=to_db_utc(verified_at))
         )
 
+    def update_name(self, user_id: str, name: str, updated_at: datetime) -> None:
+        self._session.execute(
+            update(UserModel).where(UserModel.id == user_id).values(name=name, updated_at=to_db_utc(updated_at))
+        )
+
+    def update_profile_image(self, user_id: str, url: str | None, updated_at: datetime) -> None:
+        self._session.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(profile_image_url=url, updated_at=to_db_utc(updated_at))
+        )
+
     def update_password(self, user_id: str, password_hash: str, changed_at: datetime) -> None:
         self._session.execute(
             update(UserModel)

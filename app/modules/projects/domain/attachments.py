@@ -29,6 +29,14 @@ class AttachmentRepository(Protocol):
     ) -> bool:
         ...
 
+    def freelancer_can_view(
+        self,
+        project_id: str,
+        freelancer_id: str,
+    ) -> bool:
+        """Freelancer boleh membaca lampiran proyek TERBUKA yang sudah terbit, atau proyek tempat ia terpilih."""
+        ...
+
     def list_by_project(
         self,
         project_id: str,

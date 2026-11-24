@@ -11,7 +11,7 @@ from app.modules.notifications.domain.entities import (
     NotificationType,
     types_of,
 )
-from app.modules.notifications.domain.repositories import NotificationRepository
+from app.modules.notifications.domain.repositories import DeviceTokenRepository, NotificationRepository
 
 Clock = Callable[[], datetime]
 MAX_LIMIT = 100
@@ -123,3 +123,23 @@ class MarkAllNotificationsRead:
         updated = self._repository.mark_all_read(user_id, self._clock())
         self._uow.commit()
         return updated
+
+
+class RegisterDeviceToken:
+    def __init__(self, repository: DeviceTokenRepository, uow: UnitOfWork):
+        self._repository = repository
+        self._uow = uow
+
+    def execute(self, user_id: str, token: str, platform: str) -> None:
+        self._repository.upsert(user_id, token.strip(), platform)
+        self._uow.commit()
+
+
+class UnregisterDeviceToken:
+    def __init__(self, repository: DeviceTokenRepository, uow: UnitOfWork):
+        self._repository = repository
+        self._uow = uow
+
+    def execute(self, user_id: str, token: str) -> None:
+        self._repository.remove(user_id, token.strip())
+        self._uow.commit()
