@@ -15,6 +15,13 @@ class MessageType(StrEnum):
     FILE = "FILE"
 
 
+class MessageDeleteScope(StrEnum):
+    """ME: disembunyikan hanya untuk penghapus. EVERYONE: isi dihapus untuk kedua peserta."""
+
+    ME = "ME"
+    EVERYONE = "EVERYONE"
+
+
 # 2. CHAT ACTOR
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +81,9 @@ class Message:
     created_at: datetime
 
     read_at: datetime | None = None
+
+    # Terisi bila dihapus untuk semua orang; isi teks & lampiran sudah dibuang.
+    deleted_at: datetime | None = None
 
 
 # 5. MESSAGE ATTACHMENT ENTITY

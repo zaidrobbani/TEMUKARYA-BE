@@ -102,11 +102,24 @@ def db():
                     sent_at DATETIME NOT NULL,
                     read_at DATETIME,
                     created_at DATETIME NOT NULL,
+                    deleted_at DATETIME,
 
                     CHECK (
                         message_type <> 'TEXT'
                         OR message_text IS NOT NULL
+                        OR deleted_at IS NOT NULL
                     )
+                )
+            """)
+        )
+
+        conn.execute(
+            text("""
+                CREATE TABLE hidden_messages (
+                    message_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    hidden_at DATETIME NOT NULL,
+                    PRIMARY KEY (message_id, user_id)
                 )
             """)
         )

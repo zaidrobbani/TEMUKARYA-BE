@@ -111,10 +111,13 @@ class MessageRepository(Protocol):
         *,
         limit: int,
         before: tuple[datetime, str] | None = None,
+        viewer_user_id: str | None = None,
     ) -> tuple[Message, ...]:
         """
         Keyset pagination berdasarkan:
         sent_at dan id.
+
+        viewer_user_id: pesan yang dihapus "untuk saya" oleh user ini tidak ikut.
         """
         ...
 
@@ -178,4 +181,36 @@ class MessageRepository(Protocol):
 
         Harus menggunakan transaksi.
         """
+        ...
+
+    # --------------------------------------------------------
+    # Delete messages
+    # --------------------------------------------------------
+
+    def list_by_ids(
+        self,
+        conversation_id: str,
+        message_ids: tuple[str, ...],
+    ) -> tuple[Message, ...]:
+        """Hanya pesan milik conversation tersebut; id lain diabaikan."""
+        ...
+
+    def delete_for_everyone(
+        self,
+        message_ids: tuple[str, ...],
+        deleted_at: datetime,
+    ) -> tuple[MessageAttachment, ...]:
+        """
+        Kosongkan teks, isi deleted_at, hapus metadata lampiran.
+        Mengembalikan lampiran yang dihapus agar file fisiknya dibuang setelah commit.
+        """
+        ...
+
+    def hide_for_user(
+        self,
+        message_ids: tuple[str, ...],
+        user_id: str,
+        hidden_at: datetime,
+    ) -> None:
+        """Idempotent: pesan yang sudah disembunyikan diabaikan."""
         ...

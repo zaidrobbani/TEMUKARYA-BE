@@ -204,6 +204,7 @@ GROUPS: list[tuple[str, str, list[str]]] = [
             "GET /conversations/{conversation_id}",
             "POST /conversations/{conversation_id}/messages",
             "GET /conversations/{conversation_id}/messages",
+            "POST /conversations/{conversation_id}/messages/delete",
             "PATCH /conversations/{conversation_id}/read",
             "POST /conversations/{conversation_id}/attachments",
             "GET /conversations/{conversation_id}/attachments/{attachment_id}/file",

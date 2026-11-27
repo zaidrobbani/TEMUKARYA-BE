@@ -23,6 +23,7 @@ from app.core.responses import ApiResponse, error_responses, success_response
 
 from app.modules.chat.application.dto import (
     CreateConversationInput,
+    DeleteMessagesInput,
     GetAttachmentFileInput,
     GetConversationInput,
     SendAttachmentMessageInput,
@@ -34,6 +35,7 @@ from app.modules.chat.application.dto import (
 
 from app.modules.chat.application.use_cases import (
     CreateOrGetConversation,
+    DeleteMessages,
     GetConversation,
     GetMessageAttachmentFile,
     SendAttachmentMessage,
@@ -47,7 +49,7 @@ from app.modules.chat.domain.entities import ChatActor
 
 from app.core.config import API_PREFIX
 from app.modules.chat.domain.attachment_storage import ChatAttachmentStorage, thumbnail_key_of
-from app.modules.chat.domain.entities import MessageType
+from app.modules.chat.domain.entities import MessageDeleteScope, MessageType
 from app.modules.chat.presentation.dependencies import (
     get_chat_attachment_storage,
     ChatDatabaseContext,
@@ -74,6 +76,8 @@ from app.modules.chat.presentation.schemas import (
     ConversationListResponse,
     ConversationResponse,
     CreateConversationRequest,
+    DeleteMessagesRequest,
+    DeleteMessagesResponse,
     MarkConversationReadResponse,
     MessageAttachmentResponse,
     MessageCursorResponse,
@@ -426,6 +430,81 @@ def get_message_history(
 
 
 # ============================================================
+# 5b. DELETE MESSAGES (hapus untuk saya / untuk semua orang)
+# ============================================================
+
+@router.post(
+    "/{conversation_id}/messages/delete",
+    response_model=ApiResponse[DeleteMessagesResponse],
+    responses=error_responses(400, 401, 403, 404, 422),
+    summary="Hapus banyak pesan sekaligus: untuk saya (ME) atau untuk semua orang (EVERYONE)",
+)
+def delete_messages(
+    conversation_id: str,
+    body: DeleteMessagesRequest,
+    actor: Annotated[ChatActor, Depends(get_authenticated_chat_actor)],
+    db: Annotated[ChatDatabaseContext, Depends(get_chat_database_context)],
+    hub: Annotated[ChatHub, Depends(get_chat_hub)],
+    storage: Annotated[ChatAttachmentStorage, Depends(get_chat_attachment_storage)],
+):
+    """
+    Semua-atau-tidak-sama-sekali. EVERYONE di-push ke WebSocket sebagai
+    `{"type":"message_deleted","conversation_id":…,"message_ids":[…],"deleted_at":…}`.
+    """
+    try:
+        result = DeleteMessages(
+            conversation_repository=db.conversations,
+            message_repository=db.messages,
+        ).execute(
+            DeleteMessagesInput(
+                conversation_id=conversation_id,
+                actor=actor,
+                message_ids=tuple(body.message_ids),
+                scope=body.scope,
+            )
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+
+    # File dibuang setelah commit: bila commit gagal, lampiran tetap utuh.
+    for attachment in result.removed_attachments:
+        _delete_stored_file(storage, attachment.storage_key)
+
+    response = DeleteMessagesResponse.model_validate(result)
+    if result.scope == MessageDeleteScope.EVERYONE:
+        hub.broadcast_from_thread(conversation_id, _deleted_event(response))
+
+    message = (
+        "Pesan berhasil dihapus untuk semua orang"
+        if result.scope == MessageDeleteScope.EVERYONE
+        else "Pesan berhasil dihapus untuk saya"
+    )
+    return success_response(message, response)
+
+
+def _delete_stored_file(storage: ChatAttachmentStorage, key: str) -> None:
+    for item in (key, thumbnail_key_of(key)):
+        if not item:
+            continue
+        try:
+            storage.delete(item)
+        except Exception:  # noqa: BLE001 - file yatim tidak boleh menggagalkan respons yang sudah di-commit
+            pass
+
+
+def _deleted_event(response: DeleteMessagesResponse) -> dict:
+    data = response.model_dump(mode="json")
+    return {
+        "type": "message_deleted",
+        "conversation_id": data["conversation_id"],
+        "message_ids": data["message_ids"],
+        "deleted_at": data["deleted_at"],
+    }
+
+
+# ============================================================
 # 6. MARK CONVERSATION READ
 # ============================================================
 
@@ -535,7 +614,7 @@ async def conversation_socket(
     Chat real-time satu percakapan. Token: header `Authorization: Bearer` atau query `?token=`.
 
     Client → server: `{"type":"message","text":"..."}`, `{"type":"read"}`, `{"type":"ping"}`.
-    Server → client: `ready`, `message`, `read`, `pong`, `error`. Close 4401 = token tidak valid,
+    Server → client: `ready`, `message`, `read`, `message_deleted`, `pong`, `error`. Close 4401 = token tidak valid,
     4404 = percakapan tidak ada / bukan peserta.
     """
     token = token_from(websocket)

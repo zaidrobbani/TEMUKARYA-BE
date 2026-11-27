@@ -35,8 +35,11 @@ uvicorn menjawab HTTP 403 tanpa kode.
 { "type": "message", "message": { "id": "…", "conversation_id": "…", "sender_user_id": "…", "message_text": "Halo",
   "message_type": "TEXT", "sent_at": "2026-11-23T05:10:00.000Z", "created_at": "…", "read_at": null } }
 { "type": "read", "conversation_id": "…", "reader_user_id": "…", "marked_count": 2, "read_at": "2026-11-23T05:10:03.120Z" }
+{ "type": "message_deleted", "conversation_id": "…", "message_ids": ["…"], "deleted_at": "2026-11-27T02:48:48.068Z" }
 { "type": "error", "message": "Pesan teks tidak boleh kosong" }
 ```
+
+`message_deleted` dikirim setelah `POST /conversations/{id}/messages/delete` dengan scope `EVERYONE` (lihat [chat-delete.md](chat-delete.md)).
 
 `message` memakai bentuk yang sama dengan `MessageResponse` REST. Error validasi tidak menutup koneksi.
 

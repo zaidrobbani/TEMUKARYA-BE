@@ -116,6 +116,7 @@ def _message_from_row(
         sent_at=_read_time(row["sent_at"]),
         created_at=_read_time(row["created_at"]),
         read_at=_read_time(row["read_at"]),
+        deleted_at=_read_time(row["deleted_at"]),
     )
 
 
@@ -462,6 +463,7 @@ class SqlAlchemyMessageRepository:
         *,
         limit: int,
         before: tuple[datetime, str] | None = None,
+        viewer_user_id: str | None = None,
     ) -> tuple[Message, ...]:
 
         cursor_condition = ""
@@ -471,9 +473,16 @@ class SqlAlchemyMessageRepository:
             "limit": limit,
         }
 
+        if viewer_user_id is not None:
+            cursor_condition += (
+                " AND NOT EXISTS (SELECT 1 FROM hidden_messages h "
+                "WHERE h.message_id = messages.id AND h.user_id = :viewer_id)"
+            )
+            params["viewer_id"] = viewer_user_id
+
         if before is not None:
 
-            cursor_condition = (
+            cursor_condition += (
                 " AND (sent_at < :before_at "
                 "OR (sent_at = :before_at "
                 "AND id < :before_id))"
@@ -487,7 +496,7 @@ class SqlAlchemyMessageRepository:
         statement = text(
             "SELECT id, conversation_id, "
             "sender_user_id, message_text, "
-            "message_type, sent_at, created_at, read_at "
+            "message_type, sent_at, created_at, read_at, deleted_at "
             "FROM messages "
             "WHERE conversation_id = :conversation_id "
             + cursor_condition
@@ -517,7 +526,7 @@ class SqlAlchemyMessageRepository:
         statement = text(
             "SELECT id, conversation_id, "
             "sender_user_id, message_text, "
-            "message_type, sent_at, created_at, read_at "
+            "message_type, sent_at, created_at, read_at, deleted_at "
             "FROM messages "
             "WHERE id = :message_id"
         )
@@ -809,3 +818,69 @@ class SqlAlchemyMessageRepository:
         )
 
         return result.rowcount
+
+    # ========================================================
+    # F. DELETE MESSAGES
+    # ========================================================
+
+    def list_by_ids(
+        self,
+        conversation_id: str,
+        message_ids: tuple[str, ...],
+    ) -> tuple[Message, ...]:
+        if not message_ids:
+            return ()
+        rows = self._session.execute(
+            text(
+                "SELECT id, conversation_id, sender_user_id, message_text, "
+                "message_type, sent_at, created_at, read_at, deleted_at "
+                "FROM messages "
+                "WHERE conversation_id = :conversation_id AND id IN :ids"
+            ).bindparams(bindparam("ids", expanding=True)),
+            {"conversation_id": conversation_id, "ids": message_ids},
+        ).mappings().all()
+        return tuple(_message_from_row(row) for row in rows)
+
+    def delete_for_everyone(
+        self,
+        message_ids: tuple[str, ...],
+        deleted_at: datetime,
+    ) -> tuple[MessageAttachment, ...]:
+        if not message_ids:
+            return ()
+        attachments = self.list_attachments(message_ids)
+        with self._session.begin_nested():
+            self._session.execute(
+                text("DELETE FROM message_attachments WHERE message_id IN :ids").bindparams(
+                    bindparam("ids", expanding=True)
+                ),
+                {"ids": message_ids},
+            )
+            self._session.execute(
+                text(
+                    "UPDATE messages SET message_text = NULL, deleted_at = :deleted_at "
+                    "WHERE id IN :ids AND deleted_at IS NULL"
+                ).bindparams(bindparam("ids", expanding=True)),
+                {"ids": message_ids, "deleted_at": _db_time(deleted_at)},
+            )
+        return attachments
+
+    def hide_for_user(
+        self,
+        message_ids: tuple[str, ...],
+        user_id: str,
+        hidden_at: datetime,
+    ) -> None:
+        if not message_ids:
+            return
+        ignore = "INSERT OR IGNORE" if self._session.get_bind().dialect.name == "sqlite" else "INSERT IGNORE"
+        self._session.execute(
+            text(
+                f"{ignore} INTO hidden_messages (message_id, user_id, hidden_at) "
+                "VALUES (:message_id, :user_id, :hidden_at)"
+            ),
+            [
+                {"message_id": message_id, "user_id": user_id, "hidden_at": _db_time(hidden_at)}
+                for message_id in message_ids
+            ],
+        )
