@@ -5,7 +5,8 @@ name: temukarya-prod
 
 services:
   db:
-    image: mysql:8.4
+    # CPU VM tanpa x86-64-v2 tidak bisa menjalankan mysql:8.4 (Oracle Linux 9): pakai mysql:8.0-debian.
+    image: ${MYSQL_IMAGE:-mysql:8.4}
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
