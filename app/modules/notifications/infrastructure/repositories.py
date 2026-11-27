@@ -43,7 +43,6 @@ class SqlAlchemyNotificationRepository(NotificationRepository):
         )
         self._session.flush()
 
-        # Dikirim ke WebSocket pemilik notifikasi setelah transaksi commit.
         queue_after_commit(self._session, notification)
 
     def list_for_user(

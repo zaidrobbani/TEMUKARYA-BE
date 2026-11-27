@@ -5,12 +5,19 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, UuidPk
-from app.modules.projects.infrastructure import models as _projects_models  # noqa: F401
-from app.modules.users.infrastructure import models as _users_models  # noqa: F401
+from app.modules.projects.infrastructure import models as _projects_models
+from app.modules.users.infrastructure import models as _users_models
+from typing import TypedDict
 
 
 def _now_column() -> Mapped[datetime]:
     return mapped_column(mysql.DATETIME(fsp=3), server_default=text("CURRENT_TIMESTAMP(3)"))
+
+
+class RevisionItemJson(TypedDict):
+    title: str
+    detail: str
+    area: str | None
 
 
 class ProjectSubmissionModel(Base):
@@ -59,5 +66,5 @@ class SubmissionReviewModel(Base):
     decision: Mapped[str] = mapped_column(String(25))
     review_note: Mapped[str | None] = mapped_column(Text)
     reviewed_at: Mapped[datetime] = _now_column()
-    focus_areas: Mapped[list | None] = mapped_column(JSON)
-    revision_items: Mapped[list | None] = mapped_column(JSON)
+    focus_areas: Mapped[list[str] | None] = mapped_column(JSON)
+    revision_items: Mapped[list[RevisionItemJson] | None] = mapped_column(JSON)

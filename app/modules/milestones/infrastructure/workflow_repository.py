@@ -9,16 +9,11 @@ from app.modules.milestones.domain.entities import Milestone
 from app.modules.milestones.domain.repositories import ProjectMilestoneContext
 from app.modules.milestones.infrastructure.models import ProjectMilestoneModel
 from app.modules.milestones.infrastructure.repositories import SqlAlchemyMilestoneRepository
+from app.modules.workflow.domain.entities import Agreement
 
 
 class WorkflowMilestoneRepository(SqlAlchemyMilestoneRepository):
-    """Repository milestones yang sudah tersambung ke kontrak workflow.
-
-    - freelancer_id dan deadline diambil dari kesepakatan (project_agreements).
-    - Penggantian rencana memanggil reset_approvals dalam transaksi yang sama.
-    """
-
-    def __init__(self, session: Session, reset_approvals: Callable[[str], object]):
+    def __init__(self, session: Session, reset_approvals: Callable[[str], Agreement]):
         super().__init__(session=session)
         self._reset_approvals = reset_approvals
 
@@ -35,7 +30,6 @@ class WorkflowMilestoneRepository(SqlAlchemyMilestoneRepository):
         return replace(context, freelancer_id=str(row["freelancer_id"]), deadline=row["agreed_deadline"])
 
     def replace_plan_and_reset_approvals(self, project_id: str, milestones: tuple[Milestone, ...]) -> None:
-        # Reset dulu: mengunci baris kesepakatan dan menolak bila sudah final.
         self._reset_approvals(project_id)
         self._session.execute(delete(ProjectMilestoneModel).where(ProjectMilestoneModel.project_id == project_id))
         self._session.flush()

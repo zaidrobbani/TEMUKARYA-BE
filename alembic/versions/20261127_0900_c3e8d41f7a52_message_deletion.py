@@ -1,9 +1,3 @@
-"""Hapus pesan chat: untuk semua orang (messages.deleted_at) dan untuk saya (hidden_messages).
-
-Revision ID: c3e8d41f7a52
-Revises: b7c2e91f4a10
-"""
-
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -34,7 +28,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("hidden_messages")
-    # Pesan TEXT yang sudah dihapus tidak punya teks: isi placeholder agar constraint lama lolos.
     op.execute("UPDATE messages SET message_text = '' WHERE message_type = 'TEXT' AND message_text IS NULL")
     op.drop_constraint("ck_messages_text_required", "messages", type_="check")
     op.create_check_constraint(

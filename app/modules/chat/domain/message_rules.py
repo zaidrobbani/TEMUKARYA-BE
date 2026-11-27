@@ -14,20 +14,12 @@ from app.modules.chat.domain.entities import (
 )
 
 
-# ============================================================
-# 1. MESSAGE LIMITS
-# ============================================================
-
 MAX_TEXT_LENGTH = 4000
 
 MAX_ATTACHMENTS = 5
 
 MAX_FILE_BYTES = 10 * 1024 * 1024
 
-
-# ============================================================
-# 2. ALLOWED MIME TYPES
-# ============================================================
 
 DOCUMENT_MIME_TYPES = frozenset({
     "application/pdf",
@@ -52,25 +44,11 @@ IMAGE_MIME_TYPES = frozenset(
 )
 
 
-# ============================================================
-# 3. NORMALIZE MESSAGE TEXT
-# ============================================================
-
 def normalize_message_text(
     text: str | None,
     *,
     required: bool,
 ) -> str | None:
-    """
-    Membersihkan whitespace di awal/akhir pesan.
-
-    Untuk TEXT:
-        Isi pesan wajib ada.
-
-    Untuk IMAGE/FILE:
-        Caption bersifat opsional.
-    """
-
     if text is None:
         if required:
             raise ValueError(
@@ -107,20 +85,9 @@ def normalize_message_text(
     return normalized
 
 
-# ============================================================
-# 4. VALIDATE ATTACHMENT METADATA
-# ============================================================
-
 def validate_attachment(
     attachment: MessageAttachment,
 ) -> None:
-    """
-    Memvalidasi metadata lampiran.
-
-    Validasi isi file sebenarnya dilakukan
-    melalui Storage Module.
-    """
-
     if not isinstance(
         attachment,
         MessageAttachment,
@@ -138,10 +105,6 @@ def validate_attachment(
         attachment.message_id,
         "Message ID",
     )
-
-    # --------------------------------------------------------
-    # Validate file name
-    # --------------------------------------------------------
 
     name = attachment.original_file_name
 
@@ -163,10 +126,6 @@ def validate_attachment(
             "Nama file tidak valid"
         )
 
-    # --------------------------------------------------------
-    # Validate storage key
-    # --------------------------------------------------------
-
     key = attachment.storage_key
 
     if (
@@ -184,18 +143,10 @@ def validate_attachment(
             "Storage key tidak valid"
         )
 
-    # --------------------------------------------------------
-    # Validate MIME type
-    # --------------------------------------------------------
-
     if attachment.mime_type not in ALLOWED_MIME_TYPES:
         raise ValueError(
             "Tipe file tidak diizinkan"
         )
-
-    # --------------------------------------------------------
-    # Validate file size
-    # --------------------------------------------------------
 
     if (
         type(attachment.file_size_bytes) is not int
@@ -208,22 +159,11 @@ def validate_attachment(
         )
 
 
-# ============================================================
-# 5. VALIDATE MESSAGE PAYLOAD
-# ============================================================
-
 def validate_message_payload(
     message_type: MessageType,
     message_text: str | None,
     attachments: Sequence[MessageAttachment],
 ) -> str | None:
-    """
-    Memvalidasi jenis pesan dan lampirannya.
-
-    Mengembalikan isi pesan/caption
-    yang sudah dinormalisasi.
-    """
-
     if not isinstance(
         message_type,
         MessageType,
@@ -250,12 +190,7 @@ def validate_message_payload(
             attachment
         )
 
-    # --------------------------------------------------------
-    # Text message
-    # --------------------------------------------------------
-
     if message_type == MessageType.TEXT:
-
         if attachments:
             raise ValueError(
                 "Pesan TEXT tidak boleh memiliki lampiran"
@@ -266,17 +201,12 @@ def validate_message_payload(
             required=True,
         )
 
-    # --------------------------------------------------------
-    # Image / File message
-    # --------------------------------------------------------
-
     if not attachments:
         raise ValueError(
             "Pesan IMAGE/FILE membutuhkan lampiran"
         )
 
     if message_type == MessageType.IMAGE:
-
         if any(
             item.mime_type not in IMAGE_MIME_TYPES
             for item in attachments
@@ -291,44 +221,21 @@ def validate_message_payload(
     )
 
 
-# ============================================================
-# 6. VALIDATE MESSAGE SENDER
-# ============================================================
-
 def require_message_sender(
     conversation: Conversation,
     actor: ChatActor,
 ) -> None:
-    """
-    Pengirim harus menjadi peserta percakapan.
-    """
-
     require_conversation_access(
         conversation,
         actor,
     )
 
 
-# ============================================================
-# 7. VALIDATE MESSAGE READ STATUS
-# ============================================================
-
 def should_mark_message_read(
     conversation: Conversation,
     message: Message,
     actor: ChatActor,
 ) -> bool:
-    """
-    Hanya penerima yang boleh menandai pesan
-    sebagai telah dibaca.
-
-    True:
-        Pesan belum dibaca.
-
-    False:
-        Pesan sudah dibaca sebelumnya.
-    """
-
     require_conversation_access(
         conversation,
         actor,
@@ -356,19 +263,10 @@ def should_mark_message_read(
     return message.read_at is None
 
 
-# ============================================================
-# 8. VERIFY ATTACHMENT MESSAGE
-# ============================================================
-
 def require_attachment_belongs_to_message(
     attachment: MessageAttachment,
     message: Message,
 ) -> None:
-    """
-    Lampiran hanya boleh digunakan
-    untuk pesan pemiliknya.
-    """
-
     validate_attachment(
         attachment
     )

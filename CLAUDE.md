@@ -10,7 +10,8 @@ Proyek tim (4 orang), kelas Pengembangan Aplikasi Perangkat Bergerak. Admin dash
 - Setiap fitur wajib: semua skenario error ditangani + dites (use case dengan fake repo, dan HTTP via `TestClient`),
   plus dokumen kontrak di `docs/api/<fitur>.md` berisi request/response, tabel status code + pesan per skenario error,
   dan tabel **"Keputusan yang perlu dicek"** untuk hal yang beda/tidak diatur di PRD atau Figma, supaya user bisa review.
-- Kode rapi, komentar minim: Indonesia, singkat, hanya untuk "kenapa" yang tidak jelas dari kode.
+- Kode **tanpa komentar dan tanpa docstring** (`#`, `"""..."""`), permintaan user 2026-11-27: penjelasan masuk ke `docs/`.
+- **Tidak ada tipe longgar**: tanpa `Any`, tanpa `dict`/`list`/`tuple`/`Callable` polos, semua parameter & return diberi tipe. Pakai `RowMapping` (baris SQL), `JsonObject` (`app/core/json_types.py`), `SqlParams` (`app/core/sql_types.py`), `SuccessBody[T]`/`ErrorBody` (`app/core/responses.py`), `TypedDict`/dataclass untuk struktur.
 - Bahasa percakapan: Indonesia.
 
 ## Sumber kebenaran

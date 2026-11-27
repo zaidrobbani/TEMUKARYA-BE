@@ -20,7 +20,6 @@ from app.modules.profiles.application.use_cases import (
 
 
 class FakeProfileRepository:
-
     def __init__(self, profile_exists=True):
         self.profile_exists = profile_exists
 
@@ -36,7 +35,6 @@ class FakeProfileRepository:
 
 
 class FakeSkillsRepository:
-
     def __init__(self):
         self.available_ids = {
             "logo_design",
@@ -58,7 +56,6 @@ class FakeSkillsRepository:
 
 
 class FakeUnitOfWork:
-
     def __init__(self):
         self.committed = False
 
@@ -80,7 +77,6 @@ def setup_use_case(profile_exists=True):
     return use_case, skills_repo, uow
 
 
-# TEST 1: Berhasil menyimpan daftar keahlian
 def test_set_skills_success():
     use_case, repo, uow = setup_use_case()
 
@@ -96,7 +92,6 @@ def test_set_skills_success():
     assert uow.committed is True
 
 
-# TEST 2: Profil freelancer tidak ditemukan
 def test_set_skills_profile_not_found():
     use_case, repo, uow = setup_use_case(
         profile_exists=False
@@ -114,7 +109,6 @@ def test_set_skills_profile_not_found():
     assert uow.committed is False
 
 
-# TEST 3: Skill tidak terdaftar di master data
 def test_set_skills_invalid_id():
     use_case, repo, uow = setup_use_case()
 
@@ -130,7 +124,6 @@ def test_set_skills_invalid_id():
     assert uow.committed is False
 
 
-# TEST 4: Skill duplikat ditolak
 def test_set_skills_duplicate():
     use_case, repo, uow = setup_use_case()
 
@@ -146,7 +139,6 @@ def test_set_skills_duplicate():
     assert uow.committed is False
 
 
-# TEST 5: Daftar kosong diperbolehkan
 def test_set_skills_empty_list():
     use_case, repo, uow = setup_use_case()
 
@@ -160,7 +152,6 @@ def test_set_skills_empty_list():
     assert uow.committed is True
 
 
-# TEST 6: Skill ID yang hanya berisi spasi ditolak
 def test_set_skills_blank_id():
     use_case, repo, uow = setup_use_case()
 
@@ -176,8 +167,6 @@ def test_set_skills_blank_id():
     assert uow.committed is False
 
 
-
-# TEST 7: Berhasil mengambil skill Freelancer
 def test_get_freelancer_skills_success():
     profile_repo = FakeProfileRepository()
     skills_repo = FakeSkillsRepository()
@@ -197,7 +186,6 @@ def test_get_freelancer_skills_success():
     assert result == ["logo_design", "photo_editing"]
 
 
-# TEST 8: Freelancer belum mempunyai skill
 def test_get_freelancer_skills_empty():
     profile_repo = FakeProfileRepository()
     skills_repo = FakeSkillsRepository()
@@ -212,7 +200,6 @@ def test_get_freelancer_skills_empty():
     assert result == []
 
 
-# TEST 9: Profil Freelancer tidak ditemukan
 def test_get_freelancer_skills_profile_not_found():
     profile_repo = FakeProfileRepository(
         profile_exists=False

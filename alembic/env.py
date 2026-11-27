@@ -20,6 +20,8 @@ from app.modules.payments.infrastructure import models as payments_models
 from app.modules.submissions.infrastructure import models as submissions_models
 from app.modules.reviews.infrastructure import models as reviews_models
 from app.modules.notifications.infrastructure import models as notifications_models
+from typing import Literal
+from sqlalchemy.schema import SchemaItem
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
@@ -30,7 +32,13 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def include_object(obj, name, type_, reflected, compare_to) -> bool:
+def include_object(
+    obj: SchemaItem,
+    name: str | None,
+    type_: Literal["schema", "table", "column", "index", "unique_constraint", "foreign_key_constraint"],
+    reflected: bool,
+    compare_to: SchemaItem | None,
+) -> bool:
     if type_ == "table" and reflected and compare_to is None:
         return False
     return True

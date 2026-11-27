@@ -1,4 +1,3 @@
-
 from datetime import date, datetime
 from uuid import uuid4
 
@@ -17,10 +16,6 @@ from app.modules.projects.presentation.dependencies import (
     get_create_project_use_case,
 )
 
-
-# ============================================================
-# 1. FAKE CREATE PROJECT USE CASE
-# ============================================================
 
 class FakeCreateProject:
     def __init__(self):
@@ -45,10 +40,6 @@ class FakeCreateProject:
             published_at=datetime(2026, 11, 2, 10, 0, 0),
         )
 
-
-# ============================================================
-# 2. PYTEST FIXTURES
-# ============================================================
 
 @pytest.fixture
 def valid_payload():
@@ -99,10 +90,6 @@ def override_as_freelancer(app):
     )
 
 
-# ============================================================
-# 3. AUTHENTICATION & AUTHORIZATION TESTS
-# ============================================================
-
 def test_create_project_requires_authentication(
     test_context, valid_payload
 ):
@@ -132,10 +119,6 @@ def test_freelancer_cannot_create_project(
     assert response.status_code == 403
     assert fake_use_case.calls == []
 
-
-# ============================================================
-# 4. SUCCESS TEST
-# ============================================================
 
 def test_umkm_can_create_project(
     test_context, valid_payload
@@ -172,10 +155,6 @@ def test_umkm_can_create_project(
         "fastapi",
     )
 
-
-# ============================================================
-# 5. VALIDATION TESTS
-# ============================================================
 
 def test_rejects_negative_budget(
     test_context, valid_payload
@@ -241,10 +220,6 @@ def test_handles_business_validation_error(
     assert fake_use_case.calls == []
 
 
-# ============================================================
-# 6. GET MY PROJECTS TESTS
-# ============================================================
-
 from app.modules.projects.presentation.dependencies import (
     get_my_projects_use_case,
 )
@@ -258,8 +233,6 @@ class FakeGetMyProjects:
     def execute(self, umkm_id: str):
         self.calls.append(umkm_id)
 
-        # Simulasi repository yang hanya mengambil
-        # proyek milik UMKM terautentikasi.
         return [
             project
             for project in self.projects
@@ -350,10 +323,6 @@ def test_umkm_with_no_projects_gets_empty_list(test_context):
     assert response.json() == {"success": True, "message": "Daftar project berhasil diambil", "data": []}
     assert len(fake.calls) == 1
 
-
-# ============================================================
-# 7. UPDATE PROJECT HTTP TESTS
-# ============================================================
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.modules.projects.presentation.dependencies import (

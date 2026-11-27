@@ -1,4 +1,3 @@
-
 import logging
 import os
 import re
@@ -12,11 +11,8 @@ from uuid import uuid4
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pypdf import PdfReader
+from typing import BinaryIO
 
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
 
 logger = logging.getLogger(__name__)
 
@@ -32,29 +28,21 @@ KEY_PATTERN = re.compile(
 )
 
 
-# ============================================================
-# CUSTOM EXCEPTIONS
-# ============================================================
-
 class AttachmentStorageError(Exception):
-    """Kesalahan pada penyimpanan lokal attachment."""
+    pass
 
 
 class InvalidAttachment(AttachmentStorageError):
-    """Attachment kosong, rusak, atau kontennya berisiko."""
+    pass
 
 
 class OversizedAttachment(AttachmentStorageError):
-    """Ukuran attachment melampaui batas."""
+    pass
 
 
 class UnsupportedAttachment(AttachmentStorageError):
-    """Format attachment tidak didukung."""
+    pass
 
-
-# ============================================================
-# STORED ATTACHMENT ENTITY
-# ============================================================
 
 @dataclass(frozen=True)
 class StoredAttachment:
@@ -63,17 +51,7 @@ class StoredAttachment:
     file_size_bytes: int
 
 
-# ============================================================
-# FILE TYPE DETECTION
-# ============================================================
-
 def detect_file_type(header: bytes) -> tuple[str, str]:
-    """
-    Deteksi awal format menggunakan signature file.
-
-    Tidak mempercayai ekstensi atau MIME dari klien.
-    """
-
     if header.startswith(b"%PDF-"):
         return "pdf", "application/pdf"
 
@@ -94,18 +72,7 @@ def detect_file_type(header: bytes) -> tuple[str, str]:
     )
 
 
-# ============================================================
-# LOCAL ATTACHMENT STORAGE
-# ============================================================
-
 class LocalProjectAttachmentStorage:
-    """
-    Penyimpanan private untuk attachment proyek.
-
-    Direktori storage harus hanya dapat ditulis
-    oleh aplikasi dan administrator tepercaya.
-    """
-
     def __init__(self, root: str | Path):
         root_path = Path(root)
 
@@ -130,16 +97,7 @@ class LocalProjectAttachmentStorage:
                 "Direktori storage tidak tersedia"
             ) from exc
 
-    # ========================================================
-    # SAFE STORAGE PATH
-    # ========================================================
-
     def _get_path(self, storage_key: str) -> Path:
-        """
-        Storage key hanya boleh berupa UUID acak
-        dan ekstensi yang telah ditentukan.
-        """
-
         if (
             not isinstance(storage_key, str)
             or not KEY_PATTERN.fullmatch(storage_key)
@@ -157,26 +115,13 @@ class LocalProjectAttachmentStorage:
 
         return path
 
-    # ========================================================
-    # PDF VALIDATION
-    # ========================================================
-
     @staticmethod
     def _validate_pdf(
         path: Path,
         size: int,
     ) -> None:
-        """
-        Memvalidasi struktur dasar dokumen PDF.
-
-        Pemeriksaan ini bukan antivirus dan
-        bukan sanitasi PDF menyeluruh.
-        """
-
         try:
             with path.open("rb") as stream:
-
-                # 1. Periksa versi header PDF.
                 head = stream.read(8)
 
                 if not re.fullmatch(
@@ -187,7 +132,6 @@ class LocalProjectAttachmentStorage:
                         "Header versi PDF tidak valid"
                     )
 
-                # 2. Periksa penanda akhir PDF.
                 stream.seek(max(0, size - 2048))
 
                 if not stream.read().rstrip().endswith(
@@ -197,7 +141,6 @@ class LocalProjectAttachmentStorage:
                         "PDF tidak memiliki penanda akhir valid"
                     )
 
-                # 3. Parse struktur PDF dengan pypdf.
                 stream.seek(0)
 
                 reader = PdfReader(
@@ -205,13 +148,11 @@ class LocalProjectAttachmentStorage:
                     strict=True,
                 )
 
-                # 4. Tolak PDF terenkripsi.
                 if reader.is_encrypted:
                     raise InvalidAttachment(
                         "PDF terenkripsi tidak didukung"
                     )
 
-                # 5. Batasi jumlah halaman.
                 page_count = len(reader.pages)
 
                 if not 1 <= page_count <= MAX_PDF_PAGES:
@@ -219,7 +160,6 @@ class LocalProjectAttachmentStorage:
                         "PDF harus memiliki 1 hingga 50 halaman"
                     )
 
-                # 6. Tolak fitur aktif umum pada catalog.
                 root = reader.trailer["/Root"]
 
                 forbidden_catalog_keys = (
@@ -237,7 +177,6 @@ class LocalProjectAttachmentStorage:
                         "PDF dengan konten aktif/form tidak didukung"
                     )
 
-                # 7. Tolak anotasi dan aksi pada halaman.
                 for page in reader.pages:
                     if (
                         "/Annots" in page
@@ -260,44 +199,29 @@ class LocalProjectAttachmentStorage:
                 "PDF rusak atau tidak dapat dibaca"
             ) from exc
 
-    # ========================================================
-    # IMAGE VALIDATION & NORMALIZATION
-    # ========================================================
-
     @staticmethod
     def _normalize_image(
         source_path: Path,
         output_path: Path,
         extension: str,
     ) -> int:
-        """
-        Validasi dan normalisasi gambar.
-
-        Gambar didekode lalu disimpan ulang dari
-        pixel baru untuk membuang metadata asal.
-        """
-
         expected_format = {
             "jpg": "JPEG",
             "png": "PNG",
             "webp": "WEBP",
         }[extension]
 
-        # Batasi decoder per proses.
         with IMAGE_DECODER_SLOT:
             try:
-
                 with warnings.catch_warnings():
                     warnings.simplefilter(
                         "error",
                         Image.DecompressionBombWarning,
                     )
 
-                    # 1. Verifikasi struktur gambar.
                     with Image.open(
                         source_path
                     ) as picture:
-
                         if picture.format != expected_format:
                             raise InvalidAttachment(
                                 "Format gambar tidak konsisten"
@@ -324,11 +248,9 @@ class LocalProjectAttachmentStorage:
 
                         picture.verify()
 
-                    # 2. Buka ulang dan decode gambar.
                     with Image.open(
                         source_path
                     ) as picture:
-
                         picture.load()
 
                         oriented = ImageOps.exif_transpose(
@@ -347,22 +269,17 @@ class LocalProjectAttachmentStorage:
                         ):
                             mode = "RGB"
 
-                        # 3. Buat pixel baru tanpa metadata.
                         with oriented.convert(
                             mode
                         ) as converted:
-
                             with Image.frombytes(
                                 mode,
                                 converted.size,
                                 converted.tobytes(),
                             ) as clean:
-
-                                # 4. Simpan gambar hasil normalisasi.
                                 with output_path.open(
                                     "w+b"
                                 ) as output:
-
                                     clean.save(
                                         output,
                                         format=expected_format,
@@ -375,7 +292,6 @@ class LocalProjectAttachmentStorage:
 
                                     size = output.tell()
 
-                # 5. Periksa ukuran hasil normalisasi.
                 if size > MAX_ATTACHMENT_BYTES:
                     raise OversizedAttachment(
                         "Hasil normalisasi melebihi 5 MiB"
@@ -402,37 +318,18 @@ class LocalProjectAttachmentStorage:
                     "Gambar rusak atau tidak valid"
                 ) from exc
 
-    # ========================================================
-    # SAVE ATTACHMENT
-    # ========================================================
-
     def save(
         self,
-        source,
+        source: BinaryIO,
     ) -> StoredAttachment:
-        """
-        Membaca stream secara terbatas,
-        memvalidasi file, lalu menyimpannya
-        dengan storage key acak.
-
-        Filename dan Content-Type klien
-        tidak digunakan.
-        """
-
         paths_to_cleanup: list[Path] = []
 
         try:
-
-            # =================================================
-            # 1. STAGE FILE
-            # =================================================
-
             with tempfile.NamedTemporaryFile(
                 prefix=".upload-",
                 dir=self.root,
                 delete=False,
             ) as staged:
-
                 source_path = Path(staged.name)
                 paths_to_cleanup.append(source_path)
 
@@ -472,12 +369,7 @@ class LocalProjectAttachmentStorage:
                     staged.read(16)
                 )
 
-            # =================================================
-            # 2. VALIDATE PDF OR NORMALIZE IMAGE
-            # =================================================
-
             if extension == "pdf":
-
                 self._validate_pdf(
                     source_path,
                     size,
@@ -487,13 +379,11 @@ class LocalProjectAttachmentStorage:
                 final_size = size
 
             else:
-
                 with tempfile.NamedTemporaryFile(
                     prefix=".normalized-",
                     dir=self.root,
                     delete=False,
                 ) as output:
-
                     ready_path = Path(output.name)
                     paths_to_cleanup.append(
                         ready_path
@@ -505,10 +395,6 @@ class LocalProjectAttachmentStorage:
                     extension,
                 )
 
-            # =================================================
-            # 3. GENERATE RANDOM STORAGE KEY
-            # =================================================
-
             storage_key = (
                 f"{uuid4().hex}.{extension}"
             )
@@ -516,10 +402,6 @@ class LocalProjectAttachmentStorage:
             destination = self._get_path(
                 storage_key
             )
-
-            # =================================================
-            # 4. ATOMIC FILE REPLACEMENT
-            # =================================================
 
             os.replace(
                 ready_path,
@@ -549,8 +431,6 @@ class LocalProjectAttachmentStorage:
             ) from exc
 
         finally:
-            # Bersihkan file sementara saat berhasil
-            # maupun saat validasi gagal.
             for path in paths_to_cleanup:
                 try:
                     path.unlink(
@@ -563,13 +443,7 @@ class LocalProjectAttachmentStorage:
                         path,
                     )
 
-    # ========================================================
-    # OPEN ATTACHMENT
-    # ========================================================
-
-    def open(self, storage_key: str):
-        """Membuka attachment menggunakan storage key."""
-
+    def open(self, storage_key: str) -> BinaryIO:
         path = self._get_path(
             storage_key
         )
@@ -595,16 +469,10 @@ class LocalProjectAttachmentStorage:
                 "File attachment tidak tersedia"
             ) from exc
 
-    # ========================================================
-    # DELETE ATTACHMENT
-    # ========================================================
-
     def delete(
         self,
         storage_key: str,
     ) -> None:
-        """Menghapus attachment berdasarkan storage key."""
-
         try:
             self._get_path(
                 storage_key

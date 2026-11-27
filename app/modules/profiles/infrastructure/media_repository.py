@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import Boolean, CHAR, ForeignKey, String, delete, select, text, update
@@ -26,7 +28,7 @@ class SqlAlchemyMediaRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def owns(self, portfolio_id, owner, lock=True):
+    def owns(self, portfolio_id: str, owner: str, lock: bool = True) -> bool:
         query = select(PortfolioModel.id).where(
             PortfolioModel.id == portfolio_id, PortfolioModel.freelancer_id == owner,
         )
@@ -34,44 +36,41 @@ class SqlAlchemyMediaRepository:
             query = query.with_for_update()
         return self.session.scalar(query) is not None
 
-    def list(self, portfolio_id):
-        # Current/locking read also avoids a stale REPEATABLE READ snapshot after upload authorization.
+    def list(self, portfolio_id: str) -> list[PortfolioMedia]:
         rows = self.session.scalars(select(PortfolioMediaModel).where(
             PortfolioMediaModel.portfolio_id == portfolio_id,
         ).order_by(PortfolioMediaModel.sort_order, PortfolioMediaModel.id)
             .with_for_update().execution_options(populate_existing=True)).all()
         return [self._entity(row) for row in rows]
 
-    def find(self, portfolio_id, media_id):
-        """Baca tanpa lock untuk tampilan publik (UMKM melihat portofolio freelancer)."""
+    def find(self, portfolio_id: str, media_id: str) -> PortfolioMedia | None:
         row = self.session.scalar(select(PortfolioMediaModel).where(
             PortfolioMediaModel.portfolio_id == portfolio_id, PortfolioMediaModel.id == media_id,
         ))
         return self._entity(row) if row is not None else None
 
-    def add(self, media):
+    def add(self, media: PortfolioMedia) -> PortfolioMedia:
         row = PortfolioMediaModel(**{key: value for key, value in vars(media).items() if key != "uploaded_at"})
         self.session.add(row)
         self.session.flush()
         self.session.refresh(row)
         return self._entity(row)
 
-    def arrange(self, portfolio_id, ids, cover_id):
+    def arrange(self, portfolio_id: str, ids: list[str], cover_id: str | None) -> None:
         for order, media_id in enumerate(ids):
             self.session.execute(update(PortfolioMediaModel).where(
                 PortfolioMediaModel.portfolio_id == portfolio_id, PortfolioMediaModel.id == media_id,
             ).values(sort_order=order, is_cover=(media_id == cover_id)))
 
-    def delete(self, portfolio_id, media_id):
+    def delete(self, portfolio_id: str, media_id: str) -> None:
         self.session.execute(delete(PortfolioMediaModel).where(
             PortfolioMediaModel.portfolio_id == portfolio_id, PortfolioMediaModel.id == media_id,
         ))
 
-    def delete_portfolio(self, portfolio_id, owner):
-        # Explicit metadata removal also supports isolated SQLite tests without FK enforcement.
+    def delete_portfolio(self, portfolio_id: str, owner: str) -> None:
         self.session.execute(delete(PortfolioMediaModel).where(PortfolioMediaModel.portfolio_id == portfolio_id))
         SqlAlchemyPortfolioRepository(self.session).delete(portfolio_id, owner)
 
     @staticmethod
-    def _entity(row):
+    def _entity(row: PortfolioMediaModel) -> PortfolioMedia:
         return PortfolioMedia(**{field: getattr(row, field) for field in PortfolioMedia.__dataclass_fields__})

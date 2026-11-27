@@ -206,9 +206,8 @@ class FakeSetFreelancerSkills:
     def execute(self, freelancer_id, data):
         return data.skill_ids
 
-    
-class FakeGetFreelancerSkills:
 
+class FakeGetFreelancerSkills:
     def execute(self, freelancer_id):
         return [
             "logo_design",
@@ -216,9 +215,6 @@ class FakeGetFreelancerSkills:
         ]
 
 
-
-
-# TEST 6: Freelancer berhasil mengubah keahlian
 def test_update_freelancer_skills_explicit_payload_returns_200(app):
     login_as(app, UserRole.FREELANCER)
 
@@ -240,7 +236,6 @@ def test_update_freelancer_skills_explicit_payload_returns_200(app):
     ]
 
 
-# TEST 7: UMKM tidak boleh mengubah skill Freelancer
 def test_update_skills_explicit_payload_wrong_role_returns_403(app):
     login_as(app, UserRole.UMKM)
 
@@ -255,7 +250,6 @@ def test_update_skills_explicit_payload_wrong_role_returns_403(app):
     assert response.status_code == 403
 
 
-# TEST 8: Pengguna tanpa login harus ditolak
 def test_update_skills_explicit_payload_unauthenticated_returns_401(app):
     with TestClient(app) as client:
         response = client.put(
@@ -268,7 +262,6 @@ def test_update_skills_explicit_payload_unauthenticated_returns_401(app):
     assert response.status_code == 401
 
 
-# TEST 9: Format input yang salah harus ditolak
 def test_update_skills_explicit_payload_invalid_returns_422(app):
     login_as(app, UserRole.FREELANCER)
 
@@ -338,7 +331,6 @@ def test_update_skills_invalid_payload_returns_422(app):
     assert response.status_code == 422
 
 
-# TEST 10: Freelancer berhasil melihat skill
 def test_get_freelancer_skills_returns_200(app):
     login_as(app, UserRole.FREELANCER)
 
@@ -354,7 +346,6 @@ def test_get_freelancer_skills_returns_200(app):
     ]
 
 
-# TEST 11: UMKM tidak boleh mengakses
 def test_get_skills_wrong_role_returns_403(app):
     login_as(app, UserRole.UMKM)
 
@@ -366,7 +357,6 @@ def test_get_skills_wrong_role_returns_403(app):
     assert response.status_code == 403
 
 
-# TEST 12: Pengguna belum login ditolak
 def test_get_skills_unauthenticated_returns_401(app):
     with TestClient(app) as client:
         response = client.get(

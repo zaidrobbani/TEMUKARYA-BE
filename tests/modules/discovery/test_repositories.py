@@ -12,29 +12,13 @@ from app.modules.discovery.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# SQLITE TEST DATABASE FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-    """
-    Database SQLite sementara khusus unit test.
-
-    Tidak menggunakan MySQL production/development.
-    Tidak mengubah data TEMUKARYA sungguhan.
-    """
-
     engine = create_engine(
         "sqlite+pysqlite:///:memory:"
     )
 
     with engine.begin() as connection:
-
-        # ====================================================
-        # CREATE MINIMAL TEST TABLES
-        # ====================================================
-
         statements = [
             """
             CREATE TABLE users (
@@ -119,10 +103,6 @@ def context():
         for statement in statements:
             connection.execute(text(statement))
 
-        # ====================================================
-        # SEED USERS
-        # ====================================================
-
         connection.execute(
             text("""
                 INSERT INTO users
@@ -168,10 +148,6 @@ def context():
                 },
             ],
         )
-
-        # ====================================================
-        # SEED FREELANCER PROFILES
-        # ====================================================
 
         connection.execute(
             text("""
@@ -243,10 +219,6 @@ def context():
             ],
         )
 
-        # ====================================================
-        # SEED SKILLS
-        # ====================================================
-
         connection.execute(
             text("""
                 INSERT INTO skills (id, name)
@@ -277,10 +249,6 @@ def context():
                 {"freelancer_id": "f3", "skill_id": "py"},
             ],
         )
-
-        # ====================================================
-        # SEED EXPERIENCES
-        # ====================================================
 
         connection.execute(
             text("""
@@ -334,10 +302,6 @@ def context():
             ],
         )
 
-        # ====================================================
-        # SEED PORTFOLIOS
-        # ====================================================
-
         connection.execute(
             text("""
                 INSERT INTO portfolios (
@@ -377,7 +341,6 @@ def context():
             ],
         )
 
-        # Cover hanya untuk po1; po2 punya media non-cover saja.
         connection.execute(
             text("""
                 INSERT INTO portfolio_media (id, portfolio_id, is_cover)
@@ -389,10 +352,6 @@ def context():
                 {"id": "m3", "portfolio_id": "po2", "is_cover": 0},
             ],
         )
-
-        # ====================================================
-        # SEED AGREEMENTS
-        # ====================================================
 
         connection.execute(
             text("""
@@ -425,10 +384,6 @@ def context():
                 },
             ],
         )
-
-        # ====================================================
-        # SEED REVIEWS
-        # ====================================================
 
         connection.execute(
             text("""
@@ -483,10 +438,6 @@ def context():
         engine.dispose()
 
 
-# ============================================================
-# SEARCH HELPER
-# ============================================================
-
 def search(repo, **kwargs):
     return repo.search_freelancers(
         filters=FreelancerSearchFilters(**kwargs),
@@ -494,10 +445,6 @@ def search(repo, **kwargs):
         offset=0,
     )
 
-
-# ============================================================
-# 1. DEFAULT LISTING
-# ============================================================
 
 def test_default_listing_and_no_duplicates(context):
     repository, session = context
@@ -521,10 +468,6 @@ def test_default_listing_and_no_duplicates(context):
     ]
 
 
-# ============================================================
-# 2. NO CREDENTIAL EXPOSURE
-# ============================================================
-
 def test_user_credentials_not_exposed(context):
     from dataclasses import asdict
 
@@ -539,10 +482,6 @@ def test_user_credentials_not_exposed(context):
     assert "secret" not in data
     assert "password_hash" not in data
 
-
-# ============================================================
-# 3. SEARCH BY NAME / PROFESSION / SKILL
-# ============================================================
 
 def test_search_by_name_profession_or_skill(context):
     repository, session = context
@@ -572,10 +511,6 @@ def test_search_by_name_profession_or_skill(context):
     ] == ["f1"]
 
 
-# ============================================================
-# 4. SKILL FILTER
-# ============================================================
-
 def test_skills_match_any_without_duplication(context):
     repository, session = context
 
@@ -597,10 +532,6 @@ def test_skills_match_any_without_duplication(context):
         "Python",
     ]
 
-
-# ============================================================
-# 5. CITY & AVAILABILITY FILTER
-# ============================================================
 
 def test_city_and_availability_filters(context):
     repository, session = context
@@ -635,10 +566,6 @@ def test_city_and_availability_filters(context):
     ]
 
 
-# ============================================================
-# 6. PRICE RANGE FILTER
-# ============================================================
-
 def test_price_range_overlap_and_missing_prices(
     context,
 ):
@@ -669,10 +596,6 @@ def test_price_range_overlap_and_missing_prices(
         )
     ] == ["f2"]
 
-
-# ============================================================
-# 7. EXPERIENCE & RATING FILTER
-# ============================================================
 
 def test_experience_count_and_rating(context):
     repository, session = context
@@ -710,10 +633,6 @@ def test_experience_count_and_rating(context):
     assert search(repository)[-1].average_rating is None
 
 
-# ============================================================
-# 8. PAGINATION
-# ============================================================
-
 def test_pagination_deterministic(context):
     repository, session = context
 
@@ -734,10 +653,6 @@ def test_pagination_deterministic(context):
     assert first[0].name == "Andi"
     assert second[0].name == "Budi"
 
-
-# ============================================================
-# 9. FREELANCER DETAIL
-# ============================================================
 
 def test_detail_includes_related_data(context):
     repository, session = context
@@ -765,10 +680,6 @@ def test_detail_includes_related_data(context):
     assert detail.average_rating == 4.5
 
 
-# ============================================================
-# 10. NONEXISTENT PROFILE / WRONG ROLE
-# ============================================================
-
 def test_detail_unknown_and_wrong_role(context):
     repository, session = context
 
@@ -781,10 +692,6 @@ def test_detail_unknown_and_wrong_role(context):
     ) is None
 
 
-# ============================================================
-# 11. BUSY FREELANCER DETAIL
-# ============================================================
-
 def test_detail_available_even_if_busy(context):
     repository, session = context
 
@@ -793,10 +700,6 @@ def test_detail_available_even_if_busy(context):
     assert detail is not None
     assert detail.availability_status == "BUSY"
 
-
-# ============================================================
-# 12. SEARCH WILDCARDS & SQL INJECTION
-# ============================================================
 
 def test_like_wildcards_are_literal(context):
     repository, session = context
@@ -816,10 +719,6 @@ def test_like_wildcards_are_literal(context):
         search="%' OR 1=1 --",
     ) == []
 
-
-# ============================================================
-# 13. READ-ONLY BEHAVIOR
-# ============================================================
 
 def test_read_only_repository(context):
     repository, session = context

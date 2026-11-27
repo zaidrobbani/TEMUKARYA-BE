@@ -24,7 +24,6 @@ class FileType:
     offset: int = 0
 
 
-# Sesuai Figma (AI, PSD, PDF, ZIP, PNG) + format umum hasil foto, video, dan tulisan.
 ALLOWED_FILE_TYPES: dict[str, FileType] = {
     "pdf": FileType("application/pdf", (b"%PDF-",)),
     "ai": FileType("application/postscript", (b"%PDF-", b"%!PS")),
@@ -50,7 +49,6 @@ def matches_signature(file_type: FileType, header: bytes) -> bool:
 
 
 def version_label(version_number: int) -> str:
-    # Figma: kiriman awal v1.0, revisi berikutnya v1.1, v1.2, ...
     return f"v1.{version_number - 1}"
 
 

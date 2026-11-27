@@ -1,31 +1,16 @@
-
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
 
-# ============================================================
-# 1. MILESTONE STATUS
-# ============================================================
-
 class MilestoneStatus(StrEnum):
     BELUM_SELESAI = "BELUM_SELESAI"
     SELESAI = "SELESAI"
 
 
-# ============================================================
-# 2. PROJECT MILESTONE ENTITY
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class Milestone:
-    """
-    Representasi satu tahapan pekerjaan project.
-
-    Mengikuti tabel project_milestones.
-    """
-
     id: str
     project_id: str
     name: str
@@ -38,33 +23,15 @@ class Milestone:
     updated_by_user_id: str | None = None
 
 
-# ============================================================
-# 3. PROJECT SCHEDULE
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class ProjectSchedule:
-    """
-    Data waktu yang dimiliki Projects/Workflow.
-
-    Milestones hanya membaca data ini.
-    """
-
     project_id: str
     started_at: datetime | None
     deadline: date
 
 
-# ============================================================
-# 4. MILESTONE PROGRESS
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class MilestoneProgress:
-    """
-    Ringkasan progres berbobot project.
-    """
-
     project_id: str
 
     total_weight: Decimal
@@ -80,10 +47,6 @@ class MilestoneProgress:
     is_plan_complete: bool
 
 
-# ============================================================
-# 5. DELAY RISK LEVEL
-# ============================================================
-
 class DelayRiskLevel(StrEnum):
     PLAN_INCOMPLETE = "PLAN_INCOMPLETE"
     NOT_STARTED = "NOT_STARTED"
@@ -93,16 +56,8 @@ class DelayRiskLevel(StrEnum):
     COMPLETED = "COMPLETED"
 
 
-# ============================================================
-# 6. DELAY RISK RESULT
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class DelayRiskResult:
-    """
-    Hasil estimasi risiko keterlambatan project.
-    """
-
     project_id: str
     risk_level: DelayRiskLevel
 

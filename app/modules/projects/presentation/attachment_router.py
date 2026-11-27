@@ -1,10 +1,11 @@
 import os
 import tempfile
+from collections.abc import Awaitable, Callable, Iterator
 from functools import wraps
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -14,7 +15,7 @@ from starlette.concurrency import run_in_threadpool
 from app.core.database import get_db
 from app.core.dependencies import get_uow
 from app.core.exceptions import ForbiddenError
-from app.core.responses import ApiResponse, UtcDateTime, error_body, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, UtcDateTime, error_body, error_responses, success_response
 from app.core.unit_of_work import UnitOfWork
 
 from app.modules.users.domain.entities import UserRole
@@ -45,10 +46,6 @@ from app.modules.projects.presentation.dependencies import (
 )
 
 
-# ============================================================
-# RESPONSE SCHEMA
-# ============================================================
-
 class ProjectAttachmentResponse(BaseModel):
     id: str
     project_id: str
@@ -58,22 +55,14 @@ class ProjectAttachmentResponse(BaseModel):
     uploaded_at: UtcDateTime | None = None
 
 
-# ============================================================
-# ATTACHMENT ERROR HANDLING
-# ============================================================
+RouteHandler = Callable[[Request], Awaitable[Response]]
 
-def attachment_errors(function):
-    """
-    Mengubah error storage menjadi HTTP response.
 
-    Error aplikasi seperti NotFoundError tetap
-    ditangani global error handler TEMUKARYA.
-    """
-
+def attachment_errors(function: RouteHandler) -> RouteHandler:
     @wraps(function)
-    async def wrapped(*args, **kwargs):
+    async def wrapped(request: Request) -> Response:
         try:
-            return await function(*args, **kwargs)
+            return await function(request)
 
         except OversizedAttachment as exc:
             return JSONResponse(
@@ -105,15 +94,11 @@ def attachment_errors(function):
 
 
 class AttachmentRoute(APIRoute):
-    def get_route_handler(self):
+    def get_route_handler(self) -> RouteHandler:
         return attachment_errors(
             super().get_route_handler()
         )
 
-
-# ============================================================
-# DEPENDENCY INJECTION
-# ============================================================
 
 def get_project_attachment_repository(
     db: Session = Depends(get_db),
@@ -122,16 +107,6 @@ def get_project_attachment_repository(
 
 
 def get_project_attachment_storage() -> LocalProjectAttachmentStorage:
-    """
-    Folder development:
-        <project-root>/storage/projects
-
-    Folder Docker dapat diatur menggunakan:
-        PROJECT_ATTACHMENT_STORAGE_ROOT
-
-    Folder harus disimpan di private persistent volume.
-    """
-
     configured_root = os.getenv(
         "PROJECT_ATTACHMENT_STORAGE_ROOT"
     )
@@ -164,10 +139,6 @@ def get_project_attachment_service(
     )
 
 
-# ============================================================
-# ROLE AUTHORIZATION
-# ============================================================
-
 def require_umkm(
     current_user: AuthenticatedProjectUser,
 ) -> str:
@@ -179,20 +150,12 @@ def require_umkm(
     return current_user.user_id
 
 
-# ============================================================
-# ATTACHMENT ROUTER
-# ============================================================
-
 router = APIRouter(
     prefix="/{project_id}/attachments",
     tags=["project-attachments"],
     route_class=AttachmentRoute,
 )
 
-
-# ============================================================
-# 1. UPLOAD ATTACHMENT
-# ============================================================
 
 @router.post(
     "",
@@ -229,30 +192,21 @@ async def upload_project_attachment(
     service: ProjectAttachmentService = Depends(
         get_project_attachment_service
     ),
-):
-    # 1. Verifikasi role terlebih dahulu.
+) -> SuccessBody[ProjectAttachmentResponse]:
     umkm_id = require_umkm(current_user)
 
-    # 2. Periksa kepemilikan sebelum membaca body request.
-    # Service.upload akan mengecek lagi status proyek
-    # dan mengambil lock saat operasi tulis.
     await run_in_threadpool(
         service.list,
         umkm_id,
         project_id,
     )
 
-    # 3. Simpan request multipart di temporary stream.
-    # File belum menjadi attachment permanen.
     with tempfile.TemporaryFile(mode="w+b") as source:
-
         filename = await receive_attachment(
             request,
             source,
         )
 
-        # 4. Jalankan validasi file, storage,
-        # metadata database, dan commit di worker.
         attachment = await run_in_threadpool(
             service.upload,
             umkm_id,
@@ -262,10 +216,6 @@ async def upload_project_attachment(
         )
         return success_response("Lampiran project berhasil diunggah", attachment)
 
-
-# ============================================================
-# 2. LIST ATTACHMENTS
-# ============================================================
 
 @router.get(
     "",
@@ -281,7 +231,7 @@ def list_project_attachments(
     service: ProjectAttachmentService = Depends(
         get_project_attachment_service
     ),
-):
+) -> SuccessBody[list[ProjectAttachmentResponse]]:
     if current_user.role == UserRole.FREELANCER:
         items = service.list_as_freelancer(freelancer_id=current_user.user_id, project_id=project_id)
     else:
@@ -289,10 +239,6 @@ def list_project_attachments(
 
     return success_response("Daftar lampiran project berhasil diambil", items)
 
-
-# ============================================================
-# 3. DOWNLOAD ATTACHMENT
-# ============================================================
 
 @router.get(
     "/{attachment_id}/file",
@@ -308,8 +254,7 @@ def download_project_attachment(
     service: ProjectAttachmentService = Depends(
         get_project_attachment_service
     ),
-):
-    # Service memeriksa hak baca sebelum membuka stream file fisik.
+) -> StreamingResponse:
     if current_user.role == UserRole.FREELANCER:
         attachment, stream = service.file_as_freelancer(
             freelancer_id=current_user.user_id,
@@ -323,7 +268,7 @@ def download_project_attachment(
             attachment_id=attachment_id,
         )
 
-    def chunks():
+    def chunks() -> Iterator[bytes]:
         try:
             while True:
                 chunk = stream.read(64 * 1024)
@@ -336,10 +281,6 @@ def download_project_attachment(
         finally:
             stream.close()
 
-    # Gunakan nama download tetap agar filename
-    # dari pengguna tidak masuk ke HTTP header.
-    # application/octet-stream memaksa download
-    # dan tidak mengandalkan tipe konten klien.
     return StreamingResponse(
         chunks(),
         media_type="application/octet-stream",
@@ -357,10 +298,6 @@ def download_project_attachment(
     )
 
 
-# ============================================================
-# 4. DELETE ATTACHMENT
-# ============================================================
-
 @router.delete(
     "/{attachment_id}",
     response_model=ApiResponse[None],
@@ -376,7 +313,7 @@ def delete_project_attachment(
     service: ProjectAttachmentService = Depends(
         get_project_attachment_service
     ),
-):
+) -> SuccessBody[None]:
     umkm_id = require_umkm(current_user)
 
     service.delete(

@@ -123,7 +123,6 @@ def test_self_profile_exact_column_limits_and_optional_normalization():
 
 @pytest.mark.parametrize("field", ["service_price_min", "service_price_max"])
 def test_create_freelancer_uint64_overflow_regression(field):
-    # Previously the application layer accepted values MySQL cannot store.
     repository, uow = MagicMock(spec=FreelancerProfileRepository), MagicMock(spec=UnitOfWork)
     repository.get_by_user_id.return_value = None
     with pytest.raises(BadRequestError):

@@ -1,4 +1,3 @@
-
 from datetime import date, datetime, timezone
 
 import pytest
@@ -16,28 +15,13 @@ from app.modules.admin_statistics.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# 1. SQLITE TEST DATABASE
-# ============================================================
-
 @pytest.fixture
 def db():
-    """
-    Database SQLite sementara.
-
-    Semua tabel dan data dibuat hanya untuk test.
-    """
-
     engine = create_engine(
         "sqlite+pysqlite:///:memory:"
     )
 
     with engine.begin() as conn:
-
-        # ----------------------------------------------------
-        # CREATE TEST TABLES
-        # ----------------------------------------------------
-
         statements = [
             """
             CREATE TABLE users (
@@ -108,10 +92,6 @@ def db():
                 text(statement)
             )
 
-        # ----------------------------------------------------
-        # INSERT TEST USERS
-        # ----------------------------------------------------
-
         conn.execute(
             text(
                 """
@@ -170,10 +150,6 @@ def db():
             ],
         )
 
-        # ----------------------------------------------------
-        # INSERT UMKM PROFILE
-        # ----------------------------------------------------
-
         conn.execute(
             text(
                 """
@@ -188,10 +164,6 @@ def db():
                 """
             )
         )
-
-        # ----------------------------------------------------
-        # INSERT FREELANCER PROFILE
-        # ----------------------------------------------------
 
         conn.execute(
             text(
@@ -209,10 +181,6 @@ def db():
                 """
             )
         )
-
-        # ----------------------------------------------------
-        # INSERT TEST PROJECTS
-        # ----------------------------------------------------
 
         conn.execute(
             text(
@@ -286,10 +254,6 @@ def db():
             ],
         )
 
-        # ----------------------------------------------------
-        # INSERT TEST AGREEMENTS
-        # ----------------------------------------------------
-
         conn.execute(
             text(
                 """
@@ -323,10 +287,6 @@ def db():
                 },
             ],
         )
-
-        # ----------------------------------------------------
-        # INSERT TEST PAYMENTS
-        # ----------------------------------------------------
 
         conn.execute(
             text(
@@ -362,13 +322,8 @@ def db():
             ],
         )
 
-    # --------------------------------------------------------
-    # PROVIDE SESSION AND REPOSITORY
-    # --------------------------------------------------------
-
     try:
         with Session(engine) as session:
-
             repository = (
                 SqlAlchemyAdminStatisticsRepository(
                     session
@@ -381,12 +336,7 @@ def db():
         engine.dispose()
 
 
-# ============================================================
-# 2. LIST USERS ORDERING
-# ============================================================
-
 def test_list_users_order(db):
-
     _, repo = db
 
     items = repo.list_users(
@@ -406,12 +356,7 @@ def test_list_users_order(db):
     ]
 
 
-# ============================================================
-# 3. COUNT USERS
-# ============================================================
-
 def test_count_users(db):
-
     _, repo = db
 
     assert repo.count_users(
@@ -430,12 +375,7 @@ def test_count_users(db):
     ) == 2
 
 
-# ============================================================
-# 4. USER SEARCH BY EMAIL
-# ============================================================
-
 def test_user_search_email(db):
-
     _, repo = db
 
     items = repo.list_users(
@@ -451,12 +391,7 @@ def test_user_search_email(db):
     ] == ["f1"]
 
 
-# ============================================================
-# 5. SEARCH ESCAPING
-# ============================================================
-
 def test_user_search_wildcards(db):
-
     _, repo = db
 
     cases = [
@@ -466,7 +401,6 @@ def test_user_search_wildcards(db):
     ]
 
     for search, expected in cases:
-
         items = repo.list_users(
             role=None,
             search=search,
@@ -485,12 +419,7 @@ def test_user_search_wildcards(db):
         ) == 1
 
 
-# ============================================================
-# 6. GET UMKM DETAIL
-# ============================================================
-
 def test_user_detail_umkm(db):
-
     _, repo = db
 
     detail = repo.get_user_detail("u1")
@@ -506,12 +435,7 @@ def test_user_detail_umkm(db):
     assert "password_hash" not in str(detail)
 
 
-# ============================================================
-# 7. GET FREELANCER DETAIL
-# ============================================================
-
 def test_user_detail_freelancer(db):
-
     _, repo = db
 
     detail = repo.get_user_detail("f1")
@@ -525,12 +449,7 @@ def test_user_detail_freelancer(db):
     assert detail.umkm_profile is None
 
 
-# ============================================================
-# 8. GET ADMIN USER DETAIL
-# ============================================================
-
 def test_user_detail_admin(db):
-
     _, repo = db
 
     detail = repo.get_user_detail("admin1")
@@ -540,23 +459,13 @@ def test_user_detail_admin(db):
     assert detail.freelancer_profile is None
 
 
-# ============================================================
-# 9. MISSING USER
-# ============================================================
-
 def test_user_detail_missing(db):
-
     _, repo = db
 
     assert repo.get_user_detail("missing") is None
 
 
-# ============================================================
-# 10. LIST PROJECTS
-# ============================================================
-
 def test_list_projects(db):
-
     _, repo = db
 
     items = repo.list_projects(
@@ -581,12 +490,7 @@ def test_list_projects(db):
     assert items[0].assigned_freelancer_id == "f1"
 
 
-# ============================================================
-# 11. PROJECT STATUS FILTER
-# ============================================================
-
 def test_project_filter(db):
-
     _, repo = db
 
     assert repo.count_projects(
@@ -612,16 +516,10 @@ def test_project_filter(db):
     ] == ["p2"]
 
 
-# ============================================================
-# 12. PROJECT SEARCH ESCAPING
-# ============================================================
-
 def test_project_search_wildcards(db):
-
     _, repo = db
 
     for search in ["%", "_"]:
-
         items = repo.list_projects(
             status=None,
             search=search,
@@ -640,12 +538,7 @@ def test_project_search_wildcards(db):
         ) == 1
 
 
-# ============================================================
-# 13. PROJECT DETAIL WITH AGREEMENT
-# ============================================================
-
 def test_project_detail_agreement(db):
-
     _, repo = db
 
     detail = repo.get_project_detail("p2")
@@ -661,12 +554,7 @@ def test_project_detail_agreement(db):
     assert detail.completed_at.year == 2026
 
 
-# ============================================================
-# 14. PROJECT DETAIL WITHOUT AGREEMENT
-# ============================================================
-
 def test_project_detail_without_agreement(db):
-
     _, repo = db
 
     detail = repo.get_project_detail("p1")
@@ -683,23 +571,13 @@ def test_project_detail_without_agreement(db):
     assert detail.started_at is None
 
 
-# ============================================================
-# 15. MISSING PROJECT
-# ============================================================
-
 def test_project_detail_missing(db):
-
     _, repo = db
 
     assert repo.get_project_detail("missing") is None
 
 
-# ============================================================
-# 16. SYSTEM STATISTICS
-# ============================================================
-
 def test_system_stats(db):
-
     _, repo = db
 
     stats = repo.get_system_statistics()
@@ -721,16 +599,9 @@ def test_system_stats(db):
     )
 
 
-# ============================================================
-# 17. EMPTY PAYMENTS
-# ============================================================
-
 def test_zero_payments(db):
-
     session, repo = db
 
-    # Data test diubah pada fixture SQLite.
-    # Repository Admin tetap read-only.
     session.execute(
         text("DELETE FROM payments")
     )
@@ -741,18 +612,11 @@ def test_zero_payments(db):
     assert stats.platform_income == 0
 
 
-# ============================================================
-# 18. VERIFY READ-ONLY QUERIES
-# ============================================================
-
 def test_methods_are_read_only(db):
-
     session, repo = db
 
     statements = []
 
-    # Catat seluruh SQL yang dieksekusi
-    # saat metode Repository dipanggil.
     @event.listens_for(
         session.bind,
         "before_cursor_execute",
@@ -770,7 +634,6 @@ def test_methods_are_read_only(db):
         )
 
     try:
-
         repo.list_users(
             role=None,
             search=None,

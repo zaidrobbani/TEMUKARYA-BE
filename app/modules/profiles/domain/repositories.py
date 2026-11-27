@@ -11,7 +11,6 @@ from app.modules.profiles.domain.entities import (
 )
 
 class UmkmProfileRepository(Protocol):
-
     def update(self, profile: UmkmProfile) -> UmkmProfile | None:
         ...
 
@@ -29,7 +28,6 @@ class UmkmProfileRepository(Protocol):
 
 
 class FreelancerProfileRepository(Protocol):
-
     def update(self, profile: FreelancerProfile) -> FreelancerProfile | None:
         ...
 
@@ -47,7 +45,6 @@ class FreelancerProfileRepository(Protocol):
 
 
 class FreelancerSkillsRepository(Protocol):
-
     def get_skill_ids(
         self,
         freelancer_id: str,
@@ -69,18 +66,15 @@ class FreelancerSkillsRepository(Protocol):
 
 
 class FreelancerExperienceRepository(Protocol):
-
     def list_by_freelancer_id(
         self, freelancer_id: str,
     ) -> list[FreelancerExperience]:
         ...
 
     def update(self, experience: FreelancerExperience) -> bool:
-        """Update hanya jika ID dan freelancer_id cocok; False jika tidak ada."""
         ...
 
     def delete(self, experience_id: str, freelancer_id: str) -> bool:
-        """Delete hanya jika ID dan freelancer_id cocok; False jika tidak ada."""
         ...
 
     def add(
@@ -103,7 +97,6 @@ class PortfolioRepository(Protocol):
         ...
 
     def update(self, portfolio: Portfolio) -> Portfolio | None:
-        """Return metadata tersimpan hanya jika ID dan pemilik cocok."""
         ...
 
     def delete(self, portfolio_id: str, freelancer_id: str) -> bool:

@@ -66,5 +66,4 @@ class MediaRepository(Protocol):
 
 
 def public_media_path(api_prefix: str, portfolio_id: str, media_id: str) -> str:
-    """Path relatif gambar portofolio yang boleh dibaca semua user login (lihat build_public_media_router)."""
     return f"{api_prefix}/profiles/portfolios/{portfolio_id}/media/{media_id}/file"

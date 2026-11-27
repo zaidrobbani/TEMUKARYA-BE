@@ -1,21 +1,9 @@
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.responses import UtcDateTime
 
 
-# ============================================================
-# SUBMIT APPLICATION REQUEST
-# ============================================================
-
 class SubmitApplicationRequest(BaseModel):
-    """
-    Data yang dikirim Freelancer ketika melamar.
-
-    freelancer_id tidak diterima dari request.
-    Identitas berasal dari autentikasi.
-    """
-
     model_config = ConfigDict(extra="forbid")
 
     proposed_price: int = Field(
@@ -36,13 +24,7 @@ class SubmitApplicationRequest(BaseModel):
     )
 
 
-# ============================================================
-# APPLICATION RESPONSE
-# ============================================================
-
 class ApplicationResponse(BaseModel):
-    """Data lamaran yang dikembalikan oleh API."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -58,10 +40,6 @@ class ApplicationResponse(BaseModel):
     created_at: UtcDateTime | None = None
     updated_at: UtcDateTime | None = None
 
-
-# ============================================================
-# PAGINATION RESPONSE
-# ============================================================
 
 class ApplicationsPageResponse(BaseModel):
     items: list[ApplicationResponse]

@@ -5,12 +5,10 @@ from typing import BinaryIO
 from app.core.exceptions import BadRequestError, NotFoundError, PayloadTooLargeError, ServiceUnavailableError, UnsupportedMediaTypeError
 from app.modules.chat.domain.message_rules import MAX_FILE_BYTES
 
-# Foto chat (gaya WhatsApp ringan): disimpan WebP, sisi terpanjang maks 1600 px, <= 400 KB, plus thumbnail 320 px.
 CHAT_IMAGE_MAX_DIMENSION = 1600
 CHAT_IMAGE_MAX_BYTES = 400 * 1024
 CHAT_THUMBNAIL_DIMENSION = 320
 CHAT_THUMBNAIL_MAX_BYTES = 30 * 1024
-# Batas unggahan foto mentah sebelum dikompres server (Android sudah mengompres lebih dulu).
 CHAT_IMAGE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
 
 
@@ -48,7 +46,6 @@ class ChatFileStorageError(ServiceUnavailableError):
 
 
 def thumbnail_key_of(key: str) -> str | None:
-    """Thumbnail hanya dibuat untuk foto (`<hex>.webp` → `<hex>.thumb.webp`), jadi tidak perlu kolom DB baru."""
     if key.endswith(".webp") and not key.endswith(".thumb.webp"):
         return key.removesuffix(".webp") + ".thumb.webp"
     return None

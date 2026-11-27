@@ -1,8 +1,6 @@
-
 from datetime import date, datetime, timezone
-from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import RowMapping, text
 from sqlalchemy.orm import Session
 
 from app.modules.admin_statistics.domain.entities import (
@@ -18,25 +16,12 @@ from app.modules.admin_statistics.domain.entities import (
 from app.modules.admin_statistics.domain.statistics_rules import (
     build_system_statistics,
 )
+from app.core.sql_types import SqlParams
 
-
-# ============================================================
-# 1. DATETIME HELPERS
-# ============================================================
 
 def _utc_datetime(
     value: datetime | str | None,
 ) -> datetime | None:
-    """
-    Konversi DATETIME database ke datetime UTC-aware.
-
-    Konvensi:
-        DATETIME tanpa timezone dianggap UTC.
-
-    Konvensi ini harus disepakati dengan
-    modul lain saat integrasi.
-    """
-
     if value is None:
         return None
 
@@ -58,10 +43,6 @@ def _utc_datetime(
 def _date(
     value: date | datetime | str,
 ) -> date:
-    """
-    Konversi kolom DATE dari MySQL atau SQLite.
-    """
-
     if isinstance(value, datetime):
         return value.date()
 
@@ -71,26 +52,9 @@ def _date(
     return date.fromisoformat(value)
 
 
-# ============================================================
-# 2. SQL LIKE HELPER
-# ============================================================
-
 def _like_pattern(
     query: str,
 ) -> str:
-    """
-    Menjadikan keyword sebagai pencarian literal.
-
-    Karakter SQL LIKE:
-        %
-        _
-
-    tidak boleh digunakan sebagai wildcard
-    secara tidak sengaja oleh pengguna.
-
-    Menggunakan ! sebagai escape character.
-    """
-
     escaped = (
         query.lower()
         .replace("!", "!!")
@@ -101,19 +65,9 @@ def _like_pattern(
     return f"%{escaped}%"
 
 
-# ============================================================
-# 3. USER ROW MAPPER
-# ============================================================
-
 def _user_from_row(
-    row: Any,
+    row: RowMapping,
 ) -> AdminUserSummary:
-    """
-    Mengubah hasil SQL menjadi Domain Entity.
-
-    Password hash tidak diambil dari database.
-    """
-
     return AdminUserSummary(
         id=str(row["id"]),
         name=row["name"],
@@ -125,14 +79,9 @@ def _user_from_row(
     )
 
 
-# ============================================================
-# 4. PROJECT ROW MAPPER
-# ============================================================
-
 def _project_from_row(
-    row: Any,
+    row: RowMapping,
 ) -> AdminProjectSummary:
-
     return AdminProjectSummary(
         id=str(row["id"]),
         title=row["title"],
@@ -155,10 +104,6 @@ def _project_from_row(
         ),
     )
 
-
-# ============================================================
-# 5. SHARED PROJECT SQL
-# ============================================================
 
 _PROJECT_SELECT = """
 SELECT
@@ -187,41 +132,20 @@ LEFT JOIN users AS freelancer
 """
 
 
-# ============================================================
-# 6. ADMIN STATISTICS SQLALCHEMY REPOSITORY
-# ============================================================
-
 class SqlAlchemyAdminStatisticsRepository:
-    """
-    Implementasi Repository Admin Statistics.
-
-    READ-ONLY:
-        Tidak menjalankan INSERT.
-        Tidak menjalankan UPDATE.
-        Tidak menjalankan DELETE.
-        Tidak menjalankan commit().
-
-    Session disediakan oleh dependency FastAPI.
-    """
-
     def __init__(
         self,
         session: Session,
     ):
         self._session = session
 
-    # ========================================================
-    # A. BUILD USER FILTER
-    # ========================================================
-
     @staticmethod
     def _user_filter(
         role: str | None,
         search: str | None,
-    ) -> tuple[str, dict]:
-
-        conditions = []
-        params = {}
+    ) -> tuple[str, SqlParams]:
+        conditions: list[str] = []
+        params: SqlParams = {}
 
         if role is not None:
             conditions.append(
@@ -250,18 +174,13 @@ class SqlAlchemyAdminStatisticsRepository:
 
         return where_clause, params
 
-    # ========================================================
-    # B. BUILD PROJECT FILTER
-    # ========================================================
-
     @staticmethod
     def _project_filter(
         status: str | None,
         search: str | None,
-    ) -> tuple[str, dict]:
-
-        conditions = []
-        params = {}
+    ) -> tuple[str, SqlParams]:
+        conditions: list[str] = []
+        params: SqlParams = {}
 
         if status is not None:
             conditions.append(
@@ -287,10 +206,6 @@ class SqlAlchemyAdminStatisticsRepository:
 
         return where_clause, params
 
-    # ========================================================
-    # 1. LIST USERS
-    # ========================================================
-
     def list_users(
         self,
         *,
@@ -299,11 +214,6 @@ class SqlAlchemyAdminStatisticsRepository:
         limit: int,
         offset: int,
     ) -> tuple[AdminUserSummary, ...]:
-        """
-        Daftar pengguna dengan filter,
-        search dan pagination.
-        """
-
         where_clause, params = self._user_filter(
             role,
             search,
@@ -332,17 +242,12 @@ class SqlAlchemyAdminStatisticsRepository:
             for row in rows
         )
 
-    # ========================================================
-    # 2. COUNT USERS
-    # ========================================================
-
     def count_users(
         self,
         *,
         role: str | None,
         search: str | None,
     ) -> int:
-
         where_clause, params = self._user_filter(
             role,
             search,
@@ -361,25 +266,10 @@ class SqlAlchemyAdminStatisticsRepository:
 
         return int(result)
 
-    # ========================================================
-    # 3. GET USER DETAIL
-    # ========================================================
-
     def get_user_detail(
         self,
         user_id: str,
     ) -> AdminUserDetail | None:
-        """
-        Mengambil informasi User dan profil
-        berdasarkan role pengguna.
-
-        Tidak mengambil password_hash.
-        """
-
-        # ----------------------------------------------------
-        # A. GET BASE USER
-        # ----------------------------------------------------
-
         statement = text(
             "SELECT id, name, email, role, created_at "
             "FROM users "
@@ -403,12 +293,7 @@ class SqlAlchemyAdminStatisticsRepository:
         umkm_profile = None
         freelancer_profile = None
 
-        # ----------------------------------------------------
-        # B. GET UMKM PROFILE
-        # ----------------------------------------------------
-
         if user.role.lower() == "umkm":
-
             statement = text(
                 "SELECT "
                 "business_name, "
@@ -427,7 +312,6 @@ class SqlAlchemyAdminStatisticsRepository:
             ).mappings().one_or_none()
 
             if profile is not None:
-
                 umkm_profile = AdminUMKMProfile(
                     business_name=(
                         profile["business_name"]
@@ -441,12 +325,7 @@ class SqlAlchemyAdminStatisticsRepository:
                     city=profile["city"],
                 )
 
-        # ----------------------------------------------------
-        # C. GET FREELANCER PROFILE
-        # ----------------------------------------------------
-
         elif user.role.lower() == "freelancer":
-
             statement = text(
                 "SELECT "
                 "professional_title, "
@@ -467,7 +346,6 @@ class SqlAlchemyAdminStatisticsRepository:
             ).mappings().one_or_none()
 
             if profile is not None:
-
                 freelancer_profile = AdminFreelancerProfile(
                     professional_title=(
                         profile["professional_title"]
@@ -489,19 +367,11 @@ class SqlAlchemyAdminStatisticsRepository:
                     ),
                 )
 
-        # ----------------------------------------------------
-        # D. BUILD DETAIL
-        # ----------------------------------------------------
-
         return AdminUserDetail(
             user=user,
             umkm_profile=umkm_profile,
             freelancer_profile=freelancer_profile,
         )
-
-    # ========================================================
-    # 4. LIST PROJECTS
-    # ========================================================
 
     def list_projects(
         self,
@@ -511,13 +381,6 @@ class SqlAlchemyAdminStatisticsRepository:
         limit: int,
         offset: int,
     ) -> tuple[AdminProjectSummary, ...]:
-        """
-        Menampilkan seluruh Project.
-
-        LEFT JOIN memastikan Project tanpa
-        agreement tetap ditampilkan.
-        """
-
         where_clause, params = self._project_filter(
             status,
             search,
@@ -545,21 +408,12 @@ class SqlAlchemyAdminStatisticsRepository:
             for row in rows
         )
 
-    # ========================================================
-    # 5. COUNT PROJECTS
-    # ========================================================
-
     def count_projects(
         self,
         *,
         status: str | None,
         search: str | None,
     ) -> int:
-        """
-        Menghitung Project tanpa JOIN agar
-        tidak terjadi penghitungan ganda.
-        """
-
         where_clause, params = self._project_filter(
             status,
             search,
@@ -578,23 +432,10 @@ class SqlAlchemyAdminStatisticsRepository:
 
         return int(result)
 
-    # ========================================================
-    # 6. GET PROJECT DETAIL
-    # ========================================================
-
     def get_project_detail(
         self,
         project_id: str,
     ) -> AdminProjectDetail | None:
-        """
-        Mengambil detail Project berikut
-        pemilik dan agreement.
-
-        Jika belum ada agreement:
-            agreed_price = None
-            assigned_freelancer_id = None
-        """
-
         statement = text(
             _PROJECT_SELECT.rstrip()
             + ", p.description, "
@@ -635,27 +476,9 @@ class SqlAlchemyAdminStatisticsRepository:
             ),
         )
 
-    # ========================================================
-    # 7. GET SYSTEM STATISTICS
-    # ========================================================
-
     def get_system_statistics(
         self,
     ) -> AdminSystemStatistics:
-        """
-        Mengambil seluruh agregasi statistik.
-
-        total_transactions:
-            Menghitung seluruh record payments.
-
-        platform_income:
-            Hanya menjumlahkan platform_fee_amount
-            dari pembayaran berstatus BERHASIL.
-
-        Subquery terpisah mencegah duplikasi
-        hasil perhitungan akibat JOIN.
-        """
-
         statement = text(
             """
             SELECT

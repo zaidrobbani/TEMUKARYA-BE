@@ -36,7 +36,7 @@ def test_decode_reencode_stores_real_size_and_removes_metadata(tmp_path, format,
         assert "xmp" not in decoded.info and "icc_profile" not in decoded.info
     assert [p.name for p in tmp_path.iterdir()] == [result.key]
     storage.delete(result.key)
-    storage.delete(result.key)  # Missing file deletion is idempotent.
+    storage.delete(result.key)
     assert not list(tmp_path.iterdir())
 
 

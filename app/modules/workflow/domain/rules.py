@@ -6,7 +6,6 @@ from app.modules.workflow.domain.entities import (
     status_label,
 )
 
-# Pembatalan hanya sebelum pembayaran berhasil (PRD Fungsi 2).
 CANCELLABLE_STATUSES = {
     ProjectStatus.TERBUKA,
     ProjectStatus.MENUNGGU_KESEPAKATAN,
@@ -14,7 +13,6 @@ CANCELLABLE_STATUSES = {
 }
 WORKING_STATUSES = {ProjectStatus.SEDANG_DIKERJAKAN, ProjectStatus.REVISI}
 
-# Alasan penolakan per status, supaya pesan error menjelaskan tahap yang sedang berjalan.
 _START_BLOCKERS = {
     ProjectStatus.TERBUKA: "Proyek belum memiliki freelancer terpilih",
     ProjectStatus.MENUNGGU_KESEPAKATAN: "Kesepakatan belum disetujui kedua pihak",
@@ -28,7 +26,6 @@ def start_blocker(status: str) -> str:
 
 
 def cancel_blocker(status: str, party: Party) -> str | None:
-    """None berarti boleh membatalkan."""
     project_status = ProjectStatus(status)
     if project_status == ProjectStatus.DIBATALKAN:
         return "Proyek sudah dibatalkan"
@@ -71,7 +68,6 @@ def available_actions(
     if cancel_blocker(status, party) is None:
         actions.append(WorkflowAction.CANCEL_PROJECT)
     return actions
-
 
 
 ALLOWED_TRANSITIONS: dict[ProjectStatus, set[ProjectStatus]] = {

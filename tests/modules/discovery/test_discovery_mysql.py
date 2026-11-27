@@ -21,18 +21,8 @@ from app.modules.discovery.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# MYSQL TEST CONFIGURATION
-# ============================================================
-
 @pytest.fixture
 def mysql_engine():
-    """
-    Jalankan MySQL test hanya jika diaktifkan
-    secara eksplisit dan menggunakan database
-    TEMUKARYA lokal.
-    """
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration test disabled")
 
@@ -58,35 +48,14 @@ def mysql_engine():
     return engine
 
 
-# ============================================================
-# DATABASE HELPER
-# ============================================================
-
 def insert_rows(session, statement, rows):
-    """
-    Membantu INSERT data sementara menggunakan
-    SQL terparameter.
-    """
-
     session.execute(
         text(statement),
         rows,
     )
 
 
-# ============================================================
-# MYSQL INTEGRATION TEST
-# ============================================================
-
 def test_discovery_mysql_integration(mysql_engine):
-    """
-    Memeriksa Discovery Repository terhadap
-    skema MySQL TEMUKARYA yang sebenarnya.
-
-    Seluruh INSERT berjalan dalam satu transaksi
-    dan akan di-rollback pada akhir pengujian.
-    """
-
     tag = uuid4().hex[:12]
 
     umkm_id = str(uuid4())
@@ -134,11 +103,6 @@ def test_discovery_mysql_integration(mysql_engine):
             autoflush=False,
             expire_on_commit=False,
         ) as session:
-
-            # =================================================
-            # 1. VERIFY USERS ID CONTRACT
-            # =================================================
-
             id_type = session.execute(
                 text("""
                     SELECT DATA_TYPE
@@ -159,10 +123,6 @@ def test_discovery_mysql_integration(mysql_engine):
                     "Koordinasikan migrasi Users/Auth "
                     "bersama Zaid sebelum integration test."
                 )
-
-            # =================================================
-            # 2. TEMPORARY USERS
-            # =================================================
 
             users = [
                 {
@@ -212,10 +172,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 ],
             )
 
-            # =================================================
-            # 3. TEMPORARY UMKM PROFILE
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -242,10 +198,6 @@ def test_discovery_mysql_integration(mysql_engine):
                     "city": "Malang",
                 },
             )
-
-            # =================================================
-            # 4. TEMPORARY FREELANCER PROFILES
-            # =================================================
 
             profiles = [
                 {
@@ -302,10 +254,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 profiles,
             )
 
-            # =================================================
-            # 5. TEMPORARY SKILLS
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -356,10 +304,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 ],
             )
 
-            # =================================================
-            # 6. TEMPORARY EXPERIENCES
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -404,10 +348,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 ],
             )
 
-            # =================================================
-            # 7. TEMPORARY PORTFOLIO
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -435,10 +375,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 },
             )
 
-            # =================================================
-            # 8. TEMPORARY PROJECT CATEGORY
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -461,10 +397,6 @@ def test_discovery_mysql_integration(mysql_engine):
                     "description": "Temporary test category",
                 },
             )
-
-            # =================================================
-            # 9. TEMPORARY PROJECTS
-            # =================================================
 
             insert_rows(
                 session,
@@ -510,10 +442,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 ],
             )
 
-            # =================================================
-            # 10. TEMPORARY AGREEMENTS
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -553,10 +481,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 ],
             )
 
-            # =================================================
-            # 11. TEMPORARY REVIEWS
-            # =================================================
-
             insert_rows(
                 session,
                 """
@@ -589,10 +513,6 @@ def test_discovery_mysql_integration(mysql_engine):
                 ],
             )
 
-            # =================================================
-            # 12. START DISCOVERY REPOSITORY
-            # =================================================
-
             repository = SqlAlchemyDiscoveryRepository(
                 session
             )
@@ -606,10 +526,6 @@ def test_discovery_mysql_integration(mysql_engine):
                     limit=20,
                     offset=0,
                 )
-
-            # =================================================
-            # 13. DEFAULT SEARCH
-            # =================================================
 
             results = find()
 
@@ -627,10 +543,6 @@ def test_discovery_mysql_integration(mysql_engine):
             }) == 2
 
             print("\nDEFAULT FREELANCER SEARCH: OK")
-
-            # =================================================
-            # 14. SEARCH BY NAME / SKILL
-            # =================================================
 
             name_results = repository.search_freelancers(
                 filters=FreelancerSearchFilters(
@@ -658,10 +570,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("NAME AND SKILL SEARCH: OK")
 
-            # =================================================
-            # 15. SKILL FILTER
-            # =================================================
-
             filtered = find(
                 skill_ids=(
                     skill_python,
@@ -677,10 +585,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("SKILL FILTER: OK")
 
-            # =================================================
-            # 16. CITY FILTER
-            # =================================================
-
             city_results = find(city="Malang")
 
             assert [
@@ -688,10 +592,6 @@ def test_discovery_mysql_integration(mysql_engine):
             ] == [freelancer_a]
 
             print("CITY FILTER: OK")
-
-            # =================================================
-            # 17. AVAILABILITY FILTER
-            # =================================================
 
             busy_results = find(
                 availability_status="BUSY",
@@ -702,10 +602,6 @@ def test_discovery_mysql_integration(mysql_engine):
             ] == [freelancer_c]
 
             print("AVAILABILITY FILTER: OK")
-
-            # =================================================
-            # 18. PRICE FILTER
-            # =================================================
 
             price_results = find(
                 min_price=700000,
@@ -718,10 +614,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("PRICE RANGE FILTER: OK")
 
-            # =================================================
-            # 19. EXPERIENCE FILTER
-            # =================================================
-
             experience_results = find(
                 min_experience_count=2,
             )
@@ -731,10 +623,6 @@ def test_discovery_mysql_integration(mysql_engine):
             ] == [freelancer_a]
 
             print("EXPERIENCE FILTER: OK")
-
-            # =================================================
-            # 20. RATING FILTER
-            # =================================================
 
             rated_results = find(
                 min_rating=4.0,
@@ -748,10 +636,6 @@ def test_discovery_mysql_integration(mysql_engine):
             assert rated_results[0].review_count == 2
 
             print("MYSQL RATING CALCULATION: OK")
-
-            # =================================================
-            # 21. PAGINATION
-            # =================================================
 
             page_1 = repository.search_freelancers(
                 filters=FreelancerSearchFilters(
@@ -776,10 +660,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("MYSQL PAGINATION: OK")
 
-            # =================================================
-            # 22. FREELANCER DETAIL
-            # =================================================
-
             detail = repository.get_freelancer_detail(
                 freelancer_a
             )
@@ -799,10 +679,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("FREELANCER DETAIL: OK")
 
-            # =================================================
-            # 23. FREELANCER WITHOUT REVIEWS
-            # =================================================
-
             no_reviews = repository.get_freelancer_detail(
                 freelancer_b
             )
@@ -814,10 +690,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("FREELANCER WITHOUT REVIEW: OK")
 
-            # =================================================
-            # 24. INVALID FREELANCER
-            # =================================================
-
             assert repository.get_freelancer_detail(
                 str(uuid4())
             ) is None
@@ -828,10 +700,6 @@ def test_discovery_mysql_integration(mysql_engine):
 
             print("UNKNOWN / WRONG ROLE: OK")
 
-            # =================================================
-            # 25. SENSITIVE DATA PROTECTION
-            # =================================================
-
             public_data = asdict(detail)
 
             assert "email" not in public_data
@@ -841,21 +709,12 @@ def test_discovery_mysql_integration(mysql_engine):
             print("SENSITIVE DATA PROTECTION: OK")
 
     finally:
-        # ====================================================
-        # 26. ROLLBACK TEMPORARY DATA
-        # ====================================================
-
         transaction.rollback()
         connection.close()
 
         print("MYSQL TRANSACTION ROLLBACK: EXECUTED")
 
-    # ========================================================
-    # 27. VERIFY CLEANUP
-    # ========================================================
-
     with mysql_engine.connect() as check_connection:
-
         checks = [
             ("users", "id", user_ids),
             (
@@ -883,9 +742,7 @@ def test_discovery_mysql_integration(mysql_engine):
         ]
 
         for table, column, identifiers in checks:
-
             for identifier in identifiers:
-
                 remaining = check_connection.execute(
                     text(
                         f"SELECT COUNT(*) FROM {table} "

@@ -3,11 +3,6 @@ from app.modules.skills.domain.entities import Skill, ProjectCategory
 
 
 class FakeMasterDataRepository:
-    """
-    Repository palsu untuk pengujian.
-    Tidak membutuhkan koneksi MySQL.
-    """
-
     def list_skills(self):
         return [
             Skill(id="logo_design", name="Desain Logo"),

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.dependencies import get_uow
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.core.unit_of_work import UnitOfWork
 from app.modules.milestones.application.dto import (
     CompleteMilestoneInput,
@@ -66,7 +66,7 @@ def save_milestone_plan(
     body: MilestonePlanRequest,
     actor: MilestoneActor = Depends(get_authenticated_milestone_actor),
     use_case: SaveMilestonePlan = Depends(save_plan_use_case),
-):
+) -> SuccessBody[MilestonePlanResponse]:
     data = ReplaceMilestonePlanInput(
         project_id=project_id,
         actor=actor,
@@ -95,6 +95,6 @@ def complete_milestone(
     milestone_id: str,
     actor: MilestoneActor = Depends(get_authenticated_milestone_actor),
     use_case: MarkMilestoneDone = Depends(mark_done_use_case),
-):
+) -> SuccessBody[MilestoneProgressResponse]:
     progress = use_case.execute(CompleteMilestoneInput(project_id, milestone_id, actor))
     return success_response("Milestone ditandai selesai", MilestoneProgressResponse.model_validate(progress))

@@ -126,8 +126,6 @@ class AuthenticateToken:
 
 
 class UpdateAccountName:
-    """Ubah nama akun (Nama Pemilik UMKM / Nama Lengkap freelancer). Email, role, dan nomor tidak ikut diubah."""
-
     def __init__(self, users: UserRepository, uow: UnitOfWork):
         self._users = users
         self._uow = uow

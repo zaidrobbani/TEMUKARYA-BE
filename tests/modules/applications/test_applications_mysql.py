@@ -31,19 +31,8 @@ from app.modules.applications.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# MYSQL TEST CONFIGURATION
-# ============================================================
-
 @pytest.fixture
 def mysql_engine():
-    """
-    Integration test hanya dijalankan jika
-    diaktifkan secara eksplisit.
-
-    Database yang diizinkan: temukarya lokal.
-    """
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration tests disabled")
 
@@ -63,19 +52,7 @@ def mysql_engine():
     return engine
 
 
-# ============================================================
-# TEST UNIT OF WORK
-# ============================================================
-
 class FlushOnlyUnitOfWork:
-    """
-    UnitOfWork khusus integration test.
-
-    commit() diganti flush() agar seluruh data
-    tetap berada di transaksi luar yang nantinya
-    akan di-rollback.
-    """
-
     def __init__(self, session: Session):
         self.session = session
         self.commit_count = 0
@@ -84,10 +61,6 @@ class FlushOnlyUnitOfWork:
         self.session.flush()
         self.commit_count += 1
 
-
-# ============================================================
-# TEST DATA HELPERS
-# ============================================================
 
 def create_user(
     session: Session,
@@ -196,29 +169,7 @@ def make_application(
     )
 
 
-# ============================================================
-# MYSQL INTEGRATION TEST
-# ============================================================
-
 def test_applications_mysql_integration(mysql_engine):
-    """
-    Memeriksa:
-
-    1. Profil Freelancer
-    2. Status proyek
-    3. Kepemilikan UMKM
-    4. Submit Application
-    5. Metadata MySQL
-    6. Lookup Application
-    7. Daftar lamaran Freelancer
-    8. Daftar pelamar UMKM
-    9. Pagination
-    10. Unique constraint
-    11. Foreign key constraint
-    12. Positive-price constraint
-    13. Transaction rollback
-    """
-
     umkm_id = str(uuid4())
 
     freelancer_a = str(uuid4())
@@ -244,10 +195,6 @@ def test_applications_mysql_integration(mysql_engine):
 
     created_application_ids = []
 
-    # ========================================================
-    # 1. START ROLLBACK-ONLY TRANSACTION
-    # ========================================================
-
     connection = mysql_engine.connect()
     transaction = connection.begin()
 
@@ -257,16 +204,11 @@ def test_applications_mysql_integration(mysql_engine):
             autoflush=False,
             expire_on_commit=False,
         ) as session:
-
             repository = SqlAlchemyApplicationRepository(
                 session
             )
 
             uow = FlushOnlyUnitOfWork(session)
-
-            # =================================================
-            # 2. GET EXISTING PROJECT CATEGORY
-            # =================================================
 
             category_id = session.execute(
                 text("""
@@ -276,10 +218,6 @@ def test_applications_mysql_integration(mysql_engine):
                     LIMIT 1
                 """)
             ).scalar_one()
-
-            # =================================================
-            # 3. CREATE TEMPORARY USERS
-            # =================================================
 
             create_user(
                 session,
@@ -298,10 +236,6 @@ def test_applications_mysql_integration(mysql_engine):
                 freelancer_b,
                 "FREELANCER",
             )
-
-            # =================================================
-            # 4. CREATE UMKM PROFILE
-            # =================================================
 
             session.execute(
                 text("""
@@ -329,10 +263,6 @@ def test_applications_mysql_integration(mysql_engine):
                 },
             )
 
-            # =================================================
-            # 5. CREATE FREELANCER PROFILES
-            # =================================================
-
             create_freelancer_profile(
                 session,
                 freelancer_a,
@@ -356,10 +286,6 @@ def test_applications_mysql_integration(mysql_engine):
             )
 
             print("\nFREELANCER PROFILES: OK")
-
-            # =================================================
-            # 6. CREATE TEMPORARY PROJECTS
-            # =================================================
 
             create_project(
                 session,
@@ -391,10 +317,6 @@ def test_applications_mysql_integration(mysql_engine):
                 published=False,
             )
 
-            # =================================================
-            # 7. PROJECT AVAILABILITY
-            # =================================================
-
             assert repository.project_is_open(
                 project_a,
                 lock=True,
@@ -414,10 +336,6 @@ def test_applications_mysql_integration(mysql_engine):
 
             print("PROJECT AVAILABILITY: OK")
 
-            # =================================================
-            # 8. UMKM OWNERSHIP
-            # =================================================
-
             assert repository.project_owned_by_umkm(
                 project_a,
                 umkm_id,
@@ -429,10 +347,6 @@ def test_applications_mysql_integration(mysql_engine):
             )
 
             print("PROJECT OWNERSHIP: OK")
-
-            # =================================================
-            # 9. SUBMIT VIA REAL USE CASE
-            # =================================================
 
             submit = SubmitApplication(
                 repository=repository,
@@ -459,10 +373,6 @@ def test_applications_mysql_integration(mysql_engine):
             assert uow.commit_count == 1
 
             print("SUBMIT APPLICATION: OK")
-
-            # =================================================
-            # 10. VERIFY MYSQL DATA
-            # =================================================
 
             row = session.execute(
                 text("""
@@ -496,16 +406,10 @@ def test_applications_mysql_integration(mysql_engine):
                 {"project_id": project_a},
             ).scalar_one()
 
-            # Submit lamaran tidak boleh mengubah
-            # status proyek. Itu milik Workflow Zaid.
             assert project_status == "TERBUKA"
 
             print("MYSQL METADATA: OK")
             print("PROJECT STATUS UNCHANGED: OK")
-
-            # =================================================
-            # 11. CREATE TWO ADDITIONAL APPLICATIONS
-            # =================================================
 
             saved_b = repository.add(
                 make_application(
@@ -526,10 +430,6 @@ def test_applications_mysql_integration(mysql_engine):
                 saved_c.id,
             ])
 
-            # =================================================
-            # 12. VERIFY APPLICATION LOOKUP
-            # =================================================
-
             found = repository.get_by_id(saved_a.id)
 
             assert found is not None
@@ -546,10 +446,6 @@ def test_applications_mysql_integration(mysql_engine):
             assert by_pair.id == saved_a.id
 
             print("APPLICATION LOOKUP: OK")
-
-            # =================================================
-            # 13. FREELANCER APPLICATIONS
-            # =================================================
 
             my_applications = GetMyApplications(
                 repository
@@ -578,10 +474,6 @@ def test_applications_mysql_integration(mysql_engine):
             )
 
             print("FREELANCER LIST + PAGINATION: OK")
-
-            # =================================================
-            # 14. UMKM PROJECT APPLICANTS
-            # =================================================
 
             get_applicants = GetProjectApplicants(
                 repository
@@ -612,13 +504,6 @@ def test_applications_mysql_integration(mysql_engine):
 
             print("UMKM APPLICANTS + OWNERSHIP: OK")
 
-            # =================================================
-            # 15. UNIQUE CONSTRAINT
-            # =================================================
-
-            # SAVEPOINT membuat IntegrityError bisa
-            # diuji tanpa membatalkan semua data
-            # yang telah dibuat dalam transaksi luar.
             with pytest.raises(ConflictError):
                 with session.begin_nested():
                     repository.add(
@@ -630,10 +515,6 @@ def test_applications_mysql_integration(mysql_engine):
 
             print("DUPLICATE APPLICATION PROTECTION: OK")
 
-            # =================================================
-            # 16. FOREIGN KEY CONSTRAINT
-            # =================================================
-
             with pytest.raises(IntegrityError):
                 with session.begin_nested():
                     repository.add(
@@ -644,10 +525,6 @@ def test_applications_mysql_integration(mysql_engine):
                     )
 
             print("FOREIGN KEY PROTECTION: OK")
-
-            # =================================================
-            # 17. POSITIVE PRICE CONSTRAINT
-            # =================================================
 
             with pytest.raises(OperationalError) as exc_info:
                 with session.begin_nested():
@@ -662,10 +539,6 @@ def test_applications_mysql_integration(mysql_engine):
             assert exc_info.value.orig.args[0] == 3819
 
             print("POSITIVE PRICE CONSTRAINT: OK")
-
-            # =================================================
-            # 18. VERIFY DATA AFTER SAVEPOINT ROLLBACKS
-            # =================================================
 
             count = session.execute(
                 text("""
@@ -687,21 +560,12 @@ def test_applications_mysql_integration(mysql_engine):
             print("TRANSACTION ISOLATION: OK")
 
     finally:
-        # ====================================================
-        # 19. ROLLBACK ALL TEMPORARY DATA
-        # ====================================================
-
         transaction.rollback()
         connection.close()
 
         print("MYSQL TRANSACTION ROLLBACK: EXECUTED")
 
-    # ========================================================
-    # 20. VERIFY DATABASE CLEANUP
-    # ========================================================
-
     with mysql_engine.connect() as check_connection:
-
         checks = [
             ("users", "id", user_ids),
             ("umkm_profiles", "user_id", (umkm_id,)),
@@ -720,7 +584,6 @@ def test_applications_mysql_integration(mysql_engine):
 
         for table, column, identifiers in checks:
             for identifier in identifiers:
-
                 remaining = check_connection.execute(
                     text(
                         f"SELECT COUNT(*) FROM {table} "

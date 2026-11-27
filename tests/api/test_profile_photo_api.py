@@ -8,7 +8,7 @@ from app.main import app
 from app.modules.users.domain.avatar import AVATAR_MAX_DIMENSION, AVATAR_MAX_STORED_BYTES
 from app.modules.users.infrastructure.avatar_storage import LocalAvatarStorage
 from app.modules.users.presentation.dependencies import get_avatar_storage
-from tests.api.test_auth_api import (  # noqa: F401 (fixture dipakai pytest)
+from tests.api.test_auth_api import (
     action_tokens,
     assert_error,
     auth,

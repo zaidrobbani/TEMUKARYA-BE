@@ -8,22 +8,7 @@ from app.modules.chat.domain.entities import (
 )
 
 
-# ============================================================
-# 1. CONVERSATION REPOSITORY CONTRACT
-# ============================================================
-
 class ConversationRepository(Protocol):
-    """
-    Interface untuk mengakses data percakapan.
-
-    Implementasi SQLAlchemy akan dibuat
-    pada Infrastructure Layer.
-    """
-
-    # --------------------------------------------------------
-    # Find existing conversation
-    # --------------------------------------------------------
-
     def find_by_participants(
         self,
         umkm_id: str,
@@ -32,19 +17,11 @@ class ConversationRepository(Protocol):
     ) -> Conversation | None:
         ...
 
-    # --------------------------------------------------------
-    # Get conversation by ID
-    # --------------------------------------------------------
-
     def get_by_id(
         self,
         conversation_id: str,
     ) -> Conversation | None:
         ...
-
-    # --------------------------------------------------------
-    # List conversations for a user
-    # --------------------------------------------------------
 
     def list_for_user(
         self,
@@ -55,19 +32,11 @@ class ConversationRepository(Protocol):
     ) -> tuple[Conversation, ...]:
         ...
 
-    # --------------------------------------------------------
-    # Verify user role
-    # --------------------------------------------------------
-
     def get_user_role(
         self,
         user_id: str,
     ) -> str | None:
         ...
-
-    # --------------------------------------------------------
-    # Verify project ownership
-    # --------------------------------------------------------
 
     def get_project_owner_id(
         self,
@@ -75,36 +44,14 @@ class ConversationRepository(Protocol):
     ) -> str | None:
         ...
 
-    # --------------------------------------------------------
-    # Create conversation safely
-    # --------------------------------------------------------
-
     def create_or_get(
         self,
         conversation: Conversation,
     ) -> Conversation:
-        """
-        Harus aman terhadap request bersamaan.
-
-        Implementasi nanti menggunakan unique
-        constraint database dan transaksi.
-        """
         ...
 
 
-# ============================================================
-# 2. MESSAGE REPOSITORY CONTRACT
-# ============================================================
-
 class MessageRepository(Protocol):
-    """
-    Interface untuk mengakses pesan dan lampiran.
-    """
-
-    # --------------------------------------------------------
-    # Get paginated message history
-    # --------------------------------------------------------
-
     def list_for_conversation(
         self,
         conversation_id: str,
@@ -113,27 +60,13 @@ class MessageRepository(Protocol):
         before: tuple[datetime, str] | None = None,
         viewer_user_id: str | None = None,
     ) -> tuple[Message, ...]:
-        """
-        Keyset pagination berdasarkan:
-        sent_at dan id.
-
-        viewer_user_id: pesan yang dihapus "untuk saya" oleh user ini tidak ikut.
-        """
         ...
-
-    # --------------------------------------------------------
-    # Get single message
-    # --------------------------------------------------------
 
     def get_by_id(
         self,
         message_id: str,
     ) -> Message | None:
         ...
-
-    # --------------------------------------------------------
-    # Retrieve attachment metadata
-    # --------------------------------------------------------
 
     def list_attachments(
         self,
@@ -145,29 +78,14 @@ class MessageRepository(Protocol):
         self,
         attachment_id: str,
     ) -> tuple[MessageAttachment, str] | None:
-        """Lampiran beserta conversation_id pesannya (untuk cek akses peserta)."""
         ...
-
-    # --------------------------------------------------------
-    # Create message and attachments
-    # --------------------------------------------------------
 
     def create_with_attachments(
         self,
         message: Message,
         attachments: tuple[MessageAttachment, ...],
     ) -> Message:
-        """
-        Insert pesan dan lampiran serta update
-        conversations.last_message_at.
-
-        Seluruhnya harus atomik.
-        """
         ...
-
-    # --------------------------------------------------------
-    # Mark received messages as read
-    # --------------------------------------------------------
 
     def mark_received_messages_read(
         self,
@@ -175,24 +93,13 @@ class MessageRepository(Protocol):
         recipient_user_id: str,
         read_at: datetime,
     ) -> int:
-        """
-        Hanya menandai pesan belum dibaca
-        yang dikirim peserta lain.
-
-        Harus menggunakan transaksi.
-        """
         ...
-
-    # --------------------------------------------------------
-    # Delete messages
-    # --------------------------------------------------------
 
     def list_by_ids(
         self,
         conversation_id: str,
         message_ids: tuple[str, ...],
     ) -> tuple[Message, ...]:
-        """Hanya pesan milik conversation tersebut; id lain diabaikan."""
         ...
 
     def delete_for_everyone(
@@ -200,10 +107,6 @@ class MessageRepository(Protocol):
         message_ids: tuple[str, ...],
         deleted_at: datetime,
     ) -> tuple[MessageAttachment, ...]:
-        """
-        Kosongkan teks, isi deleted_at, hapus metadata lampiran.
-        Mengembalikan lampiran yang dihapus agar file fisiknya dibuang setelah commit.
-        """
         ...
 
     def hide_for_user(
@@ -212,5 +115,4 @@ class MessageRepository(Protocol):
         user_id: str,
         hidden_at: datetime,
     ) -> None:
-        """Idempotent: pesan yang sudah disembunyikan diabaikan."""
         ...

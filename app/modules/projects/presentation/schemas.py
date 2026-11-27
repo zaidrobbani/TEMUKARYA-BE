@@ -5,12 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.responses import UtcDateTime
 
 
-# ============================================================
-# CREATE PROJECT REQUEST
-
 class CreateProjectRequest(BaseModel):
-    """Schema request pembuatan proyek oleh UMKM."""
-
     model_config = ConfigDict(extra="forbid")
 
     category_id: str = Field(
@@ -36,12 +31,7 @@ class CreateProjectRequest(BaseModel):
     skill_ids: list[str]
 
 
-# ============================================================
-# PROJECT RESPONSE
-
 class ProjectOwnerResponse(BaseModel):
-    """UMKM pemilik proyek, ditampilkan ke freelancer di daftar & detail proyek."""
-
     user_id: str
     owner_name: str
     business_name: str | None = None
@@ -50,8 +40,6 @@ class ProjectOwnerResponse(BaseModel):
 
 
 class ProjectResponse(BaseModel):
-    """Schema response informasi proyek."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -70,14 +58,11 @@ class ProjectResponse(BaseModel):
     created_at: UtcDateTime | None = None
     updated_at: UtcDateTime | None = None
 
-    # Hanya diisi di detail & pencarian proyek publik.
     umkm: ProjectOwnerResponse | None = None
     skill_ids: list[str] | None = None
 
 
 class UpdateProjectRequest(CreateProjectRequest):
-    """Request untuk memperbarui seluruh field proyek."""
-
     model_config = ConfigDict(extra="forbid")
 
 class PublicProjectsPageResponse(BaseModel):

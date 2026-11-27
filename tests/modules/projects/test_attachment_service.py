@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from io import BytesIO
 from uuid import uuid4
@@ -31,10 +30,6 @@ OTHER_UMKM_ID = "22222222-2222-4222-8222-222222222222"
 PROJECT_ID = "33333333-3333-4333-8333-333333333333"
 
 
-# ============================================================
-# TEST DATA FACTORY
-# ============================================================
-
 def make_attachment(
     attachment_id=None,
     storage_key=None,
@@ -50,12 +45,7 @@ def make_attachment(
     )
 
 
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
-
 class FakeAttachmentRepository:
-
     def __init__(self):
         self.items = []
         self.owner_id = UMKM_ID
@@ -158,12 +148,7 @@ class FakeAttachmentRepository:
         return True
 
 
-# ============================================================
-# FAKE STORAGE
-# ============================================================
-
 class FakeAttachmentStorage:
-
     def __init__(self):
         self.files = {}
         self.deleted_keys = []
@@ -211,12 +196,7 @@ class FakeAttachmentStorage:
         self.files.pop(storage_key, None)
 
 
-# ============================================================
-# FAKE UNIT OF WORK
-# ============================================================
-
 class FakeUnitOfWork:
-
     def __init__(self):
         self.commit_count = 0
         self.fail_commit = False
@@ -230,13 +210,8 @@ class FakeUnitOfWork:
             )
 
 
-# ============================================================
-# TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-
     repository = FakeAttachmentRepository()
     storage = FakeAttachmentStorage()
     uow = FakeUnitOfWork()
@@ -261,10 +236,6 @@ def upload_file(
         source=BytesIO(b"test document bytes"),
     )
 
-
-# ============================================================
-# UPLOAD TESTS
-# ============================================================
 
 def test_upload_success(context):
     service, repository, storage, uow = context
@@ -391,8 +362,6 @@ def test_upload_commit_failure_removes_file(context):
     with pytest.raises(RuntimeError):
         upload_file(service)
 
-    # Fake Repository belum memiliki rollback database.
-    # Kita hanya membuktikan cleanup file dipanggil.
     assert storage.files == {}
     assert len(storage.deleted_keys) == 1
     assert uow.commit_count == 1
@@ -407,14 +376,9 @@ def test_upload_cleanup_failure_is_reported(context):
     with pytest.raises(AttachmentStorageError):
         upload_file(service)
 
-    # File yatim masih ada dan harus ditangani.
     assert len(storage.files) == 1
     assert uow.commit_count == 0
 
-
-# ============================================================
-# LIST & DOWNLOAD TESTS
-# ============================================================
 
 def test_owner_can_list_attachments(context):
     service, repository, storage, uow = context
@@ -476,10 +440,6 @@ def test_missing_attachment_cannot_be_read(context):
         )
 
 
-# ============================================================
-# DELETE TESTS
-# ============================================================
-
 def test_delete_success(context):
     service, repository, storage, uow = context
 
@@ -496,7 +456,6 @@ def test_delete_success(context):
     assert repository.items == []
     assert saved.storage_key not in storage.files
 
-    # Satu commit upload dan satu commit delete.
     assert uow.commit_count == 2
 
 
@@ -544,7 +503,6 @@ def test_delete_commit_failure_keeps_file(context):
             attachment_id=saved.id,
         )
 
-    # File fisik tidak boleh dihapus sebelum commit.
     assert saved.storage_key in storage.files
 
 
@@ -562,10 +520,8 @@ def test_delete_storage_failure_is_reported(context):
             attachment_id=saved.id,
         )
 
-    # Metadata telah terhapus setelah commit.
     assert repository.items == []
 
-    # File yatim masih ada karena cleanup gagal.
     assert saved.storage_key in storage.files
 
     assert uow.commit_count == 2

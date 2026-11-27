@@ -1,5 +1,3 @@
-"""Notifikasi untuk kejadian di modul lain (lamaran, chat). Ikut transaksi pemanggil, tidak commit."""
-
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 

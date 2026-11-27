@@ -62,17 +62,7 @@ from app.modules.chat.domain.message_rules import (
 from app.modules.users.domain.entities import UserRole
 
 
-# ============================================================
-# 1. SHARED HELPERS
-# ============================================================
-
 def _utc_now() -> datetime:
-    """
-    Mengambil timestamp UTC.
-
-    Clock bisa diganti saat unit testing
-    agar hasil pengujian deterministik.
-    """
     return datetime.now(timezone.utc)
 
 
@@ -80,10 +70,6 @@ def _validate_id(
     value: str,
     field_name: str,
 ) -> str:
-    """
-    Mengubah kesalahan validasi Domain
-    menjadi error Application.
-    """
     try:
         return validate_chat_id(
             value,
@@ -98,12 +84,6 @@ def _validate_id(
 def _validate_actor(
     actor: ChatActor,
 ) -> None:
-    """
-    Actor harus berasal dari autentikasi.
-
-    Pemeriksaan JWT sebenarnya dilakukan
-    pada Presentation Layer nanti.
-    """
     try:
         require_chat_actor(actor)
     except (ValueError, PermissionError) as exc:
@@ -121,12 +101,6 @@ def _require_access(
     conversation: Conversation,
     actor: ChatActor,
 ) -> None:
-    """
-    Mencegah IDOR pada conversation.
-
-    Jika pengguna bukan peserta, gunakan
-    404 agar data percakapan tidak terbuka.
-    """
     try:
         require_conversation_access(
             conversation,
@@ -146,9 +120,6 @@ def _validate_page(
     limit: int,
     offset: int | None = None,
 ) -> None:
-    """
-    Membatasi ukuran query database.
-    """
     if (
         type(limit) is not int
         or not (1 <= limit <= 100)
@@ -167,22 +138,7 @@ def _validate_page(
             )
 
 
-# ============================================================
-# 2. CREATE OR GET CONVERSATION
-# ============================================================
-
 class CreateOrGetConversation:
-    """
-    Membuat atau mengambil percakapan.
-
-    Mendukung:
-    - Chat umum tanpa project
-    - Chat terkait project tertentu
-
-    Repository harus menjamin uniqueness
-    ketika ada dua request bersamaan.
-    """
-
     def __init__(
         self,
         repository: ConversationRepository,
@@ -195,7 +151,6 @@ class CreateOrGetConversation:
         self,
         data: CreateConversationInput,
     ) -> Conversation:
-
         actor = data.actor
         _validate_actor(actor)
 
@@ -208,10 +163,6 @@ class CreateOrGetConversation:
             raise BadRequestError(
                 "Tidak dapat chat dengan akun sendiri"
             )
-
-        # ====================================================
-        # 1. VALIDATE COUNTERPART ROLE
-        # ====================================================
 
         counterpart_role = (
             self.repository.get_user_role(
@@ -229,10 +180,6 @@ class CreateOrGetConversation:
             raise NotFoundError(
                 "Pengguna tujuan tidak ditemukan"
             )
-
-        # ====================================================
-        # 2. DETERMINE PARTICIPANTS
-        # ====================================================
 
         if actor.role == UserRole.UMKM:
             umkm_id = actor.user_id
@@ -266,12 +213,7 @@ class CreateOrGetConversation:
                 "Tidak boleh memulai percakapan"
             ) from exc
 
-        # ====================================================
-        # 3. VALIDATE PROJECT OWNERSHIP
-        # ====================================================
-
         if project_id is not None:
-
             project_owner_id = (
                 self.repository.get_project_owner_id(
                     project_id
@@ -283,10 +225,6 @@ class CreateOrGetConversation:
                     "Project tidak ditemukan"
                 )
 
-        # ====================================================
-        # 4. RETURN EXISTING CONVERSATION
-        # ====================================================
-
         existing = (
             self.repository.find_by_participants(
                 umkm_id=umkm_id,
@@ -296,7 +234,6 @@ class CreateOrGetConversation:
         )
 
         if existing is not None:
-
             self._verify_result(
                 existing,
                 umkm_id,
@@ -305,10 +242,6 @@ class CreateOrGetConversation:
             )
 
             return existing
-
-        # ====================================================
-        # 5. CREATE CONVERSATION
-        # ====================================================
 
         now = self.clock()
 
@@ -322,8 +255,6 @@ class CreateOrGetConversation:
             updated_at=now,
         )
 
-        # create_or_get wajib menggunakan perlindungan
-        # unique constraint pada database.
         created = self.repository.create_or_get(
             conversation
         )
@@ -344,10 +275,6 @@ class CreateOrGetConversation:
         freelancer_id: str,
         project_id: str | None,
     ) -> None:
-        """
-        Memastikan Repository tidak mengembalikan
-        percakapan dengan peserta berbeda.
-        """
         if (
             not isinstance(conversation, Conversation)
             or conversation.umkm_id != umkm_id
@@ -359,17 +286,7 @@ class CreateOrGetConversation:
             )
 
 
-# ============================================================
-# 3. GET CONVERSATION DETAIL
-# ============================================================
-
 class GetConversation:
-    """
-    Mengambil satu percakapan berdasarkan ID.
-
-    Akses hanya untuk peserta resmi.
-    """
-
     def __init__(
         self,
         repository: ConversationRepository,
@@ -380,7 +297,6 @@ class GetConversation:
         self,
         data: GetConversationInput,
     ) -> Conversation:
-
         _validate_actor(data.actor)
 
         conversation_id = _validate_id(
@@ -405,18 +321,7 @@ class GetConversation:
         return conversation
 
 
-# ============================================================
-# 4. LIST USER CONVERSATIONS
-# ============================================================
-
 class ListUserConversations:
-    """
-    Mengambil daftar percakapan pengguna.
-
-    Repository wajib melakukan filter
-    berdasarkan user_id di database.
-    """
-
     def __init__(
         self,
         repository: ConversationRepository,
@@ -427,7 +332,6 @@ class ListUserConversations:
         self,
         data: ListConversationsInput,
     ) -> ConversationListResult:
-
         _validate_actor(data.actor)
 
         _validate_page(
@@ -449,10 +353,6 @@ class ListUserConversations:
                 "banyak percakapan"
             )
 
-        # ====================================================
-        # DEFENSE IN DEPTH
-        # ====================================================
-
         for conversation in items:
             try:
                 require_conversation_access(
@@ -472,22 +372,7 @@ class ListUserConversations:
         )
 
 
-# ============================================================
-# 5. SEND TEXT MESSAGE
-# ============================================================
-
 class SendTextMessage:
-    """
-    Mengirim pesan teks.
-
-    Sender ID selalu berasal dari actor
-    yang sudah diautentikasi.
-
-    Repository harus menyimpan pesan
-    dan memperbarui last_message_at
-    secara atomik.
-    """
-
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -512,7 +397,6 @@ class SendTextMessage:
         self,
         data: SendTextMessageInput,
     ) -> Message:
-
         conversation = (
             self.get_conversation.execute(
                 GetConversationInput(
@@ -521,10 +405,6 @@ class SendTextMessage:
                 )
             )
         )
-
-        # ====================================================
-        # 1. VALIDATE MESSAGE TEXT
-        # ====================================================
 
         try:
             message_text = validate_message_payload(
@@ -536,10 +416,6 @@ class SendTextMessage:
             raise BadRequestError(
                 str(exc)
             ) from exc
-
-        # ====================================================
-        # 2. PREPARE MESSAGE
-        # ====================================================
 
         now = self.clock()
 
@@ -554,20 +430,12 @@ class SendTextMessage:
             read_at=None,
         )
 
-        # ====================================================
-        # 3. SAVE MESSAGE
-        # ====================================================
-
         saved = (
             self.message_repository.create_with_attachments(
                 message=message,
                 attachments=(),
             )
         )
-
-        # ====================================================
-        # 4. VERIFY SAVED MESSAGE
-        # ====================================================
 
         if (
             not isinstance(saved, Message)
@@ -584,21 +452,7 @@ class SendTextMessage:
         return saved
 
 
-# ============================================================
-# 6. LIST CONVERSATION MESSAGES
-# ============================================================
-
 class ListConversationMessages:
-    """
-    Mengambil riwayat pesan dengan keyset pagination.
-
-    Urutan:
-        sent_at DESC, id DESC
-
-    Menggunakan cursor untuk menghindari
-    masalah pagination ketika ada pesan baru.
-    """
-
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -620,7 +474,6 @@ class ListConversationMessages:
         self,
         data: ListMessagesInput,
     ) -> MessagePage:
-
         conversation = (
             self.get_conversation.execute(
                 GetConversationInput(
@@ -632,12 +485,7 @@ class ListConversationMessages:
 
         _validate_page(data.limit)
 
-        # ====================================================
-        # 1. VALIDATE CURSOR
-        # ====================================================
-
         if data.before is not None:
-
             if (
                 not isinstance(data.before, tuple)
                 or len(data.before) != 2
@@ -654,10 +502,6 @@ class ListConversationMessages:
                 data.before[1],
                 "Cursor message ID",
             )
-
-        # ====================================================
-        # 2. GET ONE EXTRA ITEM
-        # ====================================================
 
         fetched = tuple(
             self.message_repository.list_for_conversation(
@@ -678,17 +522,12 @@ class ListConversationMessages:
 
         messages = fetched[:data.limit]
 
-        # ====================================================
-        # 3. VERIFY MESSAGE MEMBERSHIP
-        # ====================================================
-
         allowed_senders = {
             conversation.umkm_id,
             conversation.freelancer_id,
         }
 
         for message in messages:
-
             if (
                 not isinstance(message, Message)
                 or message.conversation_id
@@ -699,10 +538,6 @@ class ListConversationMessages:
                 raise ConflictError(
                     "Data pesan tidak konsisten"
                 )
-
-        # ====================================================
-        # 4. FETCH ATTACHMENTS IN BULK
-        # ====================================================
 
         message_ids = tuple(
             item.id
@@ -730,7 +565,6 @@ class ListConversationMessages:
         }
 
         for attachment in attachments:
-
             message = message_map.get(
                 attachment.message_id
             )
@@ -754,10 +588,6 @@ class ListConversationMessages:
                 attachment
             )
 
-        # ====================================================
-        # 5. BUILD PAGE RESULT
-        # ====================================================
-
         items = tuple(
             MessageWithAttachments(
                 message=message,
@@ -771,7 +601,6 @@ class ListConversationMessages:
         next_before = None
 
         if has_more and messages:
-
             last = messages[-1]
 
             next_before = (
@@ -787,19 +616,7 @@ class ListConversationMessages:
         )
 
 
-# ============================================================
-# 7. MARK CONVERSATION AS READ
-# ============================================================
-
 class MarkConversationRead:
-    """
-    Menandai pesan dari lawan bicara
-    sebagai sudah dibaca.
-
-    Tidak boleh mengubah read_at pesan
-    yang dikirim oleh pengguna sendiri.
-    """
-
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -824,7 +641,6 @@ class MarkConversationRead:
         self,
         data: MarkConversationReadInput,
     ) -> MarkConversationReadResult:
-
         conversation = (
             self.get_conversation.execute(
                 GetConversationInput(
@@ -833,10 +649,6 @@ class MarkConversationRead:
                 )
             )
         )
-
-        # ====================================================
-        # MARK ONLY RECEIVED UNREAD MESSAGES
-        # ====================================================
 
         count = (
             self.message_repository.mark_received_messages_read(
@@ -856,18 +668,8 @@ class MarkConversationRead:
             marked_count=count,
         )
 
-# ============================================================
-# 8. SEND ATTACHMENT MESSAGE (foto / dokumen)
-# ============================================================
 
 class SendAttachmentMessage:
-    """
-    Satu lampiran per pesan (seperti WhatsApp), caption opsional.
-
-    Foto dikompres storage ke WebP + thumbnail; dokumen disimpan apa adanya setelah isinya dicek.
-    File yang sudah tersimpan dihapus lagi bila penyimpanan pesan gagal.
-    """
-
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -930,19 +732,12 @@ class SendAttachmentMessage:
 def _display_name(file_name: str, key: str, is_image: bool) -> str:
     name = (file_name or "").replace("/", "_").replace("\\", "_").replace("\x00", "").strip()[:200]
     if is_image:
-        # Foto disimpan ulang sebagai WebP, nama mengikuti format tersimpan.
         stem = name.rsplit(".", 1)[0] if "." in name else (name or "foto")
         return f"{stem or 'foto'}.webp"
     return name or key
 
 
-# ============================================================
-# 9. GET ATTACHMENT FILE
-# ============================================================
-
 class GetMessageAttachmentFile:
-    """Hanya peserta percakapan yang boleh mengunduh. Thumbnail hanya ada untuk foto."""
-
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -971,12 +766,7 @@ class GetMessageAttachmentFile:
         return attachment, mime, self.storage.open(key)
 
 
-# ============================================================
-# 10. DELETE MESSAGES (pilih banyak, ala WhatsApp)
-# ============================================================
-
 MAX_DELETE_BATCH = 100
-# Seperti WhatsApp: hapus untuk semua orang hanya untuk pesan yang masih baru.
 DELETE_FOR_EVERYONE_WINDOW = timedelta(hours=48)
 
 
@@ -988,13 +778,6 @@ class MessageDeleteExpiredError(BadRequestError):
 
 
 class DeleteMessages:
-    """
-    ME: pesan disembunyikan untuk actor saja (boleh pesan siapa pun di percakapan).
-    EVERYONE: hanya pesan milik actor, maksimal 48 jam; teks & lampiran dibuang,
-    pesan tetap tampil sebagai "Pesan ini telah dihapus".
-    Semua-atau-tidak-sama-sekali: satu id bermasalah menggagalkan seluruh permintaan.
-    """
-
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -1032,7 +815,6 @@ class DeleteMessages:
         messages = [found[message_id] for message_id in message_ids]
         if any(item.sender_user_id != data.actor.user_id for item in messages):
             raise ForbiddenError("Hanya pesan milik sendiri yang bisa dihapus untuk semua orang")
-        # Pesan yang sudah dihapus dilewati (idempotent), sisanya wajib masih dalam batas waktu.
         targets = tuple(item.id for item in messages if item.deleted_at is None)
         if any(now - found[message_id].sent_at > DELETE_FOR_EVERYONE_WINDOW for message_id in targets):
             raise MessageDeleteExpiredError()

@@ -1,4 +1,3 @@
-
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Protocol
@@ -49,18 +48,7 @@ from app.modules.milestones.domain.delay_risk import (
 from app.modules.users.domain.entities import UserRole
 
 
-# ============================================================
-# 1. WORKFLOW PERMISSION CONTRACT
-# ============================================================
-
 class MilestoneWorkflowPolicy(Protocol):
-    """
-    Kontrak pemeriksaan izin dari Workflow Zaid.
-
-    Application tidak boleh menetapkan sendiri
-    kapan project boleh diedit/diselesaikan.
-    """
-
     def require_plan_editable(
         self,
         project: ProjectMilestoneContext,
@@ -76,19 +64,7 @@ class MilestoneWorkflowPolicy(Protocol):
         ...
 
 
-# ============================================================
-# 2. FAIL-CLOSED WORKFLOW POLICY
-# ============================================================
-
 class FailClosedMilestoneWorkflowPolicy:
-    """
-    Policy aman sebelum integrasi Workflow.
-
-    Semua operasi perubahan ditolak.
-    Operasi pembacaan tetap diperiksa
-    berdasarkan ownership/keanggotaan project.
-    """
-
     def require_plan_editable(
         self,
         project: ProjectMilestoneContext,
@@ -109,10 +85,6 @@ class FailClosedMilestoneWorkflowPolicy:
             "penyelesaian milestone"
         )
 
-
-# ============================================================
-# 3. INPUT VALIDATION
-# ============================================================
 
 def _clean_id(value: str, name: str) -> str:
     if not isinstance(value, str):
@@ -168,15 +140,6 @@ def _require_project_access(
     project: ProjectMilestoneContext,
     actor: MilestoneActor,
 ) -> None:
-    """
-    Hanya pemilik UMKM atau Freelancer
-    yang sudah ditetapkan pada agreement
-    yang boleh membaca milestone.
-
-    Freelancer ID harus berasal dari
-    agreement resmi, bukan request client.
-    """
-
     _validate_actor(actor)
 
     owner_allowed = (
@@ -196,15 +159,7 @@ def _require_project_access(
         )
 
 
-# ============================================================
-# 4. GET MILESTONE PLAN
-# ============================================================
-
 class GetMilestonePlan:
-    """
-    Mengambil rencana milestone suatu project.
-    """
-
     def __init__(
         self,
         repository: MilestoneRepository,
@@ -215,7 +170,6 @@ class GetMilestonePlan:
         self,
         data: GetMilestonePlanInput,
     ) -> MilestonePlanResult:
-
         project_id = _clean_id(
             data.project_id,
             "Project ID",
@@ -252,20 +206,7 @@ class GetMilestonePlan:
         )
 
 
-# ============================================================
-# 5. GET TOTAL WEIGHT FOR WORKFLOW
-# ============================================================
-
 class GetTotalMilestoneWeight:
-    """
-    Kontrak internal untuk Workflow Zaid.
-
-    Bukan endpoint publik.
-
-    Workflow tetap harus memeriksa aturan
-    agreement dan status project sendiri.
-    """
-
     def __init__(
         self,
         repository: MilestoneRepository,
@@ -276,7 +217,6 @@ class GetTotalMilestoneWeight:
         self,
         project_id: str,
     ) -> Decimal:
-
         project_id = _clean_id(
             project_id,
             "Project ID",
@@ -311,16 +251,7 @@ class GetTotalMilestoneWeight:
         return total
 
 
-# ============================================================
-# 6. GET MILESTONE PROGRESS
-# ============================================================
-
 class GetMilestoneProgress:
-    """
-    Menghitung progress berbobot
-    dari milestone yang tersimpan.
-    """
-
     def __init__(
         self,
         repository: MilestoneRepository,
@@ -334,7 +265,6 @@ class GetMilestoneProgress:
         self,
         data: GetMilestonePlanInput,
     ) -> MilestoneProgress:
-
         plan = self.get_plan.execute(data)
 
         return calculate_milestone_progress(
@@ -343,16 +273,7 @@ class GetMilestoneProgress:
         )
 
 
-# ============================================================
-# 7. GET PROJECT DELAY RISK
-# ============================================================
-
 class GetProjectDelayRisk:
-    """
-    Menghitung estimasi risiko keterlambatan
-    berdasarkan jadwal dan progres project.
-    """
-
     def __init__(
         self,
         repository: MilestoneRepository,
@@ -366,7 +287,6 @@ class GetProjectDelayRisk:
         self,
         data: GetDelayRiskInput,
     ) -> DelayRiskResult:
-
         project_id = _clean_id(
             data.project_id,
             "Project ID",
@@ -397,21 +317,7 @@ class GetProjectDelayRisk:
         )
 
 
-# ============================================================
-# 8. REPLACE MILESTONE PLAN
-# ============================================================
-
 class ReplaceMilestonePlan:
-    """
-    Mengganti seluruh rencana milestone.
-
-    Perubahan hanya diperbolehkan setelah
-    Workflow Policy memberi izin.
-
-    Repository wajib mengganti rencana
-    dan reset approvals secara atomik.
-    """
-
     def __init__(
         self,
         repository: MilestoneRepository,
@@ -430,7 +336,6 @@ class ReplaceMilestonePlan:
         self,
         data: ReplaceMilestonePlanInput,
     ) -> MilestonePlanResult:
-
         project_id = _clean_id(
             data.project_id,
             "Project ID",
@@ -441,15 +346,10 @@ class ReplaceMilestonePlan:
             project_id,
         )
 
-        # PRD & Figma: freelancer terpilih mengusulkan rencana,
-        # UMKM pemilik meninjau/mengubah sebelum pembayaran.
         _require_project_access(
             project,
             data.actor,
         )
-
-        # Jangan mengubah data sebelum
-        # memperoleh izin Workflow.
 
         self.workflow_policy.require_plan_editable(
             project,
@@ -464,7 +364,6 @@ class ReplaceMilestonePlan:
         milestones: list[Milestone] = []
 
         for item in data.items:
-
             if (
                 not isinstance(item.name, str)
                 or not isinstance(
@@ -501,8 +400,6 @@ class ReplaceMilestonePlan:
                 str(exc)
             ) from exc
 
-        # Replace + reset_approvals:
-        # harus dalam transaksi yang sama.
         self.repository.replace_plan_and_reset_approvals(
             project_id,
             items,
@@ -516,19 +413,7 @@ class ReplaceMilestonePlan:
         )
 
 
-# ============================================================
-# 9. COMPLETE MILESTONE
-# ============================================================
-
 class CompleteMilestone:
-    """
-    Menyelesaikan milestone secara idempotent.
-
-    Repository harus memakai UPDATE kondisional
-    agar klik bersamaan tidak menambah progres
-    dua kali.
-    """
-
     def __init__(
         self,
         repository: MilestoneRepository,
@@ -551,7 +436,6 @@ class CompleteMilestone:
         self,
         data: CompleteMilestoneInput,
     ) -> MilestoneProgress:
-
         project_id = _clean_id(
             data.project_id,
             "Project ID",
@@ -597,8 +481,6 @@ class CompleteMilestone:
                 "Milestone tidak ditemukan"
             )
 
-        # Permintaan kedua tidak mengubah
-        # milestone yang sudah selesai.
         if target.status == MilestoneStatus.SELESAI:
             return self.get_progress.execute(
                 GetMilestonePlanInput(
@@ -620,8 +502,6 @@ class CompleteMilestone:
         )
 
         if not updated:
-            # Baris mungkin sudah diubah request lain.
-            # Baca ulang agar respons idempotent.
             latest = tuple(
                 self.repository.list_milestones(
                     project_id

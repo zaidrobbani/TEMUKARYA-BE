@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from uuid import uuid4
 
@@ -37,10 +36,6 @@ from app.modules.applications.presentation.router import (
 )
 
 
-# ============================================================
-# TEST IDENTIFIERS
-# ============================================================
-
 FREELANCER_ID = "11111111-1111-4111-8111-111111111111"
 UMKM_ID = "22222222-2222-4222-8222-222222222222"
 PROJECT_ID = "33333333-3333-4333-8333-333333333333"
@@ -50,10 +45,6 @@ SUBMIT_URL = f"/projects/{PROJECT_ID}/applications"
 MINE_URL = "/applications/mine"
 APPLICANTS_URL = f"/projects/{PROJECT_ID}/applications"
 
-
-# ============================================================
-# TEST DATA FACTORIES
-# ============================================================
 
 def make_application(
     freelancer_id=FREELANCER_ID,
@@ -83,12 +74,7 @@ def valid_payload():
     }
 
 
-# ============================================================
-# FAKE SUBMIT USE CASE
-# ============================================================
-
 class FakeSubmitApplication:
-
     def __init__(self):
         self.calls = []
         self.error = None
@@ -126,12 +112,7 @@ class FakeSubmitApplication:
         )
 
 
-# ============================================================
-# FAKE GET MY APPLICATIONS
-# ============================================================
-
 class FakeGetMyApplications:
-
     def __init__(self):
         self.calls = []
         self.error = None
@@ -165,12 +146,7 @@ class FakeGetMyApplications:
         )
 
 
-# ============================================================
-# FAKE GET PROJECT APPLICANTS
-# ============================================================
-
 class FakeGetProjectApplicants:
-
     def __init__(self):
         self.calls = []
         self.error = None
@@ -206,19 +182,8 @@ class FakeGetProjectApplicants:
         )
 
 
-# ============================================================
-# FASTAPI TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-    """
-    Membuat aplikasi FastAPI sementara.
-
-    Tidak menggunakan MySQL sungguhan.
-    Tidak mengubah app/main.py.
-    """
-
     app = FastAPI()
 
     register_error_handlers(app)
@@ -252,10 +217,6 @@ def context():
     app.dependency_overrides.clear()
 
 
-# ============================================================
-# AUTHENTICATION HELPER
-# ============================================================
-
 def authenticate(
     app,
     role=UserRole.FREELANCER,
@@ -268,10 +229,6 @@ def authenticate(
         role=role,
     )
 
-
-# ============================================================
-# 1. AUTHENTICATION REQUIRED
-# ============================================================
 
 @pytest.mark.parametrize(
     "method,url",
@@ -302,10 +259,6 @@ def test_endpoint_requires_authentication(
     assert context["mine"].calls == []
     assert context["applicants"].calls == []
 
-
-# ============================================================
-# 2. ROLE AUTHORIZATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "method,url,role",
@@ -356,10 +309,6 @@ def test_wrong_role_returns_403(
     assert context["applicants"].calls == []
 
 
-# ============================================================
-# 3. SUBMIT SUCCESS
-# ============================================================
-
 def test_submit_application_returns_201(context):
     app = context["app"]
     client = context["client"]
@@ -392,10 +341,6 @@ def test_submit_application_returns_201(context):
     assert call["data"].proposed_price == 1500000
 
 
-# ============================================================
-# 4. CLIENT CANNOT SPOOF FREELANCER ID
-# ============================================================
-
 def test_submit_rejects_client_freelancer_id(context):
     app = context["app"]
     client = context["client"]
@@ -415,10 +360,6 @@ def test_submit_rejects_client_freelancer_id(context):
 
     assert context["submit"].calls == []
 
-
-# ============================================================
-# 5. REQUEST SCHEMA VALIDATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "invalid_field",
@@ -456,10 +397,6 @@ def test_invalid_submit_request_returns_422(
     assert context["submit"].calls == []
 
 
-# ============================================================
-# 6. BUSINESS VALIDATION ERROR
-# ============================================================
-
 def test_submit_business_error_returns_400(context):
     app = context["app"]
     client = context["client"]
@@ -467,8 +404,6 @@ def test_submit_business_error_returns_400(context):
 
     authenticate(app)
 
-    # Simulasikan validasi bisnis dari Application Layer,
-    # misalnya pesan hanya berisi whitespace.
     submit.error = BadRequestError(
         "Pesan lamaran wajib diisi"
     )
@@ -485,10 +420,6 @@ def test_submit_business_error_returns_400(context):
     assert response.status_code == 400
     assert response.json() == {"success": False, "message": "Pesan lamaran wajib diisi", "data": None}
 
-
-# ============================================================
-# 7. DUPLICATE APPLICATION
-# ============================================================
 
 def test_duplicate_application_returns_409(context):
     app = context["app"]
@@ -509,10 +440,6 @@ def test_duplicate_application_returns_409(context):
     assert response.status_code == 409
 
 
-# ============================================================
-# 8. PROJECT NOT AVAILABLE
-# ============================================================
-
 def test_closed_project_returns_404(context):
     app = context["app"]
     client = context["client"]
@@ -531,10 +458,6 @@ def test_closed_project_returns_404(context):
 
     assert response.status_code == 404
 
-
-# ============================================================
-# 9. FREELANCER VIEW OWN APPLICATIONS
-# ============================================================
 
 def test_get_my_applications_returns_200(context):
     app = context["app"]
@@ -572,10 +495,6 @@ def test_get_my_applications_returns_200(context):
     ]
 
 
-# ============================================================
-# 10. IDENTITY COMES FROM AUTHENTICATION
-# ============================================================
-
 def test_my_applications_uses_authenticated_identity(
     context,
 ):
@@ -599,10 +518,6 @@ def test_my_applications_uses_authenticated_identity(
         another_freelancer_id
     )
 
-
-# ============================================================
-# 11. UMKM VIEW PROJECT APPLICANTS
-# ============================================================
 
 def test_get_project_applicants_returns_200(context):
     app = context["app"]
@@ -642,10 +557,6 @@ def test_get_project_applicants_returns_200(context):
     ]
 
 
-# ============================================================
-# 12. FOREIGN PROJECT MUST RETURN 404
-# ============================================================
-
 def test_other_umkm_cannot_view_applicants(context):
     app = context["app"]
     client = context["client"]
@@ -657,8 +568,6 @@ def test_other_umkm_cannot_view_applicants(context):
         user_id=str(uuid4()),
     )
 
-    # Simulasikan hasil ownership check
-    # pada GetProjectApplicants.
     applicants.error = NotFoundError(
         "Proyek tidak ditemukan"
     )
@@ -667,10 +576,6 @@ def test_other_umkm_cannot_view_applicants(context):
 
     assert response.status_code == 404
 
-
-# ============================================================
-# 13. EMPTY APPLICATION LIST
-# ============================================================
 
 def test_empty_application_list(context):
     app = context["app"]
@@ -688,10 +593,6 @@ def test_empty_application_list(context):
     assert response.json()["data"]["items"] == []
     assert response.json()["data"]["has_more"] is False
 
-
-# ============================================================
-# 14. INVALID FREELANCER PAGINATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "params",
@@ -720,10 +621,6 @@ def test_invalid_my_applications_pagination(
 
     assert context["mine"].calls == []
 
-
-# ============================================================
-# 15. INVALID UMKM PAGINATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "params",

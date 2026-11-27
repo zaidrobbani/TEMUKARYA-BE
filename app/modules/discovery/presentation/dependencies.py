@@ -22,10 +22,6 @@ from app.modules.discovery.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# AUTHENTICATED DISCOVERY USER
-# ============================================================
-
 @dataclass(frozen=True)
 class AuthenticatedDiscoveryUser:
     user_id: str
@@ -38,44 +34,29 @@ def get_authenticated_discovery_user(
     return AuthenticatedDiscoveryUser(user_id=user.id, role=user.role)
 
 
-# ============================================================
-# DISCOVERY REPOSITORY DEPENDENCY
-# ============================================================
-
 def get_discovery_repository(
     db: Session = Depends(get_db),
 ) -> DiscoveryRepository:
-
     return SqlAlchemyDiscoveryRepository(
         session=db
     )
 
-
-# ============================================================
-# SEARCH FREELANCERS USE CASE
-# ============================================================
 
 def get_search_freelancers_use_case(
     repository: DiscoveryRepository = Depends(
         get_discovery_repository
     ),
 ) -> SearchFreelancers:
-
     return SearchFreelancers(
         repository=repository
     )
 
-
-# ============================================================
-# GET FREELANCER DETAIL USE CASE
-# ============================================================
 
 def get_freelancer_detail_use_case(
     repository: DiscoveryRepository = Depends(
         get_discovery_repository
     ),
 ) -> GetFreelancerDetail:
-
     return GetFreelancerDetail(
         repository=repository
     )

@@ -1,4 +1,3 @@
-
 from collections.abc import Iterable
 from decimal import Decimal
 
@@ -7,33 +6,14 @@ from app.modules.milestones.domain.entities import (
 )
 
 
-# ============================================================
-# WEIGHT CONSTANTS
-# ============================================================
-
 ZERO = Decimal("0.00")
 HUNDRED = Decimal("100.00")
 PRECISION = Decimal("0.01")
 
 
-# ============================================================
-# 1. VALIDATE INDIVIDUAL WEIGHT
-# ============================================================
-
 def validate_weight(
     value: Decimal,
 ) -> Decimal:
-    """
-    Validasi satu bobot milestone.
-
-    Aturan:
-    - Harus Decimal
-    - Tidak boleh NaN / Infinity
-    - Harus lebih dari 0
-    - Maksimum 100
-    - Maksimal dua angka desimal
-    """
-
     if not isinstance(value, Decimal):
         raise TypeError(
             "Bobot milestone harus menggunakan Decimal"
@@ -60,22 +40,9 @@ def validate_weight(
     return normalized
 
 
-# ============================================================
-# 2. CALCULATE TOTAL WEIGHT
-# ============================================================
-
 def calculate_total_weight(
     milestones: Iterable[Milestone],
 ) -> Decimal:
-    """
-    Menjumlahkan bobot seluruh milestone.
-
-    Ini fungsi Domain murni.
-
-    Kontrak get_total_weight(project_id)
-    untuk Workflow akan dibuat pada Repository.
-    """
-
     return sum(
         (
             validate_weight(item.weight_percent)
@@ -85,33 +52,15 @@ def calculate_total_weight(
     )
 
 
-# ============================================================
-# 3. VALIDATE MILESTONE PLAN
-# ============================================================
-
 def validate_milestone_plan(
     milestones: Iterable[Milestone],
 ) -> Decimal:
-    """
-    Memvalidasi kumpulan milestone:
-
-    - Berasal dari project yang sama
-    - Nama tidak kosong
-    - Sort order unik
-    - Bobot individual valid
-    - Total tidak melebihi 100%
-
-    Rencana dengan total kurang dari 100%
-    masih dianggap draft, bukan final.
-    """
-
     items = tuple(milestones)
 
     project_ids: set[str] = set()
     sort_orders: set[int] = set()
 
     for item in items:
-
         if not item.project_id.strip():
             raise ValueError(
                 "Project ID tidak boleh kosong"
@@ -163,20 +112,9 @@ def validate_milestone_plan(
     return total
 
 
-# ============================================================
-# 4. REQUIRE FINALIZED PLAN
-# ============================================================
-
 def require_complete_plan(
     milestones: Iterable[Milestone],
 ) -> Decimal:
-    """
-    Memastikan total bobot tepat 100%.
-
-    Digunakan sebagai dasar validasi
-    sebelum Workflow mengizinkan 'Lanjut'.
-    """
-
     total = validate_milestone_plan(milestones)
 
     if total != HUNDRED:

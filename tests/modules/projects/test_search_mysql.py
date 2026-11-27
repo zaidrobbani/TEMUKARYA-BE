@@ -15,14 +15,8 @@ from app.modules.projects.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# MYSQL TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def mysql_engine():
-    """Gunakan hanya database development lokal."""
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration tests disabled")
 
@@ -34,8 +28,6 @@ def mysql_engine():
     if url.database != "temukarya":
         pytest.skip("Unexpected database name")
 
-    # Reflection sementara untuk FK lintas modul.
-    # Bukan solusi metadata permanen aplikasi.
     Base.metadata.reflect(
         bind=engine,
         only=[
@@ -49,10 +41,6 @@ def mysql_engine():
 
     return engine
 
-
-# ============================================================
-# PROJECT FACTORY
-# ============================================================
 
 def make_project(
     project_id,
@@ -77,23 +65,7 @@ def make_project(
     )
 
 
-# ============================================================
-# MYSQL MARKETPLACE INTEGRATION TEST
-# ============================================================
-
 def test_search_public_projects_mysql(mysql_engine):
-    """
-    Menguji:
-    1. Visibilitas project publik.
-    2. Pencarian title dan description.
-    3. Filter kategori.
-    4. Filter rentang budget.
-    5. Pagination.
-    6. Pengurutan terbaru.
-    7. Escaping karakter pencarian.
-    8. Rollback seluruh data test.
-    """
-
     user_id = str(uuid4())
 
     project_ids = {
@@ -107,10 +79,6 @@ def test_search_public_projects_mysql(mysql_engine):
             "seo",
         )
     }
-
-    # ========================================================
-    # 1. READ EXISTING MASTER DATA
-    # ========================================================
 
     with mysql_engine.connect() as connection:
         categories = connection.execute(
@@ -128,20 +96,12 @@ def test_search_public_projects_mysql(mysql_engine):
 
     category_a, category_b = categories
 
-    # ========================================================
-    # 2. START ISOLATED TRANSACTION
-    # ========================================================
-
     connection = mysql_engine.connect()
     transaction = connection.begin()
 
     try:
         with Session(bind=connection) as session:
             repository = SqlAlchemyProjectRepository(session)
-
-            # =================================================
-            # 3. CREATE TEMPORARY USER + UMKM PROFILE
-            # =================================================
 
             session.execute(
                 text("""
@@ -188,10 +148,6 @@ def test_search_public_projects_mysql(mysql_engine):
             )
 
             assert repository.umkm_profile_exists(user_id)
-
-            # =================================================
-            # 4. CREATE SIX TEMPORARY PROJECTS
-            # =================================================
 
             projects = [
                 make_project(
@@ -261,10 +217,6 @@ def test_search_public_projects_mysql(mysql_engine):
 
             session.flush()
 
-            # =================================================
-            # 5. PUBLIC VISIBILITY TEST
-            # =================================================
-
             visible = repository.search_public(
                 search=None,
                 category_id=None,
@@ -286,10 +238,6 @@ def test_search_public_projects_mysql(mysql_engine):
             assert project_ids["logo"] in visible_ids
             assert project_ids["seo"] in visible_ids
 
-            # =================================================
-            # 6. SEARCH TITLE
-            # =================================================
-
             website_results = repository.search_public(
                 search="website",
                 category_id=None,
@@ -309,10 +257,6 @@ def test_search_public_projects_mysql(mysql_engine):
                 project_ids["seo"],
             }
 
-            # =================================================
-            # 7. SEARCH DESCRIPTION
-            # =================================================
-
             description_results = repository.search_public(
                 search="identitas visual",
                 category_id=None,
@@ -324,10 +268,6 @@ def test_search_public_projects_mysql(mysql_engine):
 
             assert len(description_results) == 1
             assert description_results[0].id == project_ids["logo"]
-
-            # =================================================
-            # 8. CATEGORY + BUDGET FILTER
-            # =================================================
 
             filtered = repository.search_public(
                 search="website",
@@ -341,10 +281,6 @@ def test_search_public_projects_mysql(mysql_engine):
             assert len(filtered) == 1
             assert filtered[0].id == project_ids["toko"]
             assert filtered[0].budget == 4000000
-
-            # =================================================
-            # 9. PAGINATION + SORTING
-            # =================================================
 
             first_page = repository.search_public(
                 search="website",
@@ -364,8 +300,6 @@ def test_search_public_projects_mysql(mysql_engine):
                 offset=2,
             )
 
-            # Published_at descending:
-            # SEO -> Toko -> Landing
             assert [
                 project.id for project in first_page
             ] == [
@@ -379,10 +313,6 @@ def test_search_public_projects_mysql(mysql_engine):
                 project_ids["landing"],
             ]
 
-            # =================================================
-            # 10. SEARCH SPECIAL CHARACTERS
-            # =================================================
-
             wildcard_results = repository.search_public(
                 search="%",
                 category_id=None,
@@ -392,21 +322,11 @@ def test_search_public_projects_mysql(mysql_engine):
                 offset=0,
             )
 
-            # % harus diperlakukan sebagai karakter biasa,
-            # bukan SQL LIKE wildcard.
             assert wildcard_results == []
 
     finally:
-        # ====================================================
-        # 11. ROLLBACK EVEN IF TEST FAILS
-        # ====================================================
-
         transaction.rollback()
         connection.close()
-
-    # ========================================================
-    # 12. VERIFY CLEANUP FROM NEW CONNECTION
-    # ========================================================
 
     with mysql_engine.connect() as connection:
         remaining_user = connection.execute(

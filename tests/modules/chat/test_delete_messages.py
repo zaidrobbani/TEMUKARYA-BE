@@ -62,10 +62,6 @@ def history(repo, actor):
     return {item.message.id: item for item in page.items}
 
 
-# ============================================================
-# 1. USE CASE: HAPUS UNTUK SAYA
-# ============================================================
-
 class TestDeleteForMe:
     def test_hides_only_for_actor(self, repo):
         result = delete(repo, ["m1", "m3"], ME)
@@ -89,10 +85,6 @@ class TestDeleteForMe:
         assert history(repo, FREELANCER)["m1"].message.message_text == "Hello"
 
 
-# ============================================================
-# 2. USE CASE: HAPUS UNTUK SEMUA ORANG
-# ============================================================
-
 class TestDeleteForEveryone:
     def test_marks_deleted_for_both_participants(self, repo):
         repo.attachments = [attachment("m1")]
@@ -109,7 +101,6 @@ class TestDeleteForEveryone:
     def test_only_own_messages(self, repo):
         with pytest.raises(ForbiddenError, match="milik sendiri"):
             delete(repo, ["m1", "m3"], EVERYONE)
-        # Semua-atau-tidak: m1 tidak ikut terhapus.
         assert history(repo, UMKM)["m1"].message.deleted_at is None
 
     def test_expired_after_48_hours(self, repo):
@@ -124,7 +115,6 @@ class TestDeleteForEveryone:
     def test_already_deleted_is_skipped(self, repo):
         delete(repo, ["m1"], EVERYONE)
         first = history(repo, UMKM)["m1"].message.deleted_at
-        # Pesan yang sudah dihapus tidak memicu batas waktu dan deleted_at tidak berubah.
         result = delete(repo, ["m1"], EVERYONE, now=NOW + timedelta(days=10))
         assert result.removed_attachments == ()
         assert history(repo, UMKM)["m1"].message.deleted_at == first
@@ -135,10 +125,6 @@ class TestDeleteForEveryone:
         assert "m1" not in history(repo, FREELANCER)
         assert "m1" in history(repo, UMKM)
 
-
-# ============================================================
-# 3. USE CASE: VALIDASI
-# ============================================================
 
 class TestValidation:
     def test_outsider_gets_not_found(self, repo):
@@ -172,10 +158,6 @@ class TestValidation:
             delete(repo, ["m1"], "ALL")
 
 
-# ============================================================
-# 4. HTTP
-# ============================================================
-
 DELETE_URL = "/conversations/c1/messages/delete"
 
 
@@ -201,7 +183,7 @@ def http(http_context):
     storage, hub = FakeStorage(), FakeHub()
     app.dependency_overrides[get_chat_attachment_storage] = lambda: storage
     app.dependency_overrides[get_chat_hub] = lambda: hub
-    recent = NOW.replace(year=NOW.year + 100)  # jauh di masa depan: tidak kena batas 48 jam
+    recent = NOW.replace(year=NOW.year + 100)
     context.messages.messages = [
         replace(router_tests.make_message("m1", sender="u1"), sent_at=recent),
         replace(router_tests.make_message("m2", sender="f1", minute=1), sent_at=recent),
@@ -245,7 +227,6 @@ def test_http_delete_for_everyone(http):
 
     assert response.status_code == 200
     assert response.json()["message"] == "Pesan berhasil dihapus untuk semua orang"
-    # File foto + thumbnail dibuang setelah commit.
     assert storage.deleted == ["photo.webp", "photo.thumb.webp"]
     conversation_id, event = hub.events[0]
     assert conversation_id == "c1"
@@ -315,10 +296,6 @@ def test_http_validation(http, body):
     assert response.json()["errors"]
 
 
-# ============================================================
-# 5. REPOSITORY (SQLite)
-# ============================================================
-
 db = repo_tests.db
 
 
@@ -338,7 +315,7 @@ def test_repository_hide_for_user(db):
     session, msg_repo = _seed(db)
 
     msg_repo.hide_for_user(("m1", "m3"), "u1", NOW)
-    msg_repo.hide_for_user(("m1",), "u1", NOW)  # idempotent
+    msg_repo.hide_for_user(("m1",), "u1", NOW)
 
     seen_by_umkm = [m.id for m in msg_repo.list_for_conversation("c1", limit=10, viewer_user_id="u1")]
     seen_by_freelancer = [m.id for m in msg_repo.list_for_conversation("c1", limit=10, viewer_user_id="f1")]

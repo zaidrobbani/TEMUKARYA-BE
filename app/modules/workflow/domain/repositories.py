@@ -19,7 +19,7 @@ from app.modules.workflow.domain.entities import (
 class WorkflowRepository(ABC):
     @abstractmethod
     def get_project(self, project_id: str, lock: bool = False) -> WorkflowProject | None:
-        """lock=True mengunci baris project (SELECT ... FOR UPDATE) sampai commit."""
+        pass
 
     @abstractmethod
     def set_project_status(
@@ -35,7 +35,7 @@ class WorkflowRepository(ABC):
 
     @abstractmethod
     def list_history(self, project_id: str) -> list[StatusHistoryEntry]:
-        """Urut dari yang paling lama."""
+        pass
 
     @abstractmethod
     def get_agreement(self, project_id: str, lock: bool = False) -> Agreement | None: ...
@@ -57,11 +57,11 @@ class WorkflowRepository(ABC):
 
     @abstractmethod
     def close_submitted_applications(self, project_id: str, status: str) -> list[str]:
-        """Ubah semua lamaran SUBMITTED project ini; kembalikan freelancer_id yang terdampak."""
+        pass
 
     @abstractmethod
     def is_freelancer(self, user_id: str) -> bool:
-        """True bila user punya profil freelancer."""
+        pass
 
     @abstractmethod
     def get_parties(self, umkm_id: str, freelancer_id: str | None) -> ProjectParties: ...
@@ -82,7 +82,7 @@ class WorkflowRepository(ABC):
     def list_my_projects(
         self, user_id: str, party: Party, status: str | None, limit: int, offset: int
     ) -> list[MyProjectRow]:
-        """Urut dari yang terakhir diperbarui."""
+        pass
 
     @abstractmethod
     def count_my_projects_by_status(self, user_id: str, party: Party) -> dict[str, int]: ...
@@ -93,8 +93,6 @@ class MilestoneWeightReader(Protocol):
 
 
 class PaymentPort(Protocol):
-    """Disediakan modul payments; workflow tidak menyentuh tabel pembayaran secara langsung."""
-
     def create_invoice(self, agreement: Agreement, now: datetime) -> None: ...
 
     def cancel_open_invoice(self, agreement_id: str, now: datetime) -> None: ...

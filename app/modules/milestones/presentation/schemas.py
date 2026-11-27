@@ -10,27 +10,13 @@ from app.modules.milestones.domain.entities import (
 )
 
 
-# ============================================================
-# BASE RESPONSE CONFIGURATION
-# ============================================================
-
 class MilestoneBaseResponse(BaseModel):
-    """
-    Memungkinkan Pydantic membaca atribut
-    langsung dari dataclass Domain Layer.
-    """
-
     model_config = ConfigDict(
         from_attributes=True,
     )
 
 
-# ============================================================
-# 1. MILESTONE DETAIL RESPONSE
-# ============================================================
-
 class MilestoneResponse(MilestoneBaseResponse):
-
     id: str
     project_id: str
     name: str
@@ -48,12 +34,7 @@ class MilestoneResponse(MilestoneBaseResponse):
     updated_by_user_id: str | None = None
 
 
-# ============================================================
-# 2. MILESTONE PLAN RESPONSE
-# ============================================================
-
 class MilestonePlanResponse(MilestoneBaseResponse):
-
     project_id: str
     items: list[MilestoneResponse]
 
@@ -61,12 +42,7 @@ class MilestonePlanResponse(MilestoneBaseResponse):
     is_plan_complete: bool
 
 
-# ============================================================
-# 3. WEIGHTED PROGRESS RESPONSE
-# ============================================================
-
 class MilestoneProgressResponse(MilestoneBaseResponse):
-
     project_id: str
 
     total_weight: Decimal
@@ -82,12 +58,7 @@ class MilestoneProgressResponse(MilestoneBaseResponse):
     is_plan_complete: bool
 
 
-# ============================================================
-# 4. DELAY RISK RESPONSE
-# ============================================================
-
 class MilestoneDelayRiskResponse(MilestoneBaseResponse):
-
     project_id: str
     risk_level: DelayRiskLevel
 

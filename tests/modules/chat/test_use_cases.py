@@ -37,10 +37,6 @@ from app.modules.chat.domain.entities import (
 )
 
 
-# ============================================================
-# 1. TEST CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
@@ -88,19 +84,8 @@ def make_message(
     )
 
 
-# ============================================================
-# 2. FAKE REPOSITORY
-# ============================================================
-
 class FakeChatRepository:
-    """
-    Fake ConversationRepository + MessageRepository.
-
-    Hanya digunakan dalam unit testing.
-    """
-
     def __init__(self):
-
         self.roles = {
             "u1": "UMKM",
             "u2": "UMKM",
@@ -128,10 +113,6 @@ class FakeChatRepository:
         self.return_wrong_conversation = False
         self.return_wrong_message = False
         self.return_invalid_read_count = False
-
-    # ========================================================
-    # CONVERSATION METHODS
-    # ========================================================
 
     def get_user_role(self, user_id):
         return self.roles.get(user_id)
@@ -189,7 +170,6 @@ class FakeChatRepository:
         )
 
     def create_or_get(self, conversation):
-
         self.create_calls += 1
 
         if self.return_wrong_conversation:
@@ -213,10 +193,6 @@ class FakeChatRepository:
         ] = conversation
 
         return conversation
-
-    # ========================================================
-    # MESSAGE METHODS
-    # ========================================================
 
     def list_for_conversation(
         self,
@@ -344,7 +320,6 @@ class FakeChatRepository:
         updated = 0
 
         for index, message in enumerate(self.messages):
-
             if (
                 message.conversation_id == conversation_id
                 and message.sender_user_id
@@ -363,18 +338,10 @@ class FakeChatRepository:
         return updated
 
 
-# ============================================================
-# 3. FIXTURE
-# ============================================================
-
 @pytest.fixture
 def repo():
     return FakeChatRepository()
 
-
-# ============================================================
-# 4. CREATE CONVERSATION TESTS
-# ============================================================
 
 def test_create_general_conversation(repo):
     repo.conversations.clear()
@@ -524,10 +491,6 @@ def test_wrong_repository_conversation_rejected(repo):
         )
 
 
-# ============================================================
-# 5. GET CONVERSATION TESTS
-# ============================================================
-
 def test_umkm_get_conversation(repo):
     result = GetConversation(repo).execute(
         GetConversationInput(
@@ -569,10 +532,6 @@ def test_missing_conversation(repo):
             )
         )
 
-
-# ============================================================
-# 6. LIST CONVERSATIONS TESTS
-# ============================================================
 
 def test_list_own_conversations(repo):
     result = ListUserConversations(
@@ -630,10 +589,6 @@ def test_invalid_conversation_offset(repo, offset):
             )
         )
 
-
-# ============================================================
-# 7. SEND TEXT MESSAGE TESTS
-# ============================================================
 
 def test_send_text_message(repo):
     result = SendTextMessage(
@@ -723,10 +678,6 @@ def test_wrong_saved_message_rejected(repo):
             )
         )
 
-
-# ============================================================
-# 8. MESSAGE HISTORY TESTS
-# ============================================================
 
 def test_empty_message_history(repo):
     result = ListConversationMessages(
@@ -911,10 +862,6 @@ def test_forged_message_sender_rejected(repo):
         )
 
 
-# ============================================================
-# 9. MARK MESSAGES AS READ
-# ============================================================
-
 def test_mark_received_messages_read(repo):
     repo.messages = [
         make_message(
@@ -942,10 +889,8 @@ def test_mark_received_messages_read(repo):
 
     assert result.marked_count == 1
 
-    # Pesan sendiri tidak ikut ditandai.
     assert repo.messages[0].read_at is None
 
-    # Pesan dari pihak lain sudah dibaca.
     assert repo.messages[1].read_at == NOW
 
 

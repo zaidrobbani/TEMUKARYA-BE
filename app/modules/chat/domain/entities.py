@@ -3,54 +3,25 @@ from datetime import datetime
 from enum import StrEnum
 
 
-# 1. MESSAGE TYPE
-
 class MessageType(StrEnum):
-    """
-    Jenis pesan yang didukung TEMUKARYA.
-    """
-
     TEXT = "TEXT"
     IMAGE = "IMAGE"
     FILE = "FILE"
 
 
 class MessageDeleteScope(StrEnum):
-    """ME: disembunyikan hanya untuk penghapus. EVERYONE: isi dihapus untuk kedua peserta."""
-
     ME = "ME"
     EVERYONE = "EVERYONE"
 
 
-# 2. CHAT ACTOR
-
 @dataclass(frozen=True, slots=True)
 class ChatActor:
-    """
-    Representasi pengguna yang sudah login.
-
-    Identitas harus berasal dari autentikasi
-    yang telah diverifikasi, bukan request client.
-    """
-
     user_id: str
     role: str
 
 
-# 3. CONVERSATION ENTITY
-
 @dataclass(frozen=True, slots=True)
 class Conversation:
-    """
-    Representasi percakapan UMKM dan Freelancer.
-
-    project_id = None:
-        Percakapan umum.
-
-    project_id != None:
-        Percakapan untuk project tertentu.
-    """
-
     id: str
     umkm_id: str
     freelancer_id: str
@@ -62,14 +33,8 @@ class Conversation:
     updated_at: datetime
 
 
-# 4. MESSAGE ENTITY
-
 @dataclass(frozen=True, slots=True)
 class Message:
-    """
-    Representasi satu pesan dalam percakapan.
-    """
-
     id: str
     conversation_id: str
     sender_user_id: str
@@ -82,21 +47,11 @@ class Message:
 
     read_at: datetime | None = None
 
-    # Terisi bila dihapus untuk semua orang; isi teks & lampiran sudah dibuang.
     deleted_at: datetime | None = None
 
 
-# 5. MESSAGE ATTACHMENT ENTITY
-
 @dataclass(frozen=True, slots=True)
 class MessageAttachment:
-    """
-    Metadata file yang dilampirkan pada pesan.
-
-    File fisik disimpan melalui Storage Module.
-    Database hanya menyimpan metadata.
-    """
-
     id: str
     message_id: str
 

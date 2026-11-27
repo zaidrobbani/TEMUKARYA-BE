@@ -32,10 +32,6 @@ from app.modules.milestones.presentation.router import (
 )
 
 
-# ============================================================
-# TEST CONSTANTS
-# ============================================================
-
 PROJECT_ID = "project-1"
 
 PLAN_URL = (
@@ -67,14 +63,8 @@ FREELANCER = MilestoneActor(
 )
 
 
-# ============================================================
-# FAKE MILESTONE REPOSITORY
-# ============================================================
-
 class FakeMilestoneRepository:
-
     def __init__(self):
-
         self.project = ProjectMilestoneContext(
             project_id=PROJECT_ID,
             umkm_id=UMKM.user_id,
@@ -121,7 +111,6 @@ class FakeMilestoneRepository:
         self.context_calls = 0
 
     def get_project_context(self, project_id):
-
         self.context_calls += 1
 
         if project_id == PROJECT_ID:
@@ -130,14 +119,12 @@ class FakeMilestoneRepository:
         return None
 
     def list_milestones(self, project_id):
-
         if project_id == PROJECT_ID:
             return tuple(self.milestones)
 
         return ()
 
     def get_total_weight(self, project_id):
-
         if project_id != PROJECT_ID:
             return Decimal("0.00")
 
@@ -170,23 +157,14 @@ class FakeMilestoneRepository:
         )
 
 
-# ============================================================
-# FIXTURE: HTTP TEST APPLICATION
-# ============================================================
-
 @pytest.fixture
 def http_context():
-
     app = FastAPI()
 
     register_error_handlers(app)
     app.include_router(router)
 
     repository = FakeMilestoneRepository()
-
-    # Repository dan tanggal boleh diganti
-    # untuk test. Autentikasi tetap fail-closed
-    # sampai test secara eksplisit menggantinya.
 
     app.dependency_overrides[
         get_milestone_repository
@@ -203,20 +181,10 @@ def http_context():
 
 
 def authorize(app, actor):
-    """
-    Simulasi identitas yang sudah diverifikasi.
-
-    HANYA UNTUK TEST.
-    """
-
     app.dependency_overrides[
         get_authenticated_milestone_actor
     ] = lambda: actor
 
-
-# ============================================================
-# 1. AUTHENTICATION TESTS
-# ============================================================
 
 @pytest.mark.parametrize("url", ALL_URLS)
 def test_unauthenticated_request_returns_401(
@@ -244,13 +212,8 @@ def test_fake_bearer_token_cannot_bypass_auth(
 
     assert response.status_code == 401
 
-    # Repository belum perlu membaca project.
     assert repository.context_calls == 0
 
-
-# ============================================================
-# 2. PLAN ENDPOINT TESTS
-# ============================================================
 
 def test_umkm_can_get_own_plan(http_context):
     app, client, _ = http_context
@@ -409,10 +372,6 @@ def test_corrupted_plan_returns_409(
     assert response.status_code == 409
 
 
-# ============================================================
-# 3. PROGRESS ENDPOINT TESTS
-# ============================================================
-
 def test_progress_returns_weighted_values(
     http_context,
 ):
@@ -454,10 +413,6 @@ def test_outsider_cannot_read_progress(
 
     assert response.status_code == 404
 
-
-# ============================================================
-# 4. DELAY RISK ENDPOINT TESTS
-# ============================================================
 
 def test_delay_risk_at_risk(http_context):
     app, client, _ = http_context
@@ -532,10 +487,6 @@ def test_outsider_cannot_read_delay_risk(
     assert response.status_code == 404
 
 
-# ============================================================
-# 5. WRITE ENDPOINT SECURITY
-# ============================================================
-
 @pytest.mark.parametrize(
     "method",
     ["POST", "PUT", "PATCH", "DELETE"],
@@ -553,10 +504,6 @@ def test_write_endpoints_not_exposed(
 
     assert response.status_code == 405
 
-
-# ============================================================
-# 6. OPENAPI CONTRACT
-# ============================================================
 
 def test_openapi_contains_three_read_routes(
     http_context,
@@ -584,11 +531,6 @@ def test_openapi_contains_three_read_routes(
 
 
 def test_main_app_registers_milestones_router():
-    """
-    Memastikan router juga didaftarkan
-    pada aplikasi FastAPI sesungguhnya.
-    """
-
     from app.main import app
 
     paths = app.openapi()["paths"]

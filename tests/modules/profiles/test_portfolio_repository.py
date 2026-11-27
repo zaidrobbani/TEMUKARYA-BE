@@ -46,7 +46,6 @@ def test_portfolio_repository_blocks_foreign_and_missing_ids(portfolio_store, ta
 
 def test_portfolio_update_refreshes_server_timestamps_without_assigning_them(portfolio_store, portfolio_session):
     repository, uow = portfolio_store
-    # A test-only trigger simulates a server-generated update timestamp.
     portfolio_session.execute(text("""
         CREATE TRIGGER portfolio_timestamp AFTER UPDATE ON portfolios
         BEGIN UPDATE portfolios SET updated_at = '2030-01-01 00:00:00'

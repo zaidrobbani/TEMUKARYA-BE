@@ -1,64 +1,75 @@
+from dataclasses import dataclass, field
+from typing import BinaryIO
+
 from python_multipart import MultipartParser
 from python_multipart.exceptions import MultipartParseError
 from python_multipart.multipart import parse_options_header
+from starlette.requests import Request
 
 from app.modules.profiles.domain.media import InvalidImage, MAX_IMAGE_BYTES, OversizedImage, UnsupportedImage
 
 
-async def receive_image(request, destination):
-    """Parse one multipart file without Starlette's pre-buffering of UploadFile.
+@dataclass
+class _UploadState:
+    parts: int = 0
+    size: int = 0
+    header_size: int = 0
+    header_name: bytes = b""
+    header_value: bytes = b""
+    headers: dict[bytes, bytes] = field(default_factory=dict)
+    done: bool = False
+    part_done: bool = False
 
-    Both file bytes and total framing are bounded while reading the ASGI stream.
-    Filename and claimed Content-Type never determine storage or decoding.
-    """
+
+async def receive_image(request: Request, destination: BinaryIO) -> None:
     content_type, options = parse_options_header(request.headers.get("content-type", ""))
     boundary = options.get(b"boundary")
     if content_type != b"multipart/form-data":
         raise UnsupportedImage("Gunakan multipart/form-data")
     if not boundary or len(boundary) > 200:
         raise InvalidImage("Boundary multipart tidak valid")
-    state = {"parts": 0, "size": 0, "header_size": 0, "field": b"", "value": b"", "headers": {}, "done": False, "part_done": False}
+    state = _UploadState()
 
-    def begin():
-        state["parts"] += 1
-        if state["parts"] != 1:
+    def begin() -> None:
+        state.parts += 1
+        if state.parts != 1:
             raise InvalidImage("Kirim tepat satu field file")
 
-    def header_field(data, start, end):
-        state["header_size"] += end - start
-        if state["header_size"] > 8192:
+    def header_field(data: bytes, start: int, end: int) -> None:
+        state.header_size += end - start
+        if state.header_size > 8192:
             raise InvalidImage("Header multipart terlalu panjang")
-        state["field"] += data[start:end]
+        state.header_name += data[start:end]
 
-    def header_value(data, start, end):
-        state["header_size"] += end - start
-        if state["header_size"] > 8192:
+    def header_value(data: bytes, start: int, end: int) -> None:
+        state.header_size += end - start
+        if state.header_size > 8192:
             raise InvalidImage("Header multipart terlalu panjang")
-        state["value"] += data[start:end]
+        state.header_value += data[start:end]
 
-    def header_end():
-        key = state["field"].lower()
-        if key in state["headers"]:
+    def header_end() -> None:
+        key = state.header_name.lower()
+        if key in state.headers:
             raise InvalidImage("Header multipart duplikat")
-        state["headers"][key] = state["value"]
-        state["field"], state["value"] = b"", b""
+        state.headers[key] = state.header_value
+        state.header_name, state.header_value = b"", b""
 
-    def headers_done():
-        disposition, params = parse_options_header(state["headers"].get(b"content-disposition", b""))
+    def headers_done() -> None:
+        disposition, params = parse_options_header(state.headers.get(b"content-disposition", b""))
         if disposition != b"form-data" or params.get(b"name") != b"file" or b"filename" not in params:
             raise InvalidImage("Field file wajib diisi")
 
-    def data_chunk(data, start, end):
-        state["size"] += end - start
-        if state["size"] > MAX_IMAGE_BYTES:
+    def data_chunk(data: bytes, start: int, end: int) -> None:
+        state.size += end - start
+        if state.size > MAX_IMAGE_BYTES:
             raise OversizedImage("Ukuran gambar maksimal 5 MiB")
         destination.write(data[start:end])
 
-    def part_end():
-        state["part_done"] = True
+    def part_end() -> None:
+        state.part_done = True
 
-    def end():
-        state["done"] = True
+    def end() -> None:
+        state.done = True
 
     parser = MultipartParser(boundary, {
         "on_part_begin": begin, "on_header_field": header_field, "on_header_value": header_value,
@@ -76,6 +87,6 @@ async def receive_image(request, destination):
         parser.finalize()
     except MultipartParseError as exc:
         raise InvalidImage("Multipart tidak valid") from exc
-    if not state["done"] or not state["part_done"] or state["parts"] != 1 or state["size"] == 0:
+    if not state.done or not state.part_done or state.parts != 1 or state.size == 0:
         raise InvalidImage("Upload kosong atau multipart tidak lengkap")
     destination.seek(0)

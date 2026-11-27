@@ -34,8 +34,6 @@ class Settings(BaseSettings):
 
     GOOGLE_CLIENT_ID: str = ""
 
-    # Path file JSON service account Firebase (Firebase Console → Project settings → Service accounts).
-    # Kosong / file tidak ada → push notifikasi FCM nonaktif, fitur lain tetap jalan.
     FIREBASE_CREDENTIALS_FILE: str = ""
 
     @property

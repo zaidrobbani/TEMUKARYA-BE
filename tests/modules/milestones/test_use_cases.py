@@ -1,4 +1,3 @@
-
 from dataclasses import replace
 from datetime import date, datetime
 from decimal import Decimal
@@ -41,10 +40,6 @@ from app.modules.milestones.domain.repositories import (
 )
 
 
-# ============================================================
-# TEST CONSTANTS
-# ============================================================
-
 PROJECT_ID = "project-1"
 
 UMKM = MilestoneActor(
@@ -63,17 +58,12 @@ OUTSIDER = MilestoneActor(
 )
 
 
-# ============================================================
-# TEST DATA FACTORY
-# ============================================================
-
 def make_milestone(
     milestone_id: str,
     weight: str,
     order: int,
     completed: bool = False,
 ) -> Milestone:
-
     return Milestone(
         id=milestone_id,
         project_id=PROJECT_ID,
@@ -94,14 +84,8 @@ def make_milestone(
     )
 
 
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
-
 class FakeMilestoneRepository:
-
     def __init__(self):
-
         self.project = ProjectMilestoneContext(
             project_id=PROJECT_ID,
             umkm_id=UMKM.user_id,
@@ -184,7 +168,6 @@ class FakeMilestoneRepository:
             return False
 
         for index, item in enumerate(self.milestones):
-
             if (
                 item.project_id == project_id
                 and item.id == milestone_id
@@ -205,18 +188,7 @@ class FakeMilestoneRepository:
         return False
 
 
-# ============================================================
-# FAKE WORKFLOW POLICY
-# ============================================================
-
 class FakeWorkflowPolicy:
-    """
-    Policy untuk test saja.
-
-    Production harus menggunakan aturan
-    Workflow resmi milik Zaid.
-    """
-
     def __init__(
         self,
         allow_plan=True,
@@ -246,22 +218,13 @@ class FakeWorkflowPolicy:
             )
 
 
-# ============================================================
-# TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-
     repository = FakeMilestoneRepository()
     policy = FakeWorkflowPolicy()
 
     return repository, policy
 
-
-# ============================================================
-# 1. READ PLAN
-# ============================================================
 
 def test_umkm_can_read_own_plan(context):
     repo, _ = context
@@ -400,10 +363,6 @@ def test_corrupted_plan_rejected(context):
         )
 
 
-# ============================================================
-# 2. TOTAL WEIGHT FOR WORKFLOW
-# ============================================================
-
 def test_workflow_get_total_weight(context):
     repo, _ = context
 
@@ -437,10 +396,6 @@ def test_workflow_total_weight_missing_project(
         ).execute("missing")
 
 
-# ============================================================
-# 3. WEIGHTED PROGRESS
-# ============================================================
-
 def test_weighted_progress_is_50_percent(context):
     repo, _ = context
 
@@ -469,10 +424,6 @@ def test_progress_not_accessible_by_outsider(context):
             )
         )
 
-
-# ============================================================
-# 4. DELAY RISK
-# ============================================================
 
 def test_delay_risk_at_risk(context):
     repo, _ = context
@@ -510,10 +461,6 @@ def test_delay_risk_rejects_outsider(context):
             )
         )
 
-
-# ============================================================
-# 5. REPLACE MILESTONE PLAN
-# ============================================================
 
 def make_plan_input(
     actor=UMKM,
@@ -708,10 +655,6 @@ def test_replace_plan_workflow_denies(context):
     assert repo.replace_calls == 0
 
 
-# ============================================================
-# 6. COMPLETE MILESTONE
-# ============================================================
-
 def completion_input(
     milestone_id="m3",
     actor=FREELANCER,
@@ -767,7 +710,6 @@ def test_double_complete_is_idempotent(context):
     assert first.progress_percent == Decimal("100")
     assert second.progress_percent == Decimal("100")
 
-    # Hanya satu perubahan database.
     assert repo.complete_calls == 1
 
 

@@ -3,7 +3,7 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, CreatedAt, UuidPk
-from app.modules.projects.infrastructure import models as _projects_models  # noqa: F401
+from app.modules.projects.infrastructure import models as _projects_models
 
 
 class FreelancerReviewModel(Base):
@@ -18,4 +18,4 @@ class FreelancerReviewModel(Base):
     rating: Mapped[int] = mapped_column(mysql.TINYINT(unsigned=True))
     review_text: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[CreatedAt]
-    highlights: Mapped[list | None] = mapped_column(JSON)
+    highlights: Mapped[list[str] | None] = mapped_column(JSON)

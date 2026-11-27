@@ -1,4 +1,4 @@
-from sqlalchemy import bindparam, text
+from sqlalchemy import RowMapping, bindparam, text
 from sqlalchemy.orm import Session
 
 from app.modules.matching.domain.entities import (
@@ -11,45 +11,17 @@ from app.modules.matching.domain.repositories import (
 )
 
 
-# ============================================================
-# SQLALCHEMY MATCHING REPOSITORY
-# ============================================================
-
 class SqlAlchemyMatchingRepository(MatchingRepository):
-    """
-    Repository READ-ONLY untuk Matching Module.
-
-    Menggunakan tabel:
-    - users
-    - freelancer_profiles
-    - freelancer_skills
-    - projects
-    - project_skills
-
-    Tidak melakukan INSERT, UPDATE, DELETE,
-    atau COMMIT.
-    """
-
     def __init__(
         self,
         session: Session,
     ):
         self._session = session
 
-    # ========================================================
-    # 1. LOAD PROJECT SKILLS
-    # ========================================================
-
     def _project_skill_map(
         self,
         project_ids: list[str],
     ) -> dict[str, tuple[str, ...]]:
-        """
-        Mengambil skill banyak project sekaligus.
-
-        Menghindari N+1 query.
-        """
-
         if not project_ids:
             return {}
 
@@ -94,19 +66,10 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             for key, value in grouped.items()
         }
 
-    # ========================================================
-    # 2. LOAD FREELANCER SKILLS
-    # ========================================================
-
     def _freelancer_skill_map(
         self,
         freelancer_ids: list[str],
     ) -> dict[str, tuple[str, ...]]:
-        """
-        Mengambil skill banyak Freelancer
-        menggunakan satu query.
-        """
-
         if not freelancer_ids:
             return {}
 
@@ -153,16 +116,11 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             for key, value in grouped.items()
         }
 
-    # ========================================================
-    # 3. CONVERT ROW TO PROJECT ENTITY
-    # ========================================================
-
     @staticmethod
     def _to_project(
-        row,
+        row: RowMapping,
         skills: tuple[str, ...],
     ) -> ProjectMatchingSource:
-
         return ProjectMatchingSource(
             project_id=str(row["id"]),
             umkm_id=str(row["umkm_id"]),
@@ -172,16 +130,11 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             required_skill_ids=skills,
         )
 
-    # ========================================================
-    # 4. CONVERT ROW TO FREELANCER ENTITY
-    # ========================================================
-
     @staticmethod
     def _to_freelancer(
-        row,
+        row: RowMapping,
         skills: tuple[str, ...],
     ) -> FreelancerMatchingSource:
-
         return FreelancerMatchingSource(
             freelancer_id=str(row["user_id"]),
             name=row["name"],
@@ -201,21 +154,10 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             ),
         )
 
-    # ========================================================
-    # 5. GET PROJECT BY ID
-    # ========================================================
-
     def get_project(
         self,
         project_id: str,
     ) -> ProjectMatchingSource | None:
-        """
-        Mengambil satu project beserta skill.
-
-        Pemeriksaan ownership dan status
-        dilakukan pada Application Layer.
-        """
-
         statement = text("""
             SELECT
                 id,
@@ -248,21 +190,10 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             skills,
         )
 
-    # ========================================================
-    # 6. GET FREELANCER BY ID
-    # ========================================================
-
     def get_freelancer(
         self,
         freelancer_id: str,
     ) -> FreelancerMatchingSource | None:
-        """
-        Mengambil Freelancer beserta skill.
-
-        Freelancer BUSY masih boleh membaca
-        rekomendasi project miliknya.
-        """
-
         statement = text("""
             SELECT
                 fp.user_id,
@@ -302,22 +233,9 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             skills,
         )
 
-    # ========================================================
-    # 7. AVAILABLE FREELANCERS
-    # ========================================================
-
     def iter_available_freelancers(
         self,
     ) -> list[FreelancerMatchingSource]:
-        """
-        Mengambil kandidat rekomendasi
-        Freelancer untuk UMKM.
-
-        Syarat:
-        - Role freelancer
-        - Status AVAILABLE
-        """
-
         statement = text("""
             SELECT
                 fp.user_id,
@@ -363,22 +281,9 @@ class SqlAlchemyMatchingRepository(MatchingRepository):
             for row in rows
         ]
 
-    # ========================================================
-    # 8. PUBLISHED PROJECTS
-    # ========================================================
-
     def iter_published_projects(
         self,
     ) -> list[ProjectMatchingSource]:
-        """
-        Mengambil kandidat project untuk
-        rekomendasi kepada Freelancer.
-
-        Syarat:
-        - Status TERBUKA
-        - Sudah dipublikasikan
-        """
-
         statement = text("""
             SELECT
                 id,

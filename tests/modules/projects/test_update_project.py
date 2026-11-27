@@ -1,4 +1,3 @@
-
 from dataclasses import replace
 from datetime import date, datetime
 
@@ -14,10 +13,6 @@ UMKM_A = "11111111-1111-4111-8111-111111111111"
 UMKM_B = "22222222-2222-4222-8222-222222222222"
 PROJECT_ID = "33333333-3333-4333-8333-333333333333"
 
-
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
 
 class FakeProjectRepository:
     def __init__(self, project=None):
@@ -56,10 +51,6 @@ class FakeProjectRepository:
         return project
 
 
-# ============================================================
-# FAKE UNIT OF WORK
-# ============================================================
-
 class FakeUnitOfWork:
     def __init__(self):
         self.commit_count = 0
@@ -67,10 +58,6 @@ class FakeUnitOfWork:
     def commit(self):
         self.commit_count += 1
 
-
-# ============================================================
-# TEST DATA HELPERS
-# ============================================================
 
 def make_project():
     return Project(
@@ -108,10 +95,6 @@ def setup_use_case(project=None):
     return use_case, repository, uow
 
 
-# ============================================================
-# 1. SUCCESS
-# ============================================================
-
 def test_owner_can_update_open_project():
     use_case, repository, uow = setup_use_case(
         make_project()
@@ -136,10 +119,6 @@ def test_owner_can_update_open_project():
     assert repository.update_calls == 1
     assert uow.commit_count == 1
 
-
-# ============================================================
-# 2. OWNERSHIP
-# ============================================================
 
 def test_other_umkm_cannot_update_project():
     use_case, repository, uow = setup_use_case(
@@ -170,10 +149,6 @@ def test_missing_project_cannot_be_updated():
     assert repository.update_calls == 0
     assert uow.commit_count == 0
 
-
-# ============================================================
-# 3. PROJECT STATUS
-# ============================================================
 
 def test_started_project_cannot_be_updated():
     project = replace(
@@ -212,10 +187,6 @@ def test_project_with_started_at_cannot_be_updated():
     assert repository.update_calls == 0
     assert uow.commit_count == 0
 
-
-# ============================================================
-# 4. INPUT VALIDATION
-# ============================================================
 
 def test_update_rejects_negative_budget():
     use_case, repository, uow = setup_use_case(
@@ -279,10 +250,6 @@ def test_update_rejects_unknown_skill():
     assert repository.update_calls == 0
     assert uow.commit_count == 0
 
-
-# ============================================================
-# 5. CONCURRENT STATUS CHANGE
-# ============================================================
 
 def test_update_does_not_commit_when_state_changes():
     use_case, repository, uow = setup_use_case(

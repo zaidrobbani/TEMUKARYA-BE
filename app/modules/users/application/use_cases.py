@@ -67,8 +67,6 @@ class RegisterUser(_UserCreator):
 
 
 class CreateVerifiedUser(_UserCreator):
-    """Akun dari CLI operator (admin, akun demo/uji): email dianggap sudah terverifikasi."""
-
     def execute(self, data: CreateVerifiedUserInput) -> User:
         now = datetime.now(UTC)
         return self._create(
@@ -78,13 +76,12 @@ class CreateVerifiedUser(_UserCreator):
             role=data.role,
             phone_number=data.phone_number,
             email_verified_at=now,
-            # Admin tidak melewati layar S&K aplikasi; UMKM/freelancer setara akun hasil register.
             terms_accepted_at=None if data.role == UserRole.ADMIN else now,
         )
 
 
 class CreateAdmin(CreateVerifiedUser):
-    def execute(self, data: CreateAdminInput) -> User:  # type: ignore[override]
+    def execute(self, data: CreateAdminInput) -> User:
         return super().execute(
             CreateVerifiedUserInput(name=data.name, email=data.email, password=data.password, role=UserRole.ADMIN)
         )
@@ -105,8 +102,6 @@ class GetUser:
 
 
 class UpdateProfilePhoto:
-    """Ganti foto profil: simpan WebP baru, perbarui `profile_image_url`, lalu hapus file lama."""
-
     def __init__(self, users: UserRepository, storage: AvatarStorage, uow: UnitOfWork, api_prefix: str):
         self._users = users
         self._storage = storage
@@ -120,7 +115,6 @@ class UpdateProfilePhoto:
             self._users.update_profile_image(user.id, avatar_url(self._api_prefix, user.id, key), datetime.now(UTC))
             self._uow.commit()
         except Exception:
-            # DB gagal: file baru jangan sampai yatim.
             self._storage.delete(key)
             raise
         if old_key:
@@ -150,8 +144,6 @@ class RemoveProfilePhoto:
 
 
 class GetProfilePhoto:
-    """Foto profil boleh dilihat semua user yang login (tampil di chat, pengajuan, pembayaran, dsb.)."""
-
     def __init__(self, users: UserRepository, storage: AvatarStorage):
         self._users = users
         self._storage = storage

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.admin_finance.application.use_cases import (
     GetFinanceSummary,
     GetIncomeChart,
@@ -43,7 +43,7 @@ def get_admin_finance_repository(db: Session = Depends(get_db)) -> AdminFinanceR
     responses=error_responses(401, 403),
     summary="Dashboard income (komisi) TEMUKARYA",
 )
-def finance_summary(repository: AdminFinanceRepository = Depends(get_admin_finance_repository)):
+def finance_summary(repository: AdminFinanceRepository = Depends(get_admin_finance_repository)) -> SuccessBody[FinanceSummaryResponse]:
     return success_response("Ringkasan keuangan", FinanceSummaryResponse.build(GetFinanceSummary(repository).execute()))
 
 
@@ -62,7 +62,7 @@ def list_transactions(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     repository: AdminFinanceRepository = Depends(get_admin_finance_repository),
-):
+) -> SuccessBody[TransactionListResponse]:
     page = ListTransactions(repository).execute(
         status.value if status else None,
         fund_status.value if fund_status else None,
@@ -80,7 +80,7 @@ def list_transactions(
     response_model=ApiResponse[AdminTransactionDetailResponse],
     responses=error_responses(401, 403, 404),
 )
-def get_transaction(payment_id: str, repository: AdminFinanceRepository = Depends(get_admin_finance_repository)):
+def get_transaction(payment_id: str, repository: AdminFinanceRepository = Depends(get_admin_finance_repository)) -> SuccessBody[AdminTransactionDetailResponse]:
     detail = GetTransaction(repository).execute(payment_id)
     return success_response("Detail transaksi", AdminTransactionDetailResponse.from_detail(detail))
 
@@ -97,7 +97,7 @@ def list_commissions(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     repository: AdminFinanceRepository = Depends(get_admin_finance_repository),
-):
+) -> SuccessBody[CommissionListResponse]:
     page = ListCommissions(repository).execute(date_from, date_to, limit, offset)
     return success_response("Daftar komisi", CommissionListResponse.from_page(page, limit, offset))
 
@@ -113,6 +113,6 @@ def income_chart(
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
     repository: AdminFinanceRepository = Depends(get_admin_finance_repository),
-):
+) -> SuccessBody[IncomeChartResponse]:
     chart = GetIncomeChart(repository).execute(period, date_from, date_to)
     return success_response("Grafik income", IncomeChartResponse.build(chart))

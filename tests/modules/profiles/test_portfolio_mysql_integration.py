@@ -1,13 +1,3 @@
-"""Opt-in tests against the existing local Docker Compose MySQL schema.
-
-Run the entire suite including this test:
-    docker compose exec -T -e TEMUKARYA_MYSQL_INTEGRATION=1 api python -m pytest -q -rP
-
-No DDL, migrations, or commits. All test rows live in one outer transaction.
-The fixture checks cleanup through a new physical connection after rollback,
-including when assertions or setup fail. Default test runs skip this module.
-"""
-
 import os
 from dataclasses import replace
 from datetime import datetime
@@ -38,7 +28,6 @@ def reject_commit(*_):
 
 @pytest.fixture
 def mysql_portfolio_sandbox():
-    # Fail before connecting if opt-in is used with a nonlocal/production config.
     assert Path("/.dockerenv").exists(), "Run inside the local Compose api container"
     assert settings.APP_ENV in {"development", "test", "testing"}
     assert settings.DB_HOST == "db" and settings.DB_PORT == 3306
@@ -49,7 +38,6 @@ def mysql_portfolio_sandbox():
         host=settings.DB_HOST, port=settings.DB_PORT, database=settings.DB_NAME,
         query={"charset": "utf8mb4"},
     )
-    # Avoid the shared application engine and guarantee a fresh cleanup connection.
     engine = create_engine(url, poolclass=NullPool, echo=False)
     owners = [str(uuid4()) for _ in range(2)]
     portfolio_ids = [str(uuid4()) for _ in range(4)]
@@ -76,8 +64,6 @@ def mysql_portfolio_sandbox():
                 assert "MariaDB" not in version, "This test targets MySQL"
                 print(f"MySQL {version}: local Compose transaction started")
 
-                # Seed only random UUIDs; users ORM still declares an integer ID,
-                # while the existing MySQL schema uses CHAR(36).
                 session.execute(text("""
                     INSERT INTO users (id, name, email, password_hash, role)
                     VALUES (:id, :name, :email, :password_hash, :role)
@@ -99,7 +85,6 @@ def mysql_portfolio_sandbox():
                         transaction.rollback()
                 finally:
                     session.close()
-        # Outer connection is closed before cleanup verification below.
     finally:
         try:
             remaining = {}
@@ -136,7 +121,7 @@ def test_portfolio_crud_pagination_ownership_and_audit_on_mysql(mysql_portfolio_
     repository, session, owners, portfolio_ids = mysql_portfolio_sandbox
     owner, other_owner = owners
     ignored_timestamp = datetime(1990, 1, 1)
-    description = "\U0001f600" * 16383 + "abc"  # Exactly 65,535 UTF-8 bytes.
+    description = "\U0001f600" * 16383 + "abc"
     project_url = "https://example.com/" + "a" * (1000 - len("https://example.com/"))
     saved = []
     for index, portfolio_id in enumerate(portfolio_ids):
@@ -150,14 +135,12 @@ def test_portfolio_crud_pagination_ownership_and_audit_on_mysql(mysql_portfolio_
         assert item.created_at is not None and item.updated_at is not None
         assert item.created_at != ignored_timestamp
         assert item.updated_at == item.created_at
-        assert item.created_at.microsecond % 1000 == 0  # DATETIME(3)
+        assert item.created_at.microsecond % 1000 == 0
         assert repository.get_by_id(item.id, item.freelancer_id) == item
         saved.append(item)
 
     assert session.scalar(text("SELECT COUNT(*) FROM portfolios WHERE freelancer_id = :id"), {"id": owner}) == 3
 
-    # Preserve server timestamps; stable Python sorting mirrors the public order,
-    # including the UUID tie-breaker when inserts share the same millisecond.
     expected = sorted(saved[:3], key=lambda item: item.id)
     expected.sort(key=lambda item: item.created_at, reverse=True)
     assert repository.list_by_freelancer_id(owner, limit=2, offset=0) == expected[:2]
@@ -174,7 +157,6 @@ def test_portfolio_crud_pagination_ownership_and_audit_on_mysql(mysql_portfolio_
         assert repository.delete(target, owner) is False
     assert repository.get_by_id(foreign.id, other_owner) == foreign
 
-    # Cross a DATETIME(3) tick so ON UPDATE must produce a newer timestamp.
     sleep(0.02)
     updated = repository.update(replace(
         saved[0], title="Updated metadata", description="Updated description", project_url=None,
@@ -188,7 +170,6 @@ def test_portfolio_crud_pagination_ownership_and_audit_on_mysql(mysql_portfolio_
     assert updated.updated_at.microsecond % 1000 == 0
     assert repository.get_by_id(updated.id, owner) == updated
 
-    # MySQL reports matched rows via SQLAlchemy, even for a no-op UPDATE.
     assert repository.update(updated) == updated
     assert repository.delete(saved[1].id, owner) is True
     assert repository.get_by_id(saved[1].id, owner) is None

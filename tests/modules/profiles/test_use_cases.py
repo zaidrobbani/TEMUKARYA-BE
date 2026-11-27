@@ -11,9 +11,7 @@ from app.modules.profiles.application.use_cases import (
 )
 
 
-# Repository palsu untuk pengujian tanpa MySQL
 class FakeUmkmRepository:
-
     def __init__(self):
         self.profiles = {}
 
@@ -25,9 +23,7 @@ class FakeUmkmRepository:
         return profile
 
 
-# Simulasi transaksi database
 class FakeUnitOfWork(UnitOfWork):
-
     def __init__(self):
         self.committed = False
 
@@ -35,7 +31,6 @@ class FakeUnitOfWork(UnitOfWork):
         self.committed = True
 
 
-# Membuat contoh input profil UMKM
 def make_input(**overrides):
     data = {
         "business_name": "Kopi Malang",
@@ -47,7 +42,6 @@ def make_input(**overrides):
     return CreateUmkmProfileInput(**(data | overrides))
 
 
-# TEST 1: Berhasil membuat profil UMKM
 def test_create_umkm_profile_success():
     repo = FakeUmkmRepository()
     uow = FakeUnitOfWork()
@@ -62,7 +56,6 @@ def test_create_umkm_profile_success():
     assert uow.committed is True
 
 
-# TEST 2: Menolak profil duplikat
 def test_create_umkm_profile_duplicate():
     repo = FakeUmkmRepository()
     uow = FakeUnitOfWork()
@@ -78,7 +71,6 @@ def test_create_umkm_profile_duplicate():
     assert uow.committed is False
 
 
-# TEST 3: Menolak nama usaha kosong
 def test_create_umkm_profile_empty_name():
     repo = FakeUmkmRepository()
     uow = FakeUnitOfWork()
@@ -92,7 +84,6 @@ def test_create_umkm_profile_empty_name():
     assert uow.committed is False
 
 
-# TEST 4: Menolak nama usaha lebih dari 160 karakter
 def test_create_umkm_profile_name_too_long():
     repo = FakeUmkmRepository()
     uow = FakeUnitOfWork()

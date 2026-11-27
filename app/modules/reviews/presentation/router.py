@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.reviews.application.use_cases import CreateReview, GetProjectReview, ListFreelancerReviews
 from app.modules.reviews.presentation.dependencies import (
     create_review_use_case,
@@ -26,7 +26,7 @@ def create_review(
     body: ReviewRequest,
     actor: Actor = Depends(get_actor),
     use_case: CreateReview = Depends(create_review_use_case),
-):
+) -> SuccessBody[ReviewResponse]:
     review = use_case.execute(actor, project_id, body.to_input())
     return success_response("Ulasan terkirim", ReviewResponse.build(review))
 
@@ -40,7 +40,7 @@ def get_project_review(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: GetProjectReview = Depends(get_project_review_use_case),
-):
+) -> SuccessBody[ReviewResponse]:
     return success_response("Ulasan proyek", ReviewResponse.build(use_case.execute(actor, project_id)))
 
 
@@ -56,6 +56,6 @@ def list_freelancer_reviews(
     offset: int = Query(0, ge=0),
     actor: Actor = Depends(get_actor),
     use_case: ListFreelancerReviews = Depends(list_freelancer_reviews_use_case),
-):
+) -> SuccessBody[FreelancerReviewsResponse]:
     page = use_case.execute(freelancer_id, limit, offset)
     return success_response("Ulasan freelancer", FreelancerReviewsResponse.build(page, limit, offset))

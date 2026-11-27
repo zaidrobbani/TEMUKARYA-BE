@@ -1,5 +1,3 @@
-"""Kontrak workflow untuk modul milestones + aksi rencana/penyelesaian milestone yang perlu commit & notifikasi."""
-
 from app.core.exceptions import ConflictError, ForbiddenError
 from app.core.unit_of_work import UnitOfWork
 from app.modules.milestones.application.dto import (
@@ -26,8 +24,6 @@ _COMPLETION_BLOCKERS = {
 
 
 class WorkflowMilestonePolicy:
-    """Implementasi MilestoneWorkflowPolicy milik modul milestones."""
-
     def require_plan_editable(self, project: ProjectMilestoneContext, actor: MilestoneActor) -> None:
         if project.status == ProjectStatus.DIBATALKAN:
             raise ConflictError("Proyek sudah dibatalkan")
@@ -45,8 +41,6 @@ class WorkflowMilestonePolicy:
 
 
 class SaveMilestonePlan:
-    """Simpan Draf / Ajukan rencana: ganti seluruh milestone, persetujuan kesepakatan direset."""
-
     def __init__(self, repository: MilestoneRepository, notifier: Notifier, uow: UnitOfWork):
         self._repository = repository
         self._use_case = ReplaceMilestonePlan(repository, WorkflowMilestonePolicy())
@@ -71,8 +65,6 @@ class SaveMilestonePlan:
 
 
 class MarkMilestoneDone:
-    """Tandai Selesai: idempoten, UMKM diberi tahu hanya saat status benar-benar berubah."""
-
     def __init__(self, repository: MilestoneRepository, notifier: Notifier, uow: UnitOfWork):
         self._repository = repository
         self._use_case = CompleteMilestone(repository, WorkflowMilestonePolicy())

@@ -95,7 +95,6 @@ class FakeAuthActionTokenRepository(AuthActionTokenRepository):
         return True
 
     def shift_all(self, delta) -> None:
-        """Mundurkan waktu semua token untuk mensimulasikan kedaluwarsa dan jeda kirim ulang."""
         for token in list(self.tokens.values()):
             self.tokens[token.id] = replace(
                 token,

@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
-from typing import Any
 
-from sqlalchemy import bindparam, text
+from sqlalchemy import RowMapping, bindparam, text
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
@@ -32,16 +31,7 @@ from app.modules.chat.infrastructure.models import (
 )
 
 
-# ============================================================
-# 1. DATETIME HELPERS
-# ============================================================
-
 def _db_time(value: datetime) -> datetime:
-    """
-    Simpan timestamp aplikasi sebagai UTC-naive
-    karena MySQL DATETIME tidak menyimpan timezone.
-    """
-
     if not isinstance(value, datetime):
         raise ValueError("Timestamp tidak valid")
 
@@ -56,10 +46,6 @@ def _db_time(value: datetime) -> datetime:
 def _read_time(
     value: datetime | str | None,
 ) -> datetime | None:
-    """
-    Konversi DATETIME database menjadi UTC-aware.
-    """
-
     if value is None:
         return None
 
@@ -72,14 +58,9 @@ def _read_time(
     return value.astimezone(timezone.utc)
 
 
-# ============================================================
-# 2. ROW MAPPERS
-# ============================================================
-
 def _conversation_from_row(
-    row: Any,
+    row: RowMapping,
 ) -> Conversation:
-
     return Conversation(
         id=str(row["id"]),
         umkm_id=str(row["umkm_id"]),
@@ -102,9 +83,8 @@ def _conversation_from_row(
 
 
 def _message_from_row(
-    row: Any,
+    row: RowMapping,
 ) -> Message:
-
     return Message(
         id=str(row["id"]),
         conversation_id=str(row["conversation_id"]),
@@ -121,9 +101,8 @@ def _message_from_row(
 
 
 def _attachment_from_row(
-    row: Any,
+    row: RowMapping,
 ) -> MessageAttachment:
-
     return MessageAttachment(
         id=str(row["id"]),
         message_id=str(row["message_id"]),
@@ -137,27 +116,12 @@ def _attachment_from_row(
     )
 
 
-# ============================================================
-# 3. CONVERSATION REPOSITORY
-# ============================================================
-
 class SqlAlchemyConversationRepository:
-    """
-    Implementasi ConversationRepository.
-
-    Repository tidak melakukan commit().
-    Pemanggil bertanggung jawab atas transaksi.
-    """
-
     def __init__(
         self,
         session: Session,
     ):
         self._session = session
-
-    # ========================================================
-    # A. INTERNAL FIND CONVERSATION
-    # ========================================================
 
     def _find(
         self,
@@ -167,7 +131,6 @@ class SqlAlchemyConversationRepository:
         *,
         lock: bool = False,
     ) -> Conversation | None:
-
         project_condition = (
             "project_id IS NULL"
             if project_id is None
@@ -209,32 +172,22 @@ class SqlAlchemyConversationRepository:
             else None
         )
 
-    # ========================================================
-    # B. FIND BY PARTICIPANTS
-    # ========================================================
-
     def find_by_participants(
         self,
         umkm_id: str,
         freelancer_id: str,
         project_id: str | None,
     ) -> Conversation | None:
-
         return self._find(
             umkm_id,
             freelancer_id,
             project_id,
         )
 
-    # ========================================================
-    # C. GET CONVERSATION BY ID
-    # ========================================================
-
     def get_by_id(
         self,
         conversation_id: str,
     ) -> Conversation | None:
-
         statement = text(
             "SELECT id, umkm_id, freelancer_id, "
             "project_id, last_message_at, "
@@ -256,10 +209,6 @@ class SqlAlchemyConversationRepository:
             else None
         )
 
-    # ========================================================
-    # D. LIST CONVERSATIONS FOR USER
-    # ========================================================
-
     def list_for_user(
         self,
         user_id: str,
@@ -267,7 +216,6 @@ class SqlAlchemyConversationRepository:
         limit: int,
         offset: int,
     ) -> tuple[Conversation, ...]:
-
         statement = text(
             "SELECT id, umkm_id, freelancer_id, "
             "project_id, last_message_at, "
@@ -295,15 +243,10 @@ class SqlAlchemyConversationRepository:
             for row in rows
         )
 
-    # ========================================================
-    # E. GET USER ROLE
-    # ========================================================
-
     def get_user_role(
         self,
         user_id: str,
     ) -> str | None:
-
         return self._session.execute(
             text(
                 "SELECT role FROM users "
@@ -314,15 +257,10 @@ class SqlAlchemyConversationRepository:
             },
         ).scalar_one_or_none()
 
-    # ========================================================
-    # F. GET PROJECT OWNER
-    # ========================================================
-
     def get_project_owner_id(
         self,
         project_id: str,
     ) -> str | None:
-
         owner_id = self._session.execute(
             text(
                 "SELECT umkm_id FROM projects "
@@ -339,24 +277,10 @@ class SqlAlchemyConversationRepository:
             else None
         )
 
-    # ========================================================
-    # G. CREATE OR GET CONVERSATION
-    # ========================================================
-
     def create_or_get(
         self,
         conversation: Conversation,
     ) -> Conversation:
-        """
-        Menangani duplicate conversation secara atomik
-        menggunakan UNIQUE constraint database.
-
-        MySQL: ON DUPLICATE KEY UPDATE
-        SQLite: ON CONFLICT DO NOTHING
-
-        Tidak membuat migration baru.
-        """
-
         validate_conversation_participants(
             conversation.umkm_id,
             conversation.freelancer_id,
@@ -386,7 +310,6 @@ class SqlAlchemyConversationRepository:
         }
 
         if dialect in ("mysql", "mariadb"):
-
             statement = mysql_insert(
                 ConversationModel
             ).values(**values)
@@ -398,7 +321,6 @@ class SqlAlchemyConversationRepository:
             )
 
         elif dialect == "sqlite":
-
             statement = sqlite_insert(
                 ConversationModel
             ).values(**values)
@@ -412,14 +334,9 @@ class SqlAlchemyConversationRepository:
                 "Dialect database Chat belum didukung"
             )
 
-        # INSERT memakai constraint database agar
-        # dua request bersamaan tidak membuat
-        # dua percakapan yang sama.
         with self._session.begin_nested():
             self._session.execute(statement)
 
-        # Locking read pada MySQL digunakan untuk
-        # membaca percakapan hasil insert/upsert.
         existing = self._find(
             conversation.umkm_id,
             conversation.freelancer_id,
@@ -436,26 +353,12 @@ class SqlAlchemyConversationRepository:
         return existing
 
 
-# ============================================================
-# 4. MESSAGE REPOSITORY
-# ============================================================
-
 class SqlAlchemyMessageRepository:
-    """
-    Implementasi MessageRepository.
-
-    Transaksi utama tetap dimiliki pemanggil.
-    """
-
     def __init__(
         self,
         session: Session,
     ):
         self._session = session
-
-    # ========================================================
-    # A. LIST MESSAGES WITH KEYSET PAGINATION
-    # ========================================================
 
     def list_for_conversation(
         self,
@@ -465,7 +368,6 @@ class SqlAlchemyMessageRepository:
         before: tuple[datetime, str] | None = None,
         viewer_user_id: str | None = None,
     ) -> tuple[Message, ...]:
-
         cursor_condition = ""
 
         params = {
@@ -481,7 +383,6 @@ class SqlAlchemyMessageRepository:
             params["viewer_id"] = viewer_user_id
 
         if before is not None:
-
             cursor_condition += (
                 " AND (sent_at < :before_at "
                 "OR (sent_at = :before_at "
@@ -514,15 +415,10 @@ class SqlAlchemyMessageRepository:
             for row in rows
         )
 
-    # ========================================================
-    # B. GET MESSAGE BY ID
-    # ========================================================
-
     def get_by_id(
         self,
         message_id: str,
     ) -> Message | None:
-
         statement = text(
             "SELECT id, conversation_id, "
             "sender_user_id, message_text, "
@@ -544,15 +440,10 @@ class SqlAlchemyMessageRepository:
             else None
         )
 
-    # ========================================================
-    # C. LIST MESSAGE ATTACHMENTS
-    # ========================================================
-
     def list_attachments(
         self,
         message_ids: tuple[str, ...],
     ) -> tuple[MessageAttachment, ...]:
-
         if not message_ids:
             return ()
 
@@ -599,22 +490,11 @@ class SqlAlchemyMessageRepository:
             return None
         return _attachment_from_row(row), str(row["conversation_id"])
 
-    # ========================================================
-    # D. CREATE MESSAGE WITH ATTACHMENTS
-    # ========================================================
-
     def create_with_attachments(
         self,
         message: Message,
         attachments: tuple[MessageAttachment, ...],
     ) -> Message:
-        """
-        Menyimpan pesan, lampiran, dan memperbarui
-        waktu pesan terakhir dalam satu savepoint.
-
-        Commit transaksi utama dilakukan oleh caller.
-        """
-
         normalized_text = validate_message_payload(
             message.message_type,
             message.message_text,
@@ -633,7 +513,6 @@ class SqlAlchemyMessageRepository:
                 message,
             )
 
-        # Pastikan pengirim adalah peserta conversation.
         statement = text(
             "SELECT umkm_id, freelancer_id "
             "FROM conversations "
@@ -660,16 +539,7 @@ class SqlAlchemyMessageRepository:
 
         sent_at = _db_time(message.sent_at)
 
-        # ====================================================
-        # ATOMIC SAVEPOINT
-        # ====================================================
-
         with self._session.begin_nested():
-
-            # ------------------------------------------------
-            # 1. INSERT MESSAGE
-            # ------------------------------------------------
-
             self._session.execute(
                 text(
                     "INSERT INTO messages "
@@ -699,12 +569,7 @@ class SqlAlchemyMessageRepository:
                 },
             )
 
-            # ------------------------------------------------
-            # 2. INSERT ATTACHMENTS
-            # ------------------------------------------------
-
             for attachment in attachments:
-
                 self._session.execute(
                     text(
                         "INSERT INTO message_attachments "
@@ -731,10 +596,6 @@ class SqlAlchemyMessageRepository:
                     },
                 )
 
-            # ------------------------------------------------
-            # 3. UPDATE CONVERSATION ACTIVITY
-            # ------------------------------------------------
-
             self._session.execute(
                 text(
                     "UPDATE conversations SET "
@@ -757,23 +618,12 @@ class SqlAlchemyMessageRepository:
 
         return message
 
-    # ========================================================
-    # E. MARK RECEIVED MESSAGES AS READ
-    # ========================================================
-
     def mark_received_messages_read(
         self,
         conversation_id: str,
         recipient_user_id: str,
         read_at: datetime,
     ) -> int:
-        """
-        Hanya update pesan dari lawan bicara
-        yang belum pernah dibaca.
-
-        Operasi berulang menjadi idempotent.
-        """
-
         participants = self._session.execute(
             text(
                 "SELECT umkm_id, freelancer_id "
@@ -818,10 +668,6 @@ class SqlAlchemyMessageRepository:
         )
 
         return result.rowcount
-
-    # ========================================================
-    # F. DELETE MESSAGES
-    # ========================================================
 
     def list_by_ids(
         self,

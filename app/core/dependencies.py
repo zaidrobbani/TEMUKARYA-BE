@@ -32,8 +32,6 @@ def _send_safely(sender: EmailSender, message: EmailMessage) -> None:
 
 
 class BackgroundEmailSender(EmailSender):
-    """Kirim setelah response agar lama proses tidak membocorkan apakah email terdaftar."""
-
     def __init__(self, tasks: BackgroundTasks, sender: EmailSender):
         self._tasks = tasks
         self._sender = sender

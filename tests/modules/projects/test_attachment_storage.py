@@ -1,4 +1,3 @@
-
 from io import BytesIO
 
 import pytest
@@ -17,26 +16,14 @@ from app.modules.projects.infrastructure.attachment_storage import (
 )
 
 
-# ============================================================
-# TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def storage(tmp_path):
-    """Penyimpanan sementara khusus pengujian."""
-
     return LocalProjectAttachmentStorage(
         tmp_path / "projects"
     )
 
 
-# ============================================================
-# VALID TEST FILE FACTORIES
-# ============================================================
-
 def valid_pdf():
-    """Buat PDF asli dengan satu halaman."""
-
     writer = PdfWriter()
 
     writer.add_blank_page(
@@ -51,8 +38,6 @@ def valid_pdf():
 
 
 def valid_png(with_metadata=False):
-    """Buat PNG asli dengan optional metadata."""
-
     content = BytesIO()
 
     with Image.new(
@@ -60,7 +45,6 @@ def valid_png(with_metadata=False):
         (12, 10),
         "red",
     ) as picture:
-
         if with_metadata:
             extra = PngImagePlugin.PngInfo()
 
@@ -84,12 +68,7 @@ def valid_png(with_metadata=False):
     return content.getvalue()
 
 
-# ============================================================
-# PDF STORAGE TESTS
-# ============================================================
-
 def test_save_and_read_real_pdf(storage):
-
     content = valid_pdf()
 
     saved = storage.save(
@@ -105,7 +84,6 @@ def test_save_and_read_real_pdf(storage):
 
 
 def test_storage_key_uses_uuid(storage):
-
     first = storage.save(
         BytesIO(valid_pdf())
     )
@@ -118,7 +96,6 @@ def test_storage_key_uses_uuid(storage):
 
 
 def test_rejects_fake_pdf_header(storage):
-
     fake_pdf = (
         b"%PDF-1.4\n"
         b"This is not a PDF\n"
@@ -134,7 +111,6 @@ def test_rejects_fake_pdf_header(storage):
 
 
 def test_rejects_truncated_pdf(storage):
-
     content = valid_pdf()
 
     with pytest.raises(InvalidAttachment):
@@ -144,7 +120,6 @@ def test_rejects_truncated_pdf(storage):
 
 
 def test_rejects_pdf_with_active_action(storage):
-
     writer = PdfWriter()
 
     writer.add_blank_page(
@@ -165,12 +140,7 @@ def test_rejects_pdf_with_active_action(storage):
         )
 
 
-# ============================================================
-# IMAGE VALIDATION TESTS
-# ============================================================
-
 def test_valid_png_is_reencoded_without_metadata(storage):
-
     original = valid_png(
         with_metadata=True
     )
@@ -184,17 +154,14 @@ def test_valid_png_is_reencoded_without_metadata(storage):
 
     with storage.open(saved.storage_key) as stream:
         with Image.open(stream) as picture:
-
             picture.load()
 
             assert picture.size == (12, 10)
 
-            # Metadata asal harus hilang.
             assert "Comment" not in picture.info
 
 
 def test_rejects_corrupt_png(storage):
-
     corrupt_png = (
         b"\x89PNG\r\n\x1a\n"
         b"not a png"
@@ -209,7 +176,6 @@ def test_rejects_corrupt_png(storage):
 
 
 def test_rejects_image_over_dimension_limit(storage):
-
     content = BytesIO()
 
     with Image.new(
@@ -217,7 +183,6 @@ def test_rejects_image_over_dimension_limit(storage):
         (4097, 1),
         "blue",
     ) as picture:
-
         picture.save(
             content,
             format="PNG",
@@ -229,12 +194,7 @@ def test_rejects_image_over_dimension_limit(storage):
         )
 
 
-# ============================================================
-# FILE SIZE & FORMAT TESTS
-# ============================================================
-
 def test_rejects_empty_file(storage):
-
     with pytest.raises(InvalidAttachment):
         storage.save(
             BytesIO(b"")
@@ -242,7 +202,6 @@ def test_rejects_empty_file(storage):
 
 
 def test_rejects_unsupported_file(storage):
-
     with pytest.raises(UnsupportedAttachment):
         storage.save(
             BytesIO(
@@ -252,7 +211,6 @@ def test_rejects_unsupported_file(storage):
 
 
 def test_rejects_oversized_file(storage):
-
     content = (
         b"%PDF-1.4\n"
         + b"A" * MAX_ATTACHMENT_BYTES
@@ -264,12 +222,7 @@ def test_rejects_oversized_file(storage):
         )
 
 
-# ============================================================
-# PATH SECURITY TESTS
-# ============================================================
-
 def test_rejects_path_traversal(storage):
-
     with pytest.raises(AttachmentStorageError):
         storage.open(
             "../../secrets.txt"
@@ -277,19 +230,13 @@ def test_rejects_path_traversal(storage):
 
 
 def test_rejects_invalid_key(storage):
-
     with pytest.raises(AttachmentStorageError):
         storage.delete(
             "../../foo.pdf"
         )
 
 
-# ============================================================
-# DELETE & CLEANUP TESTS
-# ============================================================
-
 def test_delete_attachment(storage):
-
     saved = storage.save(
         BytesIO(valid_pdf())
     )
@@ -309,7 +256,6 @@ def test_delete_attachment(storage):
 
 
 def test_failed_upload_removes_temporary_file(storage):
-
     with pytest.raises(UnsupportedAttachment):
         storage.save(
             BytesIO(

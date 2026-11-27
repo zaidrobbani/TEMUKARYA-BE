@@ -16,32 +16,18 @@ from app.modules.milestones.domain.repositories import (
 )
 
 
-# ============================================================
-# HELPER: DATE CONVERSION
-# ============================================================
-
 def _parse_date(
     value: date | str,
 ) -> date:
-    """
-    MySQL biasanya mengembalikan date.
-    SQLite test dapat mengembalikan string.
-    """
-
     if isinstance(value, date):
         return value
 
     return date.fromisoformat(value)
 
 
-# ============================================================
-# HELPER: DATETIME CONVERSION
-# ============================================================
-
 def _parse_datetime(
     value: datetime | str | None,
 ) -> datetime | None:
-
     if value is None or isinstance(
         value,
         datetime,
@@ -51,47 +37,17 @@ def _parse_datetime(
     return datetime.fromisoformat(value)
 
 
-# ============================================================
-# SQLALCHEMY MILESTONE REPOSITORY
-# ============================================================
-
 class SqlAlchemyMilestoneRepository:
-    """
-    Implementasi MilestoneRepository.
-
-    Mengakses tabel:
-    - projects
-    - project_milestones
-
-    Integrasi peserta Freelancer menunggu
-    kontrak Workflow milik Zaid.
-    """
-
     def __init__(
         self,
         session: Session,
     ):
         self._session = session
 
-    # ========================================================
-    # 1. GET PROJECT CONTEXT
-    # ========================================================
-
     def get_project_context(
         self,
         project_id: str,
     ) -> ProjectMilestoneContext | None:
-        """
-        Mengambil informasi project.
-
-        Dipakai untuk:
-        - Pemeriksaan kepemilikan UMKM
-        - Status project
-        - Tanggal mulai dan deadline
-
-        Freelancer access sementara fail-closed.
-        """
-
         statement = text("""
             SELECT
                 id,
@@ -126,25 +82,13 @@ class SqlAlchemyMilestoneRepository:
                 row["deadline"]
             ),
 
-            # Belum mempercayai status agreement
-            # sebelum kontrak Workflow tersedia.
             freelancer_id=None,
         )
-
-    # ========================================================
-    # 2. LIST PROJECT MILESTONES
-    # ========================================================
 
     def list_milestones(
         self,
         project_id: str,
     ) -> tuple[Milestone, ...]:
-        """
-        Membaca milestone milik satu project.
-
-        Diurutkan menurut sort_order.
-        """
-
         statement = text("""
             SELECT
                 id,
@@ -200,24 +144,10 @@ class SqlAlchemyMilestoneRepository:
             for row in rows
         )
 
-    # ========================================================
-    # 3. GET TOTAL WEIGHT
-    # ========================================================
-
     def get_total_weight(
         self,
         project_id: str,
     ) -> Decimal:
-        """
-        Menghitung total bobot milestone.
-
-        Fungsi ini menjadi kontrak yang
-        dibutuhkan Workflow Zaid.
-
-        Contoh:
-        20.00 + 30.00 + 50.00 = 100.00
-        """
-
         statement = text("""
             SELECT weight_percent
 
@@ -241,31 +171,15 @@ class SqlAlchemyMilestoneRepository:
             Decimal("0.00"),
         )
 
-    # ========================================================
-    # 4. REPLACE PLAN AND RESET APPROVALS
-    # ========================================================
-
     def replace_plan_and_reset_approvals(
         self,
         project_id: str,
         milestones: tuple[Milestone, ...],
     ) -> None:
-        """
-        WAJIB fail-closed sampai kontrak
-        Workflow approval-reset tersedia.
-
-        Penggantian plan dan reset approval
-        nantinya harus atomik.
-        """
-
         raise ConflictError(
             "Workflow approval-reset belum "
             "terintegrasi; perubahan rencana ditolak"
         )
-
-    # ========================================================
-    # 5. COMPLETE MILESTONE IF PENDING
-    # ========================================================
 
     def complete_if_pending(
         self,
@@ -274,37 +188,12 @@ class SqlAlchemyMilestoneRepository:
         updated_by_user_id: str,
         completed_at: datetime,
     ) -> bool:
-        """
-        Menyelesaikan milestone secara kondisional.
-
-        Hanya mengubah milestone dengan:
-        status = BELUM_SELESAI
-
-        True:
-            Satu milestone berhasil di-update.
-
-        False:
-            Tidak ada milestone yang di-update.
-
-        Pemeriksaan izin Workflow dan transaksi
-        commit/rollback menjadi tanggung jawab
-        Application + Unit of Work.
-        """
-
-        # ====================================================
-        # 1. NORMALIZE DATETIME TO UTC
-        # ====================================================
-
         if completed_at.tzinfo is not None:
             completed_at = (
                 completed_at
                 .astimezone(timezone.utc)
                 .replace(tzinfo=None)
             )
-
-        # ====================================================
-        # 2. CONDITIONAL UPDATE
-        # ====================================================
 
         statement = text("""
             UPDATE project_milestones
@@ -332,9 +221,5 @@ class SqlAlchemyMilestoneRepository:
                 "milestone_id": milestone_id,
             },
         )
-
-        # ====================================================
-        # 3. RETURN UPDATE RESULT
-        # ====================================================
 
         return result.rowcount == 1

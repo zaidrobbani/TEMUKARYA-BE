@@ -69,7 +69,6 @@ def to_attempt(model: PaymentAttemptModel) -> PaymentAttempt:
     )
 
 
-# Kondisi tab Riwayat Transaksi; p = payments.
 GROUP_CONDITIONS = {
     TransactionGroup.ALL: "1 = 1",
     TransactionGroup.PENDING: "p.status IN ('MENUNGGU', 'GAGAL')",
@@ -229,7 +228,6 @@ class SqlAlchemyWalletRepository(WalletRepository):
         return Wallet(model.id, model.freelancer_id) if model else None
 
     def get_or_create_wallet(self, freelancer_id: str, now: datetime) -> Wallet:
-        # INSERT IGNORE: dua pembayaran pertama yang bersamaan tidak saling menggagalkan.
         self._session.execute(
             insert(WalletModel)
             .prefix_with("IGNORE")
@@ -308,4 +306,3 @@ class SqlAlchemyWalletRepository(WalletRepository):
             )
             for r in rows
         ]
-

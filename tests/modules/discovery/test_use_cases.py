@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.core.exceptions import (
@@ -21,10 +20,6 @@ from app.modules.discovery.domain.entities import (
     FreelancerSummary,
 )
 
-
-# ============================================================
-# TEST DATA
-# ============================================================
 
 FREELANCER_ID = (
     "11111111-1111-4111-8111-111111111111"
@@ -52,12 +47,7 @@ def make_detail():
     )
 
 
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
-
 class FakeDiscoveryRepository:
-
     def __init__(self):
         self.freelancers = []
         self.detail = make_detail()
@@ -89,10 +79,6 @@ class FakeDiscoveryRepository:
         return self.detail
 
 
-# ============================================================
-# FIXTURES
-# ============================================================
-
 @pytest.fixture
 def context():
     repository = FakeDiscoveryRepository()
@@ -107,10 +93,6 @@ def context():
 
     return repository, search, detail
 
-
-# ============================================================
-# SEARCH FREELANCERS
-# ============================================================
 
 def test_search_freelancers_default(context):
     repository, search, detail = context
@@ -139,7 +121,6 @@ def test_search_freelancers_default(context):
         == "AVAILABLE"
     )
 
-    # limit + 1 untuk cek halaman berikutnya
     assert repository.last_limit == 21
     assert repository.last_offset == 0
 
@@ -222,10 +203,6 @@ def test_search_can_include_all_availability(context):
     )
 
 
-# ============================================================
-# PAGINATION
-# ============================================================
-
 def test_search_pagination(context):
     repository, search, detail = context
 
@@ -296,10 +273,6 @@ def test_search_invalid_pagination(
     assert repository.last_filters is None
 
 
-# ============================================================
-# TEXT VALIDATION
-# ============================================================
-
 @pytest.mark.parametrize(
     "invalid_search",
     [
@@ -346,10 +319,6 @@ def test_search_invalid_city(
         )
 
 
-# ============================================================
-# SKILL VALIDATION
-# ============================================================
-
 @pytest.mark.parametrize(
     "skill_ids",
     [
@@ -374,10 +343,6 @@ def test_search_invalid_skills(
             )
         )
 
-
-# ============================================================
-# PRICE FILTER VALIDATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "price",
@@ -427,10 +392,6 @@ def test_search_accepts_zero_price(context):
     assert repository.last_filters.min_price == 0
 
 
-# ============================================================
-# EXPERIENCE VALIDATION
-# ============================================================
-
 @pytest.mark.parametrize(
     "experience",
     [
@@ -452,10 +413,6 @@ def test_search_invalid_experience_count(
             )
         )
 
-
-# ============================================================
-# RATING VALIDATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "rating",
@@ -494,7 +451,6 @@ def test_search_accepts_valid_rating(context):
     assert repository.last_filters.min_rating == 4.5
 
 
-# FREELANCER DETAIL
 def test_get_freelancer_detail_success(context):
     repository, search, detail = context
 

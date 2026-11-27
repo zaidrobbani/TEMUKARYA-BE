@@ -24,10 +24,6 @@ from app.modules.chat.presentation.dependencies import (
 from app.modules.chat.presentation.router import router
 
 
-# ============================================================
-# 1. CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
@@ -42,10 +38,6 @@ DETAIL_URL = "/conversations/c1"
 MESSAGES_URL = "/conversations/c1/messages"
 READ_URL = "/conversations/c1/read"
 
-
-# ============================================================
-# 2. FAKE SESSION
-# ============================================================
 
 class FakeSession:
     def __init__(self):
@@ -63,12 +55,7 @@ class FakeSession:
         self.rollbacks += 1
 
 
-# ============================================================
-# 3. FAKE CONVERSATION REPOSITORY
-# ============================================================
-
 class FakeConversationRepository:
-
     def __init__(self):
         self.conversations = {
             "c1": Conversation(
@@ -164,12 +151,7 @@ class FakeConversationRepository:
         )
 
 
-# ============================================================
-# 4. FAKE MESSAGE REPOSITORY
-# ============================================================
-
 class FakeMessageRepository:
-
     def __init__(
         self,
         conversation_repository,
@@ -324,20 +306,12 @@ class FakeMessageRepository:
         return updated
 
 
-# ============================================================
-# 5. FAKE DATABASE CONTEXT
-# ============================================================
-
 @dataclass
 class FakeChatContext:
     session: FakeSession
     conversations: FakeConversationRepository
     messages: FakeMessageRepository
 
-
-# ============================================================
-# 6. HTTP FIXTURE
-# ============================================================
 
 @pytest.fixture
 def http_context():
@@ -373,10 +347,6 @@ def http_context():
 
 
 def authorize(app, actor):
-    """
-    Override authentication hanya untuk test.
-    """
-
     app.dependency_overrides[
         get_authenticated_chat_actor
     ] = lambda: actor
@@ -401,10 +371,6 @@ def make_message(
         created_at=at,
     )
 
-
-# ============================================================
-# 7. AUTHENTICATION TESTS
-# ============================================================
 
 @pytest.mark.parametrize(
     "method,url,body",
@@ -467,10 +433,6 @@ def test_invalid_role_rejected(http_context):
 
     assert response.status_code == 403
 
-
-# ============================================================
-# 8. CONVERSATION LIST + DETAIL
-# ============================================================
 
 def test_umkm_get_own_conversations(http_context):
     app, client, _ = http_context
@@ -552,10 +514,6 @@ def test_invalid_list_limit_returns_422(
 
     assert response.status_code == 422
 
-
-# ============================================================
-# 9. CREATE CONVERSATION
-# ============================================================
 
 def test_create_conversation_and_commit(
     http_context,
@@ -658,10 +616,6 @@ def test_invalid_counterpart_rejected(
     assert response.status_code == 404
     assert context.session.commits == 0
 
-
-# ============================================================
-# 10. SEND MESSAGE
-# ============================================================
 
 def test_umkm_sends_text_and_commits(
     http_context,
@@ -774,10 +728,6 @@ def test_sender_identity_cannot_be_overridden(
     assert response.status_code == 201
     assert response.json()["data"]["sender_user_id"] == "u1"
 
-
-# ============================================================
-# 11. MESSAGE HISTORY + PAGINATION
-# ============================================================
 
 def test_message_history_sorted_descending(
     http_context,
@@ -941,10 +891,6 @@ def test_outsider_cannot_read_history(
     assert response.status_code == 404
 
 
-# ============================================================
-# 12. MARK AS READ
-# ============================================================
-
 def test_mark_received_message_read_and_commit(
     http_context,
 ):
@@ -1023,10 +969,6 @@ def test_commit_failure_calls_rollback(
 
     assert context.session.rollbacks == 1
 
-
-# ============================================================
-# 13. OPENAPI CONTRACT
-# ============================================================
 
 def test_openapi_chat_routes(http_context):
     app, _, _ = http_context

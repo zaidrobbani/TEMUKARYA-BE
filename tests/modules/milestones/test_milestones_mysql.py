@@ -1,4 +1,3 @@
-
 import os
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -38,12 +37,7 @@ from app.modules.milestones.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# 1. DATABASE SAFETY CHECK
-# ============================================================
-
 def verify_mysql_test_environment():
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration test disabled")
 
@@ -72,10 +66,6 @@ def verify_mysql_test_environment():
         )
 
 
-# ============================================================
-# 2. INSERT HELPER
-# ============================================================
-
 def insert_data(
     session: Session,
     sql: str,
@@ -87,17 +77,8 @@ def insert_data(
     )
 
 
-# ============================================================
-# 3. MYSQL INTEGRATION TEST
-# ============================================================
-
 def test_milestones_mysql_integration_and_rollback():
-
     verify_mysql_test_environment()
-
-    # ========================================================
-    # A. GENERATE UNIQUE TEST DATA
-    # ========================================================
 
     tag = uuid4().hex[:12]
 
@@ -110,25 +91,15 @@ def test_milestones_mysql_integration_and_rollback():
 
     category_id = f"ms-cat-{tag}"
 
-    # ========================================================
-    # B. START MYSQL TRANSACTION
-    # ========================================================
-
     connection = engine.connect()
     transaction = connection.begin()
 
     try:
-
         with Session(
             bind=connection,
             autoflush=False,
             expire_on_commit=False,
         ) as session:
-
-            # =================================================
-            # 1. CREATE TEMPORARY UMKM USER
-            # =================================================
-
             insert_data(
                 session,
                 """
@@ -157,10 +128,6 @@ def test_milestones_mysql_integration_and_rollback():
                 },
             )
 
-            # =================================================
-            # 2. CREATE UMKM PROFILE
-            # =================================================
-
             insert_data(
                 session,
                 """
@@ -185,10 +152,6 @@ def test_milestones_mysql_integration_and_rollback():
                 },
             )
 
-            # =================================================
-            # 3. CREATE PROJECT CATEGORY
-            # =================================================
-
             insert_data(
                 session,
                 """
@@ -210,10 +173,6 @@ def test_milestones_mysql_integration_and_rollback():
                     "name": f"Milestone Category {tag}",
                 },
             )
-
-            # =================================================
-            # 4. CREATE PROJECT
-            # =================================================
 
             insert_data(
                 session,
@@ -253,10 +212,6 @@ def test_milestones_mysql_integration_and_rollback():
                     "started": datetime(2026, 11, 1, 8),
                 },
             )
-
-            # =================================================
-            # 5. CREATE MILESTONES
-            # =================================================
 
             insert_data(
                 session,
@@ -325,10 +280,6 @@ def test_milestones_mysql_integration_and_rollback():
 
             print("\nMYSQL TEST DATA CREATED: OK")
 
-            # =================================================
-            # 6. INITIALIZE REPOSITORY
-            # =================================================
-
             repository = SqlAlchemyMilestoneRepository(
                 session
             )
@@ -342,10 +293,6 @@ def test_milestones_mysql_integration_and_rollback():
                 project_id=project_id,
                 actor=actor,
             )
-
-            # =================================================
-            # 7. TEST MILESTONE PLAN
-            # =================================================
 
             plan = GetMilestonePlan(
                 repository
@@ -366,10 +313,6 @@ def test_milestones_mysql_integration_and_rollback():
 
             print("MYSQL MILESTONE PLAN: OK")
 
-            # =================================================
-            # 8. TEST WORKFLOW WEIGHT CONTRACT
-            # =================================================
-
             total = GetTotalMilestoneWeight(
                 repository
             ).execute(project_id)
@@ -377,10 +320,6 @@ def test_milestones_mysql_integration_and_rollback():
             assert total == Decimal("100.00")
 
             print("MYSQL TOTAL WEIGHT 100%: OK")
-
-            # =================================================
-            # 9. TEST WEIGHTED PROGRESS
-            # =================================================
 
             progress = GetMilestoneProgress(
                 repository
@@ -403,10 +342,6 @@ def test_milestones_mysql_integration_and_rollback():
             )
 
             print("MYSQL WEIGHTED PROGRESS: OK")
-
-            # =================================================
-            # 10. TEST DELAY RISK
-            # =================================================
 
             risk = GetProjectDelayRisk(
                 repository
@@ -432,12 +367,7 @@ def test_milestones_mysql_integration_and_rollback():
 
             print("MYSQL DELAY RISK: OK")
 
-            # =================================================
-            # 11. TEST OWNERSHIP PROTECTION
-            # =================================================
-
             with pytest.raises(NotFoundError):
-
                 GetMilestonePlan(
                     repository
                 ).execute(
@@ -452,22 +382,13 @@ def test_milestones_mysql_integration_and_rollback():
 
             print("MYSQL OWNERSHIP PROTECTION: OK")
 
-            # =================================================
-            # 12. TEST PLAN WRITE FAIL-CLOSED
-            # =================================================
-
             with pytest.raises(ConflictError):
-
                 repository.replace_plan_and_reset_approvals(
                     project_id,
                     (),
                 )
 
             print("MYSQL PLAN WRITE FAIL-CLOSED: OK")
-
-            # =================================================
-            # 13. TEST CONDITIONAL COMPLETION
-            # =================================================
 
             completed_at = datetime(
                 2026,
@@ -496,10 +417,6 @@ def test_milestones_mysql_integration_and_rollback():
 
             print("MYSQL IDEMPOTENT COMPLETION: OK")
 
-            # =================================================
-            # 14. VERIFY UPDATED PROGRESS
-            # =================================================
-
             updated = repository.list_milestones(
                 project_id
             )
@@ -527,21 +444,12 @@ def test_milestones_mysql_integration_and_rollback():
             print("MYSQL UPDATED PROGRESS 50%: OK")
 
     finally:
-
-        # ====================================================
-        # 15. ALWAYS ROLLBACK
-        # ====================================================
-
         if transaction.is_active:
             transaction.rollback()
 
         connection.close()
 
         print("MYSQL TRANSACTION ROLLBACK: OK")
-
-    # ========================================================
-    # 16. VERIFY NO TEST DATA LEFT
-    # ========================================================
 
     checks = [
         ("users", "id", [owner_id]),
@@ -552,9 +460,7 @@ def test_milestones_mysql_integration_and_rollback():
     ]
 
     with engine.connect() as check_connection:
-
         for table, column, ids in checks:
-
             statement = text(
                 f"SELECT COUNT(*) FROM {table} "
                 f"WHERE {column} IN :ids"

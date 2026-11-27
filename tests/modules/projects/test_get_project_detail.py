@@ -61,10 +61,6 @@ class FakeRepository:
         return self.project
 
 
-# ============================================================
-# APPLICATION USE CASE TESTS
-# ============================================================
-
 def test_owner_can_view_unpublished_project():
     project = make_project(published=False)
     use_case = GetProjectDetail(FakeRepository(project))
@@ -105,10 +101,6 @@ def test_missing_project_returns_not_found():
     with pytest.raises(NotFoundError):
         use_case.execute(str(uuid4()), UMKM_A)
 
-
-# ============================================================
-# HTTP ROUTER TESTS
-# ============================================================
 
 @pytest.fixture
 def http_context():

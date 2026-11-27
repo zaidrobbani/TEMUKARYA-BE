@@ -1,5 +1,3 @@
-"""Merakit semua use case workflow/payments/submissions/reviews dengan fake repository bersama."""
-
 import io
 from decimal import Decimal
 
@@ -104,7 +102,6 @@ class World:
         self.store.add_user(OTHER_FREELANCER_ID, "FREELANCER", "Maya Safitri", "Fotografer")
         self.store.add_project()
 
-    # ---- use case ----
     def select(self, actor=UMKM, project_id=PROJECT_ID, **data):
         return SelectFreelancer(self.workflow, self.notifier, self.uow, self.clock).execute(
             actor, project_id, SelectFreelancerInput(**data)
@@ -221,7 +218,6 @@ class World:
     def freelancer_reviews(self, freelancer_id=FREELANCER_ID, limit=20, offset=0):
         return ListFreelancerReviews(self.workflow, self.reviews).execute(freelancer_id, limit, offset)
 
-    # ---- alur ----
     def set_plan(self, weights=("40", "60"), project_id=PROJECT_ID):
         self.store.milestones[project_id] = [(Decimal(w), False) for w in weights]
 

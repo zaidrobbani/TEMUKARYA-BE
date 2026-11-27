@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -6,8 +5,6 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class AttachmentRecord:
-    """Metadata attachment yang tersimpan di database."""
-
     id: str
     project_id: str
     original_file_name: str
@@ -18,8 +15,6 @@ class AttachmentRecord:
 
 
 class AttachmentRepository(Protocol):
-    """Kontrak akses metadata attachment proyek."""
-
     def owns_project(
         self,
         project_id: str,
@@ -34,7 +29,6 @@ class AttachmentRepository(Protocol):
         project_id: str,
         freelancer_id: str,
     ) -> bool:
-        """Freelancer boleh membaca lampiran proyek TERBUKA yang sudah terbit, atau proyek tempat ia terpilih."""
         ...
 
     def list_by_project(

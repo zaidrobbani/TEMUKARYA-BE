@@ -30,10 +30,8 @@ from app.modules.projects.application.use_cases import UpdateProject
 from app.modules.projects.application.use_cases import DeleteProject
 
 from app.modules.projects.application.use_cases import SearchPublicProjects
+from app.modules.projects.infrastructure.owner_reader import SqlProjectOwnerReader
 
-
-# 1. AUTHENTICATION
-# ============================================================
 
 @dataclass(frozen=True)
 class AuthenticatedProjectUser:
@@ -47,37 +45,17 @@ def get_authenticated_project_user(
     return AuthenticatedProjectUser(user_id=user.id, role=user.role)
 
 
-# 2. REPOSITORY DEPENDENCY
-# ============================================================
-
 def get_project_repository(
     db: Session = Depends(get_db),
 ) -> ProjectRepository:
-    """
-    Menyediakan SQLAlchemy repository
-    menggunakan database session FastAPI.
-    """
     return SqlAlchemyProjectRepository(db)
 
 
-# 3. CLOCK
-# ============================================================
-
 def _utc_now_naive() -> datetime:
-    """
-    Waktu UTC tanpa tzinfo untuk kolom
-    MySQL DATETIME.
-
-    Kebijakan timezone final perlu
-    disepakati bersama tim.
-    """
     return datetime.now(timezone.utc).replace(
         tzinfo=None
     )
 
-
-# 4. CREATE PROJECT USE CASE DEPENDENCY
-# ============================================================
 
 def get_create_project_use_case(
     repository: ProjectRepository = Depends(
@@ -85,10 +63,6 @@ def get_create_project_use_case(
     ),
     uow: UnitOfWork = Depends(get_uow),
 ) -> CreateProject:
-    """
-    Menyiapkan dependency CreateProject.
-    """
-
     return CreateProject(
         project_repository=repository,
         uow=uow,
@@ -101,8 +75,6 @@ def get_my_projects_use_case(
         get_project_repository
     ),
 ) -> GetMyProjects:
-    """Dependency untuk mengambil proyek milik UMKM."""
-
     return GetMyProjects(
         project_repository=repository,
     )
@@ -138,7 +110,6 @@ def get_update_project_use_case(
     )
 
 
-
 def get_delete_project_use_case(
     repository: ProjectRepository = Depends(
         get_project_repository
@@ -160,7 +131,5 @@ def get_search_public_projects_use_case(
     )
 
 
-def get_project_owner_reader(db: Session = Depends(get_db)):
-    from app.modules.projects.infrastructure.owner_reader import SqlProjectOwnerReader
-
+def get_project_owner_reader(db: Session = Depends(get_db)) -> SqlProjectOwnerReader:
     return SqlProjectOwnerReader(db)

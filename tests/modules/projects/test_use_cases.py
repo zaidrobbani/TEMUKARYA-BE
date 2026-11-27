@@ -1,4 +1,3 @@
-
 from datetime import date, datetime
 
 import pytest
@@ -6,10 +5,6 @@ import pytest
 from app.modules.projects.application.dto import CreateProjectInput
 from app.modules.projects.application.use_cases import CreateProject
 
-
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
 
 class FakeProjectRepository:
     def __init__(self):
@@ -41,10 +36,6 @@ class FakeProjectRepository:
         self.saved_skills = list(skill_ids)
 
 
-# ============================================================
-# FAKE UNIT OF WORK
-# ============================================================
-
 class FakeUnitOfWork:
     def __init__(self):
         self.commit_count = 0
@@ -52,10 +43,6 @@ class FakeUnitOfWork:
     def commit(self):
         self.commit_count += 1
 
-
-# ============================================================
-# TEST FIXTURES
-# ============================================================
 
 @pytest.fixture
 def repository():
@@ -87,10 +74,6 @@ def valid_input():
         skill_ids=("python", "fastapi"),
     )
 
-
-# ============================================================
-# TEST CASES
-# ============================================================
 
 def test_create_project_success(
     create_project, repository, uow, valid_input

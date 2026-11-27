@@ -57,7 +57,6 @@ from app.modules.profiles.domain.repositories import (
 
 
 class CreateUmkmProfile:
-
     def __init__(
         self,
         repository: UmkmProfileRepository,
@@ -71,8 +70,6 @@ class CreateUmkmProfile:
         user_id: str,
         data: CreateUmkmProfileInput,
     ) -> UmkmProfile:
-
-        # Cek apakah pengguna sudah mempunyai profil
         existing_profile = self._repository.get_by_user_id(
             user_id
         )
@@ -84,16 +81,13 @@ class CreateUmkmProfile:
 
         profile = umkm_profile(user_id, data)
 
-        # Menyimpan dan melakukan commit transaksi
         saved_profile = self._repository.add(profile)
         self._uow.commit()
 
         return saved_profile
 
 
-
 class CreateFreelancerProfile:
-
     def __init__(
         self,
         repository: FreelancerProfileRepository,
@@ -107,8 +101,6 @@ class CreateFreelancerProfile:
         user_id: str,
         data: CreateFreelancerProfileInput,
     ) -> FreelancerProfile:
-
-        # 1. Cek apakah profil freelancer sudah ada
         existing_profile = self._repository.get_by_user_id(
             user_id
         )
@@ -120,17 +112,14 @@ class CreateFreelancerProfile:
 
         profile = freelancer_profile(user_id, data)
 
-        # 6. Simpan melalui repository
         saved_profile = self._repository.add(profile)
 
-        # 7. Commit transaksi
         self._uow.commit()
 
         return saved_profile
 
 
 class SetFreelancerSkills:
-
     def __init__(
         self,
         profile_repository: FreelancerProfileRepository,
@@ -146,8 +135,6 @@ class SetFreelancerSkills:
         freelancer_id: str,
         data: SetFreelancerSkillsInput,
     ) -> list[str]:
-
-        # 1. Pastikan profil Freelancer tersedia
         profile = self._profile_repository.get_by_user_id(
             freelancer_id
         )
@@ -157,7 +144,6 @@ class SetFreelancerSkills:
                 "Profil Freelancer tidak ditemukan"
             )
 
-        # 2. Validasi daftar ID keahlian
         skill_ids = data.skill_ids
 
         if any(
@@ -170,13 +156,11 @@ class SetFreelancerSkills:
                 "ID keahlian tidak valid"
             )
 
-        # 3. Cegah skill duplikat
         if len(skill_ids) != len(set(skill_ids)):
             raise BadRequestError(
                 "Keahlian tidak boleh duplikat"
             )
 
-        # 4. Pastikan semua skill ada di master data
         existing_ids = (
             self._skills_repository.get_existing_skill_ids(
                 skill_ids
@@ -190,21 +174,17 @@ class SetFreelancerSkills:
                 "Terdapat ID keahlian yang tidak tersedia"
             )
 
-        # 5. Ganti daftar skill Freelancer
         self._skills_repository.replace_skills(
             freelancer_id,
             skill_ids,
         )
 
-        # 6. Simpan perubahan transaksi
         self._uow.commit()
 
         return skill_ids
 
 
-    
 class GetFreelancerSkills:
-
     def __init__(
         self,
         profile_repository: FreelancerProfileRepository,
@@ -217,8 +197,6 @@ class GetFreelancerSkills:
         self,
         freelancer_id: str,
     ) -> list[str]:
-
-        # 1. Periksa apakah profil Freelancer ada
         profile = self._profile_repository.get_by_user_id(
             freelancer_id
         )
@@ -228,17 +206,14 @@ class GetFreelancerSkills:
                 "Profil Freelancer tidak ditemukan"
             )
 
-        # 2. Ambil daftar keahlian dari repository
         skill_ids = self._skills_repository.get_skill_ids(
             freelancer_id
         )
 
-        # 3. Kembalikan hasilnya
         return skill_ids
 
 
 class CreateFreelancerExperience:
-
     def __init__(
         self,
         profile_repository: FreelancerProfileRepository,
@@ -254,8 +229,6 @@ class CreateFreelancerExperience:
         freelancer_id: str,
         data: CreateFreelancerExperienceInput,
     ) -> FreelancerExperience:
-
-        # 1. Memastikan profil Freelancer tersedia
         profile = self._profile_repository.get_by_user_id(
             freelancer_id
         )
@@ -271,13 +244,10 @@ class CreateFreelancerExperience:
             data=data,
         )
 
-        # 8. Menyimpan melalui repository
         self._experience_repository.add(experience)
 
-        # 9. Commit transaksi
         self._uow.commit()
 
-        # 10. Mengembalikan hasil
         return experience
 
 
@@ -286,7 +256,6 @@ def _validated_experience(
     freelancer_id: str,
     data: CreateFreelancerExperienceInput,
 ) -> FreelancerExperience:
-    """Aturan yang sama untuk membuat dan mengganti pengalaman kerja."""
     job_title = data.job_title.strip()
     organization_name = data.organization_name.strip()
     description = data.description.strip()
@@ -364,7 +333,6 @@ class DeleteFreelancerExperience:
 
 
 def _validated_project_url(value: str | None) -> str | None:
-    """URL metadata HTTP(S); tidak melakukan request jaringan atau DNS lookup."""
     if value is None:
         return None
     value = value.strip()

@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 
 import pytest
@@ -29,14 +28,6 @@ CLOSED_PROJECT_ID = "77777777-7777-4777-8777-777777777777"
 
 @pytest.fixture
 def context():
-    """
-    SQLite sementara untuk repository tests.
-
-    Skema tes sengaja menggunakan DDL SQLite,
-    sebab DDL production menggunakan fitur MySQL
-    seperti CURRENT_TIMESTAMP(3) dan UUID().
-    """
-
     engine = create_engine(
         "sqlite+pysqlite:///:memory:"
     )
@@ -171,10 +162,6 @@ def make_application(
     )
 
 
-# ============================================================
-# VALIDATION QUERIES
-# ============================================================
-
 def test_freelancer_profile_exists(context):
     repository, session = context
 
@@ -216,10 +203,6 @@ def test_project_ownership(context):
         OTHER_UMKM_ID,
     )
 
-
-# ============================================================
-# CREATE & READ
-# ============================================================
 
 def test_add_and_get_application(context):
     repository, session = context
@@ -271,10 +254,6 @@ def test_get_by_project_and_freelancer(context):
     assert missing is None
 
 
-# ============================================================
-# DATABASE CONSTRAINTS
-# ============================================================
-
 def test_duplicate_application_returns_conflict(context):
     repository, session = context
 
@@ -294,10 +273,6 @@ def test_application_is_not_auto_committed(context):
 
     assert repository.get_by_id(application.id) is None
 
-
-# ============================================================
-# LISTING & ISOLATION
-# ============================================================
 
 def test_list_by_freelancer(context):
     repository, session = context

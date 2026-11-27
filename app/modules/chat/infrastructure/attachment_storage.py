@@ -34,7 +34,6 @@ MAX_SOURCE_DIMENSION = 8192
 QUALITY_STEPS = (80, 70, 60, 50, 40)
 DECODER_SLOT = BoundedSemaphore(1)
 
-# Ekstensi dokumen → (mime, ekstensi simpan). Isi file tetap dicek, ekstensi hanya penentu jenis turunan ZIP/teks.
 OOXML = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -90,8 +89,6 @@ class LocalChatAttachmentStorage(ChatAttachmentStorage):
             raise ChatFileInvalidError("File lampiran kosong")
         return data
 
-    # ---------------- Foto ----------------
-
     def save_image(self, source: BinaryIO) -> StoredChatFile:
         data = self._read_limited(source, CHAT_IMAGE_UPLOAD_MAX_BYTES)
         if not _is_image_signature(data[:12]):
@@ -126,7 +123,6 @@ class LocalChatAttachmentStorage(ChatAttachmentStorage):
                     oriented = ImageOps.exif_transpose(picture)
                     mode = "RGBA" if "A" in oriented.getbands() else "RGB"
                     converted = oriented.convert(mode)
-                    # Gambar baru hanya berisi piksel: EXIF/GPS/ICC tidak ikut tersimpan.
                     clean = Image.frombytes(mode, converted.size, converted.tobytes())
         except (Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
             raise ChatFileInvalidError("Dimensi foto tidak aman") from exc
@@ -154,8 +150,6 @@ class LocalChatAttachmentStorage(ChatAttachmentStorage):
         smaller.save(buffer, format="WEBP", quality=QUALITY_STEPS[-1], method=6)
         return buffer.getvalue()
 
-    # ---------------- Dokumen ----------------
-
     def save_document(self, source: BinaryIO, file_name: str) -> StoredChatFile:
         data = self._read_limited(source, MAX_FILE_BYTES)
         mime, extension = self._detect_document(data, file_name)
@@ -171,7 +165,6 @@ class LocalChatAttachmentStorage(ChatAttachmentStorage):
         if data.startswith(b"%PDF-"):
             return "application/pdf", "pdf"
         if _is_image_signature(data[:12]):
-            # Foto yang dipilih sebagai "dokumen" dikirim apa adanya (tanpa kompres), seperti WhatsApp.
             raise ChatFileUnsupportedError("Kirim foto lewat Galeri/Kamera")
         if data.startswith(b"PK\x03\x04"):
             try:
@@ -191,8 +184,6 @@ class LocalChatAttachmentStorage(ChatAttachmentStorage):
                 raise ChatFileUnsupportedError("File teks harus berenkode UTF-8") from exc
             return ("text/csv", "csv") if extension == "csv" else ("text/plain", "txt")
         raise ChatFileUnsupportedError("Format dokumen didukung: PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP")
-
-    # ---------------- Baca & hapus ----------------
 
     def open(self, key: str) -> BinaryIO:
         try:

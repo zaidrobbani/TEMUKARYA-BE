@@ -13,34 +13,14 @@ PRECISION = Decimal("0.01")
 HUNDRED = Decimal("100.00")
 ZERO = Decimal("0.00")
 
-# Heuristik awal: tertinggal >= 10 poin persentase.
 RISK_GAP_THRESHOLD = Decimal("10.00")
 
-
-# ============================================================
-# EVALUATE PROJECT DELAY RISK
-# ============================================================
 
 def evaluate_delay_risk(
     schedule: ProjectSchedule,
     progress: MilestoneProgress,
     today: date,
 ) -> DelayRiskResult:
-    """
-    Estimasi risiko keterlambatan project.
-
-    Membandingkan:
-    - Persentase waktu terpakai
-    - Persentase bobot milestone selesai
-
-    Menggunakan tanggal yang diberikan,
-    bukan mengambil jam sistem secara implisit.
-    """
-
-    # ========================================================
-    # 1. VERIFY PROJECT
-    # ========================================================
-
     if schedule.project_id != progress.project_id:
         raise ValueError(
             "Data jadwal dan progress berbeda project"
@@ -51,18 +31,12 @@ def evaluate_delay_risk(
             "today harus bertipe date"
         )
 
-    # ========================================================
-    # 2. PREPARE DURATION
-    # ========================================================
-
     start_date = (
         schedule.started_at.date()
         if schedule.started_at is not None
         else None
     )
 
-    # Project bisa mulai setelah deadline (freelancer dipilih terlambat);
-    # total_days minimal 1 sehingga hasilnya OVERDUE, bukan error.
     total_days = (
         max(
             1,
@@ -81,14 +55,9 @@ def evaluate_delay_risk(
         else 0
     )
 
-    # ========================================================
-    # 3. CALCULATE EXPECTED PROGRESS
-    # ========================================================
-
     expected = ZERO
 
     if start_date is not None:
-
         elapsed_ratio = min(
             Decimal(elapsed_days)
             / Decimal(total_days),
@@ -108,45 +77,29 @@ def evaluate_delay_risk(
         expected - actual
     ).quantize(PRECISION)
 
-    # ========================================================
-    # 4. CLASSIFY DELAY RISK
-    # ========================================================
-
     if not progress.is_plan_complete:
-
         risk = DelayRiskLevel.PLAN_INCOMPLETE
 
     elif actual >= HUNDRED:
-
         risk = DelayRiskLevel.COMPLETED
 
     elif today > schedule.deadline:
-
         risk = DelayRiskLevel.OVERDUE
 
     elif (
         start_date is None
         or today < start_date
     ):
-
         risk = DelayRiskLevel.NOT_STARTED
 
     elif today == schedule.deadline:
-
-        # Deadline hari ini, tapi belum selesai.
         risk = DelayRiskLevel.AT_RISK
 
     elif gap >= RISK_GAP_THRESHOLD:
-
         risk = DelayRiskLevel.AT_RISK
 
     else:
-
         risk = DelayRiskLevel.ON_TRACK
-
-    # ========================================================
-    # 5. RETURN RISK RESULT
-    # ========================================================
 
     return DelayRiskResult(
         project_id=schedule.project_id,

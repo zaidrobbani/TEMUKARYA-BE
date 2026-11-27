@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -9,20 +8,8 @@ from app.modules.milestones.domain.entities import (
 )
 
 
-# ============================================================
-# PROJECT CONTEXT
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class ProjectMilestoneContext:
-    """
-    Data proyek yang dibutuhkan Milestones.
-
-    UMKM ID berasal dari Projects.
-    Freelancer ID berasal dari kesepakatan
-    yang dikelola Workflow.
-    """
-
     project_id: str
     umkm_id: str
     status: str
@@ -32,17 +19,7 @@ class ProjectMilestoneContext:
     freelancer_id: str | None = None
 
 
-# ============================================================
-# MILESTONE REPOSITORY CONTRACT
-# ============================================================
-
 class MilestoneRepository(Protocol):
-    """
-    Kontrak akses data Milestones.
-
-    Belum bergantung pada SQLAlchemy atau MySQL.
-    """
-
     def get_project_context(
         self,
         project_id: str,
@@ -59,12 +36,6 @@ class MilestoneRepository(Protocol):
         self,
         project_id: str,
     ) -> Decimal:
-        """
-        Kontrak yang dibutuhkan Workflow Zaid.
-
-        Harus menghasilkan Decimal,
-        misalnya Decimal('100.00').
-        """
         ...
 
     def replace_plan_and_reset_approvals(
@@ -72,16 +43,6 @@ class MilestoneRepository(Protocol):
         project_id: str,
         milestones: tuple[Milestone, ...],
     ) -> None:
-        """
-        Mengganti seluruh rencana milestone.
-
-        PENTING:
-        Penggantian rencana dan reset persetujuan
-        harus berada dalam satu transaksi atomik.
-
-        Implementation baru dibuat setelah
-        kontrak Workflow disepakati dengan Zaid.
-        """
         ...
 
     def complete_if_pending(
@@ -91,17 +52,4 @@ class MilestoneRepository(Protocol):
         updated_by_user_id: str,
         completed_at: datetime,
     ) -> bool:
-        """
-        Update milestone secara kondisional.
-
-        True:
-          BELUM_SELESAI -> SELESAI berhasil.
-
-        False:
-          Tidak ada baris yang berhasil diubah.
-
-        Infrastructure harus menggunakan
-        UPDATE kondisional agar aman saat
-        tombol selesai diklik bersamaan.
-        """
         ...

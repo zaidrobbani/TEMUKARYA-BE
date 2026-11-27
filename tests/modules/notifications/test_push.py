@@ -70,8 +70,6 @@ def notification(user_id="user-a") -> Notification:
 
 
 class FakeGoogle:
-    """Server OAuth + FCM palsu; `fcm_status` menentukan jawaban per token."""
-
     def __init__(self, private_key):
         self.public_key = private_key[0].public_key()
         self.token_requests = 0
@@ -86,7 +84,7 @@ class FakeGoogle:
             claims = jwt.decode(
                 form["assertion"][0], self.public_key, algorithms=["RS256"],
                 audience="https://oauth2.googleapis.com/token",
-                options={"verify_exp": False, "verify_iat": False},  # jam test bisa digeser maju
+                options={"verify_exp": False, "verify_iat": False},
             )
             assert claims["scope"] == "https://www.googleapis.com/auth/firebase.messaging"
             assert jwt.get_unverified_header(form["assertion"][0])["kid"] == "kid-1"
@@ -129,14 +127,14 @@ def test_send_uses_cached_access_token_and_high_priority_data_message(client_for
         "reference_type": "CONVERSATION", "reference_id": "c-1",
     }
     assert all(isinstance(value, str) for value in first["data"].values())
-    assert "notification" not in first  # data message: aplikasi yang menampilkan
+    assert "notification" not in first
 
 
 def test_access_token_refreshed_near_expiry(client_for, google):
     now = [time.time()]
     fcm = client_for(clock=lambda: now[0])
     fcm.send(TOKEN_A, {})
-    now[0] += 3600 - 200  # dalam margin refresh 5 menit
+    now[0] += 3600 - 200
     fcm.send(TOKEN_A, {})
     assert google.token_requests == 2
     assert google.sent[-1]["auth"] == "Bearer akses-2"
@@ -233,10 +231,6 @@ def test_build_dispatcher_enabled_with_service_account(tmp_path, private_key):
     assert build_dispatcher(str(path), MagicMock()).enabled is True
 
 
-# ------------------------------------------------------------
-# Repository + endpoint token perangkat
-# ------------------------------------------------------------
-
 @pytest.fixture
 def token_session():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
@@ -263,11 +257,11 @@ def test_repository_upsert_moves_token_between_accounts(token_session):
     repository.upsert("user-a", TOKEN_B, "ANDROID")
     token_session.commit()
     assert sorted(repository.tokens_for("user-a")) == [TOKEN_A, TOKEN_B]
-    repository.upsert("user-b", TOKEN_A, "ANDROID")  # HP yang sama login akun lain
+    repository.upsert("user-b", TOKEN_A, "ANDROID")
     token_session.commit()
     assert repository.tokens_for("user-a") == [TOKEN_B]
     assert repository.tokens_for("user-b") == [TOKEN_A]
-    repository.remove("user-a", TOKEN_A)  # bukan miliknya lagi → tidak terhapus
+    repository.remove("user-a", TOKEN_A)
     repository.remove_tokens([TOKEN_B])
     token_session.commit()
     assert repository.tokens_for("user-a") == []
@@ -305,7 +299,6 @@ def test_register_and_unregister_device_endpoints(device_client):
 
 
 def test_unregister_accepts_same_body_as_register(device_client):
-    """Aplikasi Android mengirim {"token", "platform"} saat logout; dulu ditolak 422 dan token tertinggal."""
     client, _, repository = device_client
     client.put("/notifications/devices", json={"token": TOKEN_A, "platform": "ANDROID"})
     response = client.request("DELETE", "/notifications/devices", json={"token": TOKEN_A, "platform": "ANDROID"})

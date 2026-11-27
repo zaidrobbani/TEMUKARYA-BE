@@ -43,22 +43,13 @@ from app.modules.chat.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# 1. TEST CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
 )
 
 
-# ============================================================
-# 2. MYSQL SAFETY GUARD
-# ============================================================
-
 def require_safe_mysql():
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip(
             "MySQL integration test belum diaktifkan"
@@ -116,37 +107,19 @@ def require_safe_mysql():
     print("\nMYSQL CHAT TABLE CONTRACT: OK")
 
 
-# ============================================================
-# 3. SQL INSERT HELPER
-# ============================================================
-
 def insert_data(
     session: Session,
     query: str,
     parameters,
 ) -> None:
-
     session.execute(
         text(query),
         parameters,
     )
 
 
-# ============================================================
-# 4. MYSQL INTEGRATION TEST
-# ============================================================
-
 def test_chat_mysql_integration_and_rollback():
-
-    # ========================================================
-    # A. CHECK DATABASE SAFETY
-    # ========================================================
-
     require_safe_mysql()
-
-    # ========================================================
-    # B. GENERATE TEMPORARY IDS
-    # ========================================================
 
     tag = uuid4().hex[:12]
 
@@ -172,31 +145,19 @@ def test_chat_mysql_integration_and_rollback():
         role="UMKM",
     )
 
-    # IDs untuk validasi rollback.
     created_conversations = []
     created_messages = []
     created_attachments = []
 
-    # ========================================================
-    # C. BEGIN OUTER TRANSACTION
-    # ========================================================
-
     with engine.connect() as connection:
-
         transaction = connection.begin()
 
         try:
-
             with Session(
                 bind=connection,
                 autoflush=False,
                 expire_on_commit=False,
             ) as session:
-
-                # ============================================
-                # 1. CREATE TEMPORARY USERS
-                # ============================================
-
                 insert_data(
                     session,
                     """
@@ -246,10 +207,6 @@ def test_chat_mysql_integration_and_rollback():
                     ],
                 )
 
-                # ============================================
-                # 2. CREATE UMKM PROFILE
-                # ============================================
-
                 insert_data(
                     session,
                     """
@@ -276,10 +233,6 @@ def test_chat_mysql_integration_and_rollback():
                     },
                 )
 
-                # ============================================
-                # 3. CREATE FREELANCER PROFILE
-                # ============================================
-
                 insert_data(
                     session,
                     """
@@ -302,10 +255,6 @@ def test_chat_mysql_integration_and_rollback():
                         "user_id": freelancer_id,
                     },
                 )
-
-                # ============================================
-                # 4. CREATE PROJECT CATEGORY
-                # ============================================
 
                 insert_data(
                     session,
@@ -330,10 +279,6 @@ def test_chat_mysql_integration_and_rollback():
                         ),
                     },
                 )
-
-                # ============================================
-                # 5. CREATE TEMPORARY PROJECT
-                # ============================================
 
                 insert_data(
                     session,
@@ -377,10 +322,6 @@ def test_chat_mysql_integration_and_rollback():
 
                 print("MYSQL TEMPORARY USERS/PROJECT: OK")
 
-                # ============================================
-                # 6. INITIALIZE REAL REPOSITORIES
-                # ============================================
-
                 conversation_repo = (
                     SqlAlchemyConversationRepository(
                         session
@@ -392,10 +333,6 @@ def test_chat_mysql_integration_and_rollback():
                         session
                     )
                 )
-
-                # ============================================
-                # 7. TEST GENERAL CONVERSATION
-                # ============================================
 
                 create_conversation = (
                     CreateOrGetConversation(
@@ -425,10 +362,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL GENERAL CONVERSATION: OK"
                 )
 
-                # ============================================
-                # 8. TEST DUPLICATE CONVERSATION
-                # ============================================
-
                 duplicate = create_conversation.execute(
                     CreateConversationInput(
                         actor=actor_freelancer,
@@ -438,8 +371,6 @@ def test_chat_mysql_integration_and_rollback():
 
                 assert duplicate.id == general.id
 
-                # Paksa jalur UPSERT database.
-                # ID lain untuk pasangan yang sama.
                 database_duplicate = (
                     conversation_repo.create_or_get(
                         replace(
@@ -473,10 +404,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL DUPLICATE PREVENTION: OK"
                 )
 
-                # ============================================
-                # 9. TEST PROJECT CONVERSATION
-                # ============================================
-
                 project_chat = (
                     create_conversation.execute(
                         CreateConversationInput(
@@ -502,10 +429,6 @@ def test_chat_mysql_integration_and_rollback():
                 print(
                     "MYSQL PROJECT CONVERSATION: OK"
                 )
-
-                # ============================================
-                # 10. TEST CONVERSATION ACCESS
-                # ============================================
 
                 get_conversation = GetConversation(
                     conversation_repo
@@ -537,10 +460,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL CONVERSATION OWNERSHIP: OK"
                 )
 
-                # ============================================
-                # 11. TEST CONVERSATION LIST
-                # ============================================
-
                 conversations = (
                     ListUserConversations(
                         conversation_repo
@@ -570,10 +489,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL PRIVATE CONVERSATION LIST: OK"
                 )
 
-                # ============================================
-                # 12. SEND TEXT FROM UMKM
-                # ============================================
-
                 send_umkm = SendTextMessage(
                     conversation_repo,
                     message_repo,
@@ -599,10 +514,6 @@ def test_chat_mysql_integration_and_rollback():
                     "Halo Freelancer!"
                 )
 
-                # ============================================
-                # 13. SEND REPLY FROM FREELANCER
-                # ============================================
-
                 send_freelancer = SendTextMessage(
                     conversation_repo,
                     message_repo,
@@ -627,10 +538,6 @@ def test_chat_mysql_integration_and_rollback():
                     freelancer_id
                 )
 
-                # ============================================
-                # 14. VERIFY LAST MESSAGE TIMESTAMP
-                # ============================================
-
                 updated_conversation = (
                     conversation_repo.get_by_id(
                         general.id
@@ -645,10 +552,6 @@ def test_chat_mysql_integration_and_rollback():
                 print(
                     "MYSQL MESSAGE SEND + TIMESTAMP: OK"
                 )
-
-                # ============================================
-                # 15. TEST MESSAGE HISTORY
-                # ============================================
 
                 get_messages = ListConversationMessages(
                     conversation_repo,
@@ -670,10 +573,6 @@ def test_chat_mysql_integration_and_rollback():
                     second.id,
                     first.id,
                 ]
-
-                # ============================================
-                # 16. TEST KEYSET PAGINATION
-                # ============================================
 
                 page_one = get_messages.execute(
                     ListMessagesInput(
@@ -709,10 +608,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL MESSAGE HISTORY + PAGINATION: OK"
                 )
 
-                # ============================================
-                # 17. TEST MARK AS READ
-                # ============================================
-
                 mark_read = MarkConversationRead(
                     conversation_repo,
                     message_repo,
@@ -738,10 +633,6 @@ def test_chat_mysql_integration_and_rollback():
                     second.id
                 ).read_at is not None
 
-                # ============================================
-                # 18. TEST IDEMPOTENT MARK AS READ
-                # ============================================
-
                 read_again = mark_read.execute(
                     MarkConversationReadInput(
                         conversation_id=general.id,
@@ -754,10 +645,6 @@ def test_chat_mysql_integration_and_rollback():
                 print(
                     "MYSQL MESSAGE READ + IDEMPOTENCY: OK"
                 )
-
-                # ============================================
-                # 19. TEST FILE ATTACHMENT METADATA
-                # ============================================
 
                 file_message = Message(
                     id=str(uuid4()),
@@ -814,10 +701,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL ATTACHMENT METADATA: OK"
                 )
 
-                # ============================================
-                # 20. TEST FORGED SENDER REJECTED
-                # ============================================
-
                 forged = Message(
                     id=str(uuid4()),
                     conversation_id=general.id,
@@ -842,10 +725,6 @@ def test_chat_mysql_integration_and_rollback():
                     "MYSQL FORGED SENDER PROTECTION: OK"
                 )
 
-                # ============================================
-                # 21. VERIFY DATA COUNTS
-                # ============================================
-
                 count_messages = session.execute(
                     text("""
                         SELECT COUNT(*)
@@ -864,21 +743,12 @@ def test_chat_mysql_integration_and_rollback():
                 )
 
         finally:
-
-            # ================================================
-            # 22. ALWAYS ROLLBACK
-            # ================================================
-
             if transaction.is_active:
                 transaction.rollback()
 
             print(
                 "MYSQL TRANSACTION ROLLBACK: OK"
             )
-
-    # ========================================================
-    # D. VERIFY NO TEST DATA WAS LEFT
-    # ========================================================
 
     checks = [
         (
@@ -924,9 +794,7 @@ def test_chat_mysql_integration_and_rollback():
     ]
 
     with engine.connect() as check_connection:
-
         for table, column, ids in checks:
-
             if not ids:
                 continue
 

@@ -19,7 +19,7 @@ from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
 from app.core.exceptions import AppError, BadRequestError
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 
 from app.modules.chat.application.dto import (
     CreateConversationInput,
@@ -45,9 +45,10 @@ from app.modules.chat.application.use_cases import (
     SendTextMessage,
 )
 
-from app.modules.chat.domain.entities import ChatActor
+from app.modules.chat.domain.entities import ChatActor, Message, MessageAttachment
 
 from app.core.config import API_PREFIX
+from app.core.json_types import JsonObject
 from app.modules.chat.domain.attachment_storage import ChatAttachmentStorage, thumbnail_key_of
 from app.modules.chat.domain.entities import MessageDeleteScope, MessageType
 from app.modules.chat.presentation.dependencies import (
@@ -88,19 +89,11 @@ from app.modules.chat.presentation.schemas import (
 )
 
 
-# ============================================================
-# ROUTER CONFIGURATION
-# ============================================================
-
 router = APIRouter(
     prefix="/conversations",
     tags=["chat"],
 )
 
-
-# ============================================================
-# 1. CREATE OR GET CONVERSATION
-# ============================================================
 
 @router.post(
     "",
@@ -118,14 +111,7 @@ def create_or_get_conversation(
         ChatDatabaseContext,
         Depends(get_chat_database_context),
     ],
-):
-    """
-    Membuat percakapan baru atau mengambil
-    percakapan yang sudah ada.
-
-    Mengembalikan 200 untuk keduanya.
-    """
-
+) -> SuccessBody[ConversationResponse]:
     try:
         use_case = CreateOrGetConversation(
             db.conversations
@@ -155,10 +141,6 @@ def create_or_get_conversation(
         raise
 
 
-# ============================================================
-# 2. LIST MY CONVERSATIONS
-# ============================================================
-
 @router.get(
     "",
     response_model=ApiResponse[ConversationListResponse],
@@ -182,12 +164,7 @@ def list_my_conversations(
         default=0,
         ge=0,
     ),
-):
-    """
-    Hanya menampilkan conversation
-    milik pengguna yang login.
-    """
-
+) -> SuccessBody[ConversationListResponse]:
     use_case = ListUserConversations(
         db.conversations
     )
@@ -206,10 +183,6 @@ def list_my_conversations(
     )
 
 
-# ============================================================
-# 3. GET CONVERSATION DETAIL
-# ============================================================
-
 @router.get(
     "/{conversation_id}",
     response_model=ApiResponse[ConversationResponse],
@@ -225,14 +198,7 @@ def get_conversation_detail(
         ChatDatabaseContext,
         Depends(get_chat_database_context),
     ],
-):
-    """
-    Mengambil detail chat berdasarkan ID.
-
-    Hanya dua peserta conversation
-    yang boleh melihat isinya.
-    """
-
+) -> SuccessBody[ConversationResponse]:
     use_case = GetConversation(
         db.conversations
     )
@@ -249,10 +215,6 @@ def get_conversation_detail(
         ConversationResponse.model_validate(result),
     )
 
-
-# ============================================================
-# 4. SEND TEXT MESSAGE
-# ============================================================
 
 @router.post(
     "/{conversation_id}/messages",
@@ -276,17 +238,7 @@ def send_text_message(
         Depends(get_new_message_hook),
     ],
     hub: Annotated[ChatHub, Depends(get_chat_hub)],
-):
-    """
-    Mengirim pesan teks.
-
-    Sender ID tidak diterima dari body.
-    Identitas sender berasal dari JWT.
-
-    INSERT dan UPDATE last_message_at
-    harus di-commit bersama.
-    """
-
+) -> SuccessBody[MessageResponse]:
     try:
         use_case = SendTextMessage(
             conversation_repository=db.conversations,
@@ -319,10 +271,6 @@ def send_text_message(
         raise
 
 
-# ============================================================
-# 5. GET MESSAGE HISTORY
-# ============================================================
-
 @router.get(
     "/{conversation_id}/messages",
     response_model=ApiResponse[MessagePageResponse],
@@ -350,15 +298,7 @@ def get_message_history(
         default=None,
         max_length=36,
     ),
-):
-    """
-    Riwayat pesan diurutkan:
-    sent_at DESC, id DESC.
-
-    Pagination memakai dua parameter:
-    before_at dan before_id.
-    """
-
+) -> SuccessBody[MessagePageResponse]:
     if (before_at is None) != (before_id is None):
         raise BadRequestError(
             "before_at dan before_id harus "
@@ -400,8 +340,6 @@ def get_message_history(
         )
     )
 
-    # Convert Domain DTO into safe response.
-    # storage_key sengaja tidak diekspos.
     items = [
         MessageWithAttachmentsResponse(
             message=MessageResponse.model_validate(item.message),
@@ -429,10 +367,6 @@ def get_message_history(
     )
 
 
-# ============================================================
-# 5b. DELETE MESSAGES (hapus untuk saya / untuk semua orang)
-# ============================================================
-
 @router.post(
     "/{conversation_id}/messages/delete",
     response_model=ApiResponse[DeleteMessagesResponse],
@@ -446,11 +380,7 @@ def delete_messages(
     db: Annotated[ChatDatabaseContext, Depends(get_chat_database_context)],
     hub: Annotated[ChatHub, Depends(get_chat_hub)],
     storage: Annotated[ChatAttachmentStorage, Depends(get_chat_attachment_storage)],
-):
-    """
-    Semua-atau-tidak-sama-sekali. EVERYONE di-push ke WebSocket sebagai
-    `{"type":"message_deleted","conversation_id":…,"message_ids":[…],"deleted_at":…}`.
-    """
+) -> SuccessBody[DeleteMessagesResponse]:
     try:
         result = DeleteMessages(
             conversation_repository=db.conversations,
@@ -468,7 +398,6 @@ def delete_messages(
         db.session.rollback()
         raise
 
-    # File dibuang setelah commit: bila commit gagal, lampiran tetap utuh.
     for attachment in result.removed_attachments:
         _delete_stored_file(storage, attachment.storage_key)
 
@@ -490,11 +419,11 @@ def _delete_stored_file(storage: ChatAttachmentStorage, key: str) -> None:
             continue
         try:
             storage.delete(item)
-        except Exception:  # noqa: BLE001 - file yatim tidak boleh menggagalkan respons yang sudah di-commit
+        except Exception:
             pass
 
 
-def _deleted_event(response: DeleteMessagesResponse) -> dict:
+def _deleted_event(response: DeleteMessagesResponse) -> JsonObject:
     data = response.model_dump(mode="json")
     return {
         "type": "message_deleted",
@@ -503,10 +432,6 @@ def _deleted_event(response: DeleteMessagesResponse) -> dict:
         "deleted_at": data["deleted_at"],
     }
 
-
-# ============================================================
-# 6. MARK CONVERSATION READ
-# ============================================================
 
 @router.patch(
     "/{conversation_id}/read",
@@ -524,15 +449,7 @@ def mark_conversation_read(
         Depends(get_chat_database_context),
     ],
     hub: Annotated[ChatHub, Depends(get_chat_hub)],
-):
-    """
-    Menandai pesan masuk yang belum dibaca.
-
-    Mengabaikan pesan milik pengirim sendiri.
-
-    Operasi berulang harus idempotent.
-    """
-
+) -> SuccessBody[MarkConversationReadResponse]:
     try:
         use_case = MarkConversationRead(
             conversation_repository=db.conversations,
@@ -562,11 +479,7 @@ def mark_conversation_read(
         raise
 
 
-# ============================================================
-# 7. REAL-TIME (WEBSOCKET)
-# ============================================================
-
-def _attachment_response(conversation_id: str, attachment) -> MessageAttachmentResponse:
+def _attachment_response(conversation_id: str, attachment: MessageAttachment) -> MessageAttachmentResponse:
     base = f"{API_PREFIX}/conversations/{conversation_id}/attachments/{attachment.id}/file"
     response = MessageAttachmentResponse.model_validate(attachment)
     response.download_path = base
@@ -574,7 +487,7 @@ def _attachment_response(conversation_id: str, attachment) -> MessageAttachmentR
     return response
 
 
-def _message_event(message, attachments=()) -> dict:
+def _message_event(message: Message, attachments: tuple[MessageAttachment, ...] = ()) -> JsonObject:
     return {
         "type": "message",
         "message": MessageResponse.model_validate(message).model_dump(mode="json"),
@@ -584,7 +497,7 @@ def _message_event(message, attachments=()) -> dict:
     }
 
 
-def _read_event(conversation_id: str, actor: ChatActor, marked_count: int) -> dict:
+def _read_event(conversation_id: str, actor: ChatActor, marked_count: int) -> JsonObject:
     return {
         "type": "read",
         "conversation_id": conversation_id,
@@ -594,8 +507,8 @@ def _read_event(conversation_id: str, actor: ChatActor, marked_count: int) -> di
     }
 
 
-def _error_event(message: str, code: str | None = None) -> dict:
-    event = {"type": "error", "message": message}
+def _error_event(message: str, code: str | None = None) -> JsonObject:
+    event: JsonObject = {"type": "error", "message": message}
     if code:
         event["code"] = code
     return event
@@ -609,20 +522,12 @@ async def conversation_socket(
     open_context: Annotated[ChatContextFactory, Depends(get_chat_context_factory)],
     authenticate: Annotated[SocketAuthenticator, Depends(get_socket_authenticator)],
     notify: Annotated[MessageNotifier, Depends(get_socket_message_notifier)],
-):
-    """
-    Chat real-time satu percakapan. Token: header `Authorization: Bearer` atau query `?token=`.
-
-    Client → server: `{"type":"message","text":"..."}`, `{"type":"read"}`, `{"type":"ping"}`.
-    Server → client: `ready`, `message`, `read`, `message_deleted`, `pong`, `error`. Close 4401 = token tidak valid,
-    4404 = percakapan tidak ada / bukan peserta.
-    """
+) -> None:
     token = token_from(websocket)
     try:
         actor = await run_in_threadpool(authenticate, token) if token else None
     except AppError:
         actor = None
-    # Handshake diterima dulu: bila ditolak sebelum accept, uvicorn menjawab HTTP 403 dan kode close tidak sampai ke client.
     await websocket.accept()
     if actor is None:
         await websocket.close(code=CLOSE_UNAUTHORIZED, reason="Token tidak valid, silakan login kembali")
@@ -678,8 +583,7 @@ async def conversation_socket(
 
 def _send_message(
     open_context: ChatContextFactory, notify: MessageNotifier, conversation_id: str, actor: ChatActor, text: str
-):
-    # Sama seperti REST: simpan pesan + notifikasi dalam satu transaksi.
+) -> Message:
     with open_context() as db:
         try:
             result = SendTextMessage(
@@ -708,11 +612,6 @@ def _mark_read(open_context: ChatContextFactory, conversation_id: str, actor: Ch
             raise
 
 
-
-# ============================================================
-# 8. LAMPIRAN (FOTO / DOKUMEN)
-# ============================================================
-
 _IMAGE_SIGNATURES = (b"\xff\xd8", b"\x89PNG\r\n\x1a\n")
 
 
@@ -738,7 +637,7 @@ def send_attachment_message(
     storage: Annotated[ChatAttachmentStorage, Depends(get_chat_attachment_storage)],
     file: UploadFile = File(..., description="Foto JPG/PNG/WebP (maks 10 MB) atau dokumen PDF/Office/TXT/CSV/ZIP (maks 10 MB)"),
     caption: str | None = Form(None, description="Keterangan opsional"),
-):
+) -> SuccessBody[MessageWithAttachmentsResponse]:
     try:
         message, attachments = SendAttachmentMessage(
             conversation_repository=db.conversations,
@@ -786,7 +685,7 @@ def download_attachment(
     db: Annotated[ChatDatabaseContext, Depends(get_chat_database_context)],
     storage: Annotated[ChatAttachmentStorage, Depends(get_chat_attachment_storage)],
     thumbnail: bool = False,
-):
+) -> StreamingResponse:
     attachment, mime, stream = GetMessageAttachmentFile(
         conversation_repository=db.conversations,
         message_repository=db.messages,
@@ -803,7 +702,6 @@ def download_attachment(
     return StreamingResponse(
         iter(lambda: stream.read(64 * 1024), b""),
         media_type=mime,
-        # File lampiran tidak pernah berubah setelah dikirim, aman di-cache client.
         headers={
             "Cache-Control": "private, max-age=604800, immutable",
             "Content-Disposition": f'inline; filename="{safe_name}"',

@@ -1,4 +1,3 @@
-
 import os
 from datetime import date, datetime, timedelta
 from io import BytesIO
@@ -44,13 +43,8 @@ from app.modules.projects.presentation.dependencies import (
 from app.modules.projects.presentation.router import router
 
 
-# ============================================================
-# MYSQL CONFIGURATION
-# ============================================================
-
 @pytest.fixture
 def mysql_engine():
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration test disabled")
 
@@ -78,19 +72,7 @@ def mysql_engine():
     return engine
 
 
-# ============================================================
-# ROLLBACK-ONLY UNIT OF WORK
-# ============================================================
-
 class FlushOnlyUnitOfWork:
-    """
-    UoW khusus integration test.
-
-    Tidak melakukan commit permanen.
-    Perubahan tetap berada di transaksi luar
-    yang akan di-rollback.
-    """
-
     def __init__(self, session):
         self.session = session
 
@@ -98,12 +80,7 @@ class FlushOnlyUnitOfWork:
         self.session.flush()
 
 
-# ============================================================
-# PDF TEST DATA
-# ============================================================
-
 def create_valid_pdf() -> bytes:
-
     writer = PdfWriter()
 
     writer.add_blank_page(
@@ -117,15 +94,10 @@ def create_valid_pdf() -> bytes:
     return output.getvalue()
 
 
-# ============================================================
-# END-TO-END MYSQL INTEGRATION
-# ============================================================
-
 def test_attachment_http_mysql_storage_flow(
     mysql_engine,
     tmp_path,
 ):
-
     user_id = str(uuid4())
     project_id = str(uuid4())
 
@@ -144,11 +116,6 @@ def test_attachment_http_mysql_storage_flow(
             autoflush=False,
             expire_on_commit=False,
         ) as session:
-
-            # ================================================
-            # 1. CREATE TEMPORARY UMKM
-            # ================================================
-
             category_id = session.execute(
                 text("""
                     SELECT id
@@ -222,10 +189,6 @@ def test_attachment_http_mysql_storage_flow(
 
             session.flush()
 
-            # ================================================
-            # 2. BUILD FASTAPI TEST APPLICATION
-            # ================================================
-
             app = FastAPI()
 
             register_error_handlers(app)
@@ -262,11 +225,6 @@ def test_attachment_http_mysql_storage_flow(
             )
 
             with TestClient(app) as client:
-
-                # ============================================
-                # 3. INVALID PDF MUST BE REJECTED
-                # ============================================
-
                 invalid_response = client.post(
                     base_url,
                     files={
@@ -283,10 +241,6 @@ def test_attachment_http_mysql_storage_flow(
                 assert list(storage.root.iterdir()) == []
 
                 print("\nINVALID PDF REJECTION: OK")
-
-                # ============================================
-                # 4. UPLOAD REAL PDF
-                # ============================================
 
                 upload_response = client.post(
                     base_url,
@@ -320,10 +274,6 @@ def test_attachment_http_mysql_storage_flow(
 
                 print("HTTP UPLOAD: OK")
 
-                # ============================================
-                # 5. VERIFY MYSQL METADATA
-                # ============================================
-
                 metadata = attachment_repository.get_by_id(
                     project_id=project_id,
                     attachment_id=attachment_id,
@@ -343,10 +293,6 @@ def test_attachment_http_mysql_storage_flow(
 
                 print("MYSQL + FILE STORAGE: OK")
 
-                # ============================================
-                # 6. HTTP LIST
-                # ============================================
-
                 list_response = client.get(
                     base_url
                 )
@@ -359,10 +305,6 @@ def test_attachment_http_mysql_storage_flow(
                 assert items[0]["id"] == attachment_id
 
                 print("HTTP LIST: OK")
-
-                # ============================================
-                # 7. HTTP DOWNLOAD
-                # ============================================
 
                 file_url = (
                     f"{base_url}/{attachment_id}/file"
@@ -385,10 +327,6 @@ def test_attachment_http_mysql_storage_flow(
 
                 print("HTTP DOWNLOAD: OK")
 
-                # ============================================
-                # 8. FOREIGN UMKM ACCESS DENIED
-                # ============================================
-
                 app.dependency_overrides[
                     get_authenticated_project_user
                 ] = lambda: AuthenticatedProjectUser(
@@ -404,14 +342,9 @@ def test_attachment_http_mysql_storage_flow(
 
                 print("FOREIGN UMKM ACCESS: DENIED")
 
-                # Restore authenticated project owner.
                 app.dependency_overrides[
                     get_authenticated_project_user
                 ] = authenticated_owner
-
-                # ============================================
-                # 9. HTTP DELETE
-                # ============================================
 
                 delete_response = client.delete(
                     f"{base_url}/{attachment_id}"
@@ -433,19 +366,10 @@ def test_attachment_http_mysql_storage_flow(
             app.dependency_overrides.clear()
 
     finally:
-        # ====================================================
-        # 10. ROLLBACK TEST DATABASE DATA
-        # ====================================================
-
         transaction.rollback()
         connection.close()
 
-    # ========================================================
-    # 11. VERIFY DATABASE CLEANUP
-    # ========================================================
-
     with mysql_engine.connect() as check_connection:
-
         for table, column, identifier in [
             ("users", "id", user_id),
             ("umkm_profiles", "user_id", user_id),

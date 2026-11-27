@@ -16,21 +16,14 @@ from app.modules.milestones.infrastructure.repositories import (
     SqlAlchemyMilestoneRepository,
 )
 
-# SQLITE TEST DATABASE
 
 @pytest.fixture
 def repo():
-
     engine = create_engine(
         "sqlite+pysqlite:///:memory:"
     )
 
-    # ========================================================
-    # 1. CREATE TEST TABLES
-    # ========================================================
-
     with engine.begin() as connection:
-
         connection.execute(
             text("""
                 CREATE TABLE projects (
@@ -77,10 +70,6 @@ def repo():
             """)
         )
 
-        # ====================================================
-        # 2. SEED PROJECT AND USER
-        # ====================================================
-
         connection.execute(
             text("""
                 INSERT INTO projects
@@ -100,10 +89,6 @@ def repo():
                 VALUES ('u1')
             """)
         )
-
-        # ====================================================
-        # 3. SEED MILESTONES
-        # ====================================================
 
         connection.execute(
             text("""
@@ -135,13 +120,8 @@ def repo():
             """)
         )
 
-    # ========================================================
-    # 4. PROVIDE REPOSITORY
-    # ========================================================
-
     try:
         with Session(engine) as session:
-
             repository = (
                 SqlAlchemyMilestoneRepository(
                     session
@@ -154,10 +134,6 @@ def repo():
         engine.dispose()
 
 
-# ============================================================
-# TEST 1 - GET PROJECT CONTEXT
-# ============================================================
-
 def test_context(repo):
     repository, _ = repo
 
@@ -168,17 +144,12 @@ def test_context(repo):
     assert project.umkm_id == "u1"
     assert project.project_id == "p1"
 
-    # Freelancer access belum terintegrasi.
     assert project.freelancer_id is None
 
     assert project.deadline == date(
         2026, 11, 11
     )
 
-
-# ============================================================
-# TEST 2 - PROJECT NOT FOUND
-# ============================================================
 
 def test_missing_context(repo):
     repository, _ = repo
@@ -187,10 +158,6 @@ def test_missing_context(repo):
         "missing"
     ) is None
 
-
-# ============================================================
-# TEST 3 - LIST MILESTONES
-# ============================================================
 
 def test_list(repo):
     repository, _ = repo
@@ -215,10 +182,6 @@ def test_list(repo):
     assert items[1].status == "SELESAI"
 
 
-# ============================================================
-# TEST 4 - EXACT TOTAL WEIGHT
-# ============================================================
-
 def test_total(repo):
     repository, _ = repo
 
@@ -230,10 +193,6 @@ def test_total(repo):
         "missing"
     ) == Decimal("0.00")
 
-
-# ============================================================
-# TEST 5 - PLAN REPLACEMENT FAIL-CLOSED
-# ============================================================
 
 def test_fails_closed_write_plan(repo):
     repository, session = repo
@@ -253,10 +212,6 @@ def test_fails_closed_write_plan(repo):
 
     assert count == 3
 
-
-# ============================================================
-# TEST 6 - CONDITIONAL COMPLETION
-# ============================================================
 
 def test_completion_atomic(repo):
     repository, session = repo
@@ -310,10 +265,6 @@ def test_completion_atomic(repo):
     )
 
 
-# ============================================================
-# TEST 7 - WRONG PROJECT OR MILESTONE
-# ============================================================
-
 def test_wrong_project_or_id(repo):
     repository, _ = repo
 
@@ -335,10 +286,6 @@ def test_wrong_project_or_id(repo):
         now,
     ) is False
 
-
-# ============================================================
-# TEST 8 - READ ONLY QUERIES
-# ============================================================
 
 def test_read_only_methods(repo):
     repository, session = repo
@@ -363,10 +310,6 @@ def test_read_only_methods(repo):
 
     assert before == after
 
-
-# ============================================================
-# TEST 9 - ORM MODEL METADATA
-# ============================================================
 
 def test_model_metadata():
     table = ProjectMilestoneModel.__table__

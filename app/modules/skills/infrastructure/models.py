@@ -4,8 +4,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
-# Master data dibaca lewat SQL mentah; model ini dibutuhkan agar FK
-# projects.category_id & project_skills.skill_id bisa di-resolve ORM.
 class SkillModel(Base):
     __tablename__ = "skills"
 

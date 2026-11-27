@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.core.exceptions import (
@@ -16,7 +15,6 @@ from app.modules.profiles.application.use_cases import (
 
 
 class FakeFreelancerRepository:
-
     def __init__(self):
         self.profiles = {}
 
@@ -29,7 +27,6 @@ class FakeFreelancerRepository:
 
 
 class FakeUnitOfWork(UnitOfWork):
-
     def __init__(self):
         self.committed = False
 
@@ -127,8 +124,6 @@ def test_create_freelancer_invalid_price_range():
     assert uow.committed is False
 
 
-
-# TEST 6: Kota tidak boleh kosong
 def test_create_freelancer_empty_city():
     repo = FakeFreelancerRepository()
     uow = FakeUnitOfWork()
@@ -142,7 +137,6 @@ def test_create_freelancer_empty_city():
     assert uow.committed is False
 
 
-# TEST 7: Harga maksimum tidak boleh negatif
 def test_create_freelancer_negative_max_price():
     repo = FakeFreelancerRepository()
     uow = FakeUnitOfWork()
@@ -156,7 +150,6 @@ def test_create_freelancer_negative_max_price():
     assert uow.committed is False
 
 
-# TEST 8: Profesi maksimal 150 karakter
 def test_create_freelancer_title_too_long():
     repo = FakeFreelancerRepository()
     uow = FakeUnitOfWork()
@@ -170,7 +163,6 @@ def test_create_freelancer_title_too_long():
     assert uow.committed is False
 
 
-# TEST 9: Harga jasa boleh tidak diisi
 def test_create_freelancer_without_prices():
     repo = FakeFreelancerRepository()
     uow = FakeUnitOfWork()
@@ -188,7 +180,6 @@ def test_create_freelancer_without_prices():
     assert uow.committed is True
 
 
-# TEST 10: Spasi berlebihan dibersihkan
 def test_create_freelancer_trims_whitespace():
     repo = FakeFreelancerRepository()
     uow = FakeUnitOfWork()

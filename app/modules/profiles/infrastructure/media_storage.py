@@ -3,8 +3,10 @@ import os
 import re
 import tempfile
 import warnings
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import BinaryIO
 from uuid import uuid4
 from threading import BoundedSemaphore
 
@@ -22,7 +24,7 @@ DECODER_SLOT = BoundedSemaphore(1)
 
 
 class LocalImageStorage:
-    def __init__(self, root):
+    def __init__(self, root: str | Path):
         root = Path(root)
         if not root.is_absolute() or root.is_symlink():
             raise StorageFailure("Storage root harus direktori absolut tanpa symlink")
@@ -32,7 +34,7 @@ class LocalImageStorage:
         except OSError as exc:
             raise StorageFailure("Storage tidak tersedia") from exc
 
-    def _path(self, key):
+    def _path(self, key: str) -> Path:
         if not isinstance(key, str) or not KEY_PATTERN.fullmatch(key):
             raise StorageFailure("Storage key tidak valid")
         path = self.root / key
@@ -41,7 +43,7 @@ class LocalImageStorage:
         return path
 
     @contextmanager
-    def temporary_upload(self):
+    def temporary_upload(self) -> Iterator[BinaryIO]:
         try:
             with tempfile.NamedTemporaryFile(prefix=".upload-", dir=self.root) as stream:
                 yield stream
@@ -49,13 +51,12 @@ class LocalImageStorage:
             logger.exception("Temporary upload storage failed")
             raise StorageFailure("Storage tidak tersedia") from exc
 
-    def save_image(self, source):
-        # One bounded 4096x4096 decode per worker process at a time.
+    def save_image(self, source: BinaryIO) -> StoredImage:
         with DECODER_SLOT:
             return self._save_image(source)
 
-    def _save_image(self, source):
-        output = None
+    def _save_image(self, source: BinaryIO) -> StoredImage:
+        output: str | None = None
         try:
             with self.temporary_upload() as raw:
                 total = 0
@@ -67,7 +68,6 @@ class LocalImageStorage:
                 if total == 0:
                     raise InvalidImage("File gambar kosong")
                 raw.seek(0)
-                # Known signatures distinguish unsupported formats from broken images.
                 signature = raw.read(12)
                 raw.seek(0)
                 supported_signature = (
@@ -95,7 +95,6 @@ class LocalImageStorage:
                             oriented = ImageOps.exif_transpose(picture)
                             mode = "RGB" if image_format == "JPEG" else "RGBA"
                             with oriented.convert(mode) as converted:
-                                # Fresh pixel-only image: no EXIF, ICC, XMP or textual metadata.
                                 with Image.frombytes(mode, converted.size, converted.tobytes()) as clean:
                                     fd, output = tempfile.mkstemp(prefix=".normalized-", dir=self.root)
                                     with os.fdopen(fd, "w+b") as destination:
@@ -128,7 +127,7 @@ class LocalImageStorage:
                     logger.exception("Temporary image cleanup failed: %s", output)
                     raise StorageFailure("Pembersihan file sementara gagal") from exc
 
-    def open(self, key):
+    def open(self, key: str) -> BinaryIO:
         try:
             descriptor = os.open(self._path(key), os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
             return os.fdopen(descriptor, "rb")
@@ -136,7 +135,7 @@ class LocalImageStorage:
             logger.exception("Cannot open media file: %s", key)
             raise StorageFailure("File media tidak tersedia") from exc
 
-    def delete(self, key):
+    def delete(self, key: str) -> None:
         try:
             self._path(key).unlink(missing_ok=True)
         except OSError as exc:

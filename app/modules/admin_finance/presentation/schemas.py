@@ -13,9 +13,10 @@ from app.modules.payments.domain.entities import (
 )
 from app.modules.payments.presentation.schemas import PaymentAttemptResponse
 from app.modules.workflow.domain.entities import status_label
+from collections.abc import Mapping
 
 
-def _label(labels: dict, value: str | None) -> str | None:
+def _label(labels: Mapping[str, str], value: str | None) -> str | None:
     if value is None:
         return None
     return next((label for key, label in labels.items() if key == value), value)

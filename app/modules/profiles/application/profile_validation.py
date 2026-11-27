@@ -1,5 +1,3 @@
-"""Profile column constraints shared by create and replace use cases."""
-
 from app.core.exceptions import BadRequestError
 from app.modules.profiles.application.dto import CreateFreelancerProfileInput, CreateUmkmProfileInput
 from app.modules.profiles.domain.entities import FreelancerProfile, UmkmProfile

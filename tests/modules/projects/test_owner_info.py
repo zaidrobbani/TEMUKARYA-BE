@@ -56,8 +56,8 @@ def test_selected_freelancer_can_view_non_open_project():
     repo = SimpleNamespace(get_by_id=lambda pid: p if pid == "p1" else None)
     use_case = GetProjectDetail(repo, is_selected_freelancer=lambda pid, uid: uid == "f-terpilih")
     assert use_case.execute("p1", "f-terpilih") is p
-    assert use_case.execute("p1", "u1") is p  # pemilik
+    assert use_case.execute("p1", "u1") is p
     with pytest.raises(NotFoundError):
         use_case.execute("p1", "f-lain")
     with pytest.raises(NotFoundError):
-        GetProjectDetail(repo).execute("p1", "f-terpilih")  # tanpa checker: perilaku lama
+        GetProjectDetail(repo).execute("p1", "f-terpilih")

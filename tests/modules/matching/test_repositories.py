@@ -1,4 +1,3 @@
-
 from dataclasses import asdict
 
 import pytest
@@ -15,30 +14,13 @@ from app.modules.matching.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# SQLITE TEST DATABASE
-# ============================================================
-
 @pytest.fixture
 def context():
-    """
-    Menyiapkan database SQLite sementara
-    untuk setiap test.
-
-    Hanya kolom yang digunakan Repository
-    yang dimasukkan ke dalam skema pengujian.
-    """
-
     engine = create_engine(
         "sqlite+pysqlite:///:memory:"
     )
 
-    # ========================================================
-    # 1. CREATE TEST TABLES
-    # ========================================================
-
     with engine.begin() as connection:
-
         schemas = (
             """
             CREATE TABLE users (
@@ -89,10 +71,6 @@ def context():
             connection.execute(
                 text(schema)
             )
-
-        # ====================================================
-        # 2. SEED USERS
-        # ====================================================
 
         users = [
             {
@@ -145,10 +123,6 @@ def context():
             """),
             users,
         )
-
-        # ====================================================
-        # 3. SEED FREELANCER PROFILES
-        # ====================================================
 
         profiles = [
             {
@@ -211,10 +185,6 @@ def context():
             profiles,
         )
 
-        # ====================================================
-        # 4. SEED FREELANCER SKILLS
-        # ====================================================
-
         connection.execute(
             text("""
                 INSERT INTO freelancer_skills (
@@ -232,10 +202,6 @@ def context():
                 {"id": "f3", "skill": "python"},
             ],
         )
-
-        # ====================================================
-        # 5. SEED PROJECTS
-        # ====================================================
 
         projects = [
             {
@@ -302,10 +268,6 @@ def context():
             projects,
         )
 
-        # ====================================================
-        # 6. SEED PROJECT SKILLS
-        # ====================================================
-
         connection.execute(
             text("""
                 INSERT INTO project_skills (
@@ -327,13 +289,8 @@ def context():
             ],
         )
 
-    # ========================================================
-    # 7. RETURN REPOSITORY AND SESSION
-    # ========================================================
-
     try:
         with Session(engine) as session:
-
             repository = (
                 SqlAlchemyMatchingRepository(
                     session
@@ -345,10 +302,6 @@ def context():
     finally:
         engine.dispose()
 
-
-# ============================================================
-# TEST 1 - GET PROJECT DATA
-# ============================================================
 
 def test_get_project_reads_ownership_category_status_and_skills(
     context,
@@ -378,10 +331,6 @@ def test_get_project_reads_ownership_category_status_and_skills(
     )
 
 
-# ============================================================
-# TEST 2 - GET DRAFT FOR OWNERSHIP VALIDATION
-# ============================================================
-
 def test_get_project_can_load_draft_for_owner_validation(
     context,
 ):
@@ -392,10 +341,6 @@ def test_get_project_can_load_draft_for_owner_validation(
     assert project.status == "DRAFT"
 
 
-# ============================================================
-# TEST 3 - UNKNOWN PROJECT
-# ============================================================
-
 def test_get_project_missing_returns_none(
     context,
 ):
@@ -405,10 +350,6 @@ def test_get_project_missing_returns_none(
         "unknown"
     ) is None
 
-
-# ============================================================
-# TEST 4 - FREELANCER PROFILE AND SKILLS
-# ============================================================
 
 def test_get_freelancer_includes_skills_and_price(
     context,
@@ -439,10 +380,6 @@ def test_get_freelancer_includes_skills_and_price(
     assert freelancer.service_price_max == 1500000
 
 
-# ============================================================
-# TEST 5 - BUSY FREELANCER CAN BE READ
-# ============================================================
-
 def test_get_freelancer_busy_is_still_readable(
     context,
 ):
@@ -452,10 +389,6 @@ def test_get_freelancer_busy_is_still_readable(
 
     assert freelancer.availability_status == "BUSY"
 
-
-# ============================================================
-# TEST 6 - UNKNOWN / WRONG ROLE
-# ============================================================
 
 def test_get_freelancer_missing_and_wrong_role(
     context,
@@ -470,10 +403,6 @@ def test_get_freelancer_missing_and_wrong_role(
         "u1"
     ) is None
 
-
-# ============================================================
-# TEST 7 - AVAILABLE FREELANCERS
-# ============================================================
 
 def test_available_freelancers_are_filtered_and_deterministic(
     context,
@@ -492,10 +421,6 @@ def test_available_freelancers_are_filtered_and_deterministic(
     ]
 
 
-# ============================================================
-# TEST 8 - FREELANCER WITHOUT SKILLS
-# ============================================================
-
 def test_available_freelancer_with_no_skills(
     context,
 ):
@@ -505,10 +430,6 @@ def test_available_freelancer_with_no_skills(
 
     assert freelancers[-1].skill_ids == ()
 
-
-# ============================================================
-# TEST 9 - PUBLISHED PROJECTS ONLY
-# ============================================================
 
 def test_published_projects_require_timestamp_and_open_status(
     context,
@@ -527,10 +448,6 @@ def test_published_projects_require_timestamp_and_open_status(
     ]
 
 
-# ============================================================
-# TEST 10 - PROJECT WITHOUT SKILLS
-# ============================================================
-
 def test_published_project_with_no_skills(
     context,
 ):
@@ -540,10 +457,6 @@ def test_published_project_with_no_skills(
 
     assert projects[-1].required_skill_ids == ()
 
-
-# ============================================================
-# TEST 11 - NO DUPLICATE SKILLS
-# ============================================================
 
 def test_candidate_skill_sets_no_duplicates(
     context,
@@ -556,10 +469,6 @@ def test_candidate_skill_sets_no_duplicates(
     assert len(freelancer.skill_ids) == 3
     assert len(project.required_skill_ids) == 3
 
-
-# ============================================================
-# TEST 12 - DATA LEAK PROTECTION
-# ============================================================
 
 def test_repository_does_not_expose_sensitive_user_data(
     context,
@@ -575,10 +484,6 @@ def test_repository_does_not_expose_sensitive_user_data(
     assert "password_hash" not in rendered
     assert "secret1@" not in rendered
 
-
-# ============================================================
-# TEST 13 - READ ONLY
-# ============================================================
 
 def test_repository_only_reads_data(
     context,
@@ -605,10 +510,6 @@ def test_repository_only_reads_data(
     assert not session.deleted
 
 
-# ============================================================
-# TEST 14 - PARAMETERIZED SQL LOOKUPS
-# ============================================================
-
 def test_parameterized_lookup_resists_injection(
     context,
 ):
@@ -622,10 +523,6 @@ def test_parameterized_lookup_resists_injection(
         "f1' OR '1'='1"
     ) is None
 
-
-# ============================================================
-# TEST 15 - PREVENT N+1 QUERY
-# ============================================================
 
 def test_bulk_fetch_does_not_n_plus_one(
     context,
@@ -653,14 +550,12 @@ def test_bulk_fetch_does_not_n_plus_one(
     try:
         repo.iter_available_freelancers()
 
-        # 1 query profil, 1 query skills
         assert len(statements) == 2
 
         statements.clear()
 
         repo.iter_published_projects()
 
-        # 1 query project, 1 query skills
         assert len(statements) == 2
 
     finally:
@@ -670,10 +565,6 @@ def test_bulk_fetch_does_not_n_plus_one(
             trace,
         )
 
-
-# ============================================================
-# TEST 16 - EMPTY CANDIDATES
-# ============================================================
 
 def test_empty_candidate_queries_skip_skills_lookup(
     context,

@@ -166,8 +166,6 @@ def _clean_url(value: str | None) -> str | None:
 
 
 class SubmitResult(_SubmissionUseCase):
-    """F-18/F-19: kirim hasil atau hasil revisi → Menunggu Review."""
-
     def __init__(
         self,
         workflow: WorkflowRepository,
@@ -266,8 +264,6 @@ def _submit_blocker(status: str) -> str:
 
 
 class ListSubmissions(_SubmissionUseCase):
-    """U-23: UMKM dan freelancer melihat semua versi kiriman."""
-
     def execute(self, actor: Actor, project_id: str) -> SubmissionList:
         context = self._access.load(project_id, actor)
         if context.agreement is None:
@@ -335,14 +331,11 @@ def _clean_revision(data: RevisionRequestInput) -> tuple[str, tuple[str, ...], t
         items.append(RevisionItem(title, detail, area))
     if note is None and not items:
         raise BadRequestError("Catatan revisi wajib diisi")
-    # review_note wajib terisi untuk revisi (constraint DB); susun dari poin bila catatan kosong.
     review_note = note or "\n".join(f"{i}. {it.title}: {it.detail}" for i, it in enumerate(items, start=1))
     return review_note[:MAX_REVISION_NOTE], tuple(areas), tuple(items)
 
 
 class RequestRevision(_SubmissionUseCase):
-    """U-24: UMKM meminta revisi kiriman terbaru → Revisi."""
-
     def __init__(
         self,
         workflow: WorkflowRepository,
@@ -396,8 +389,6 @@ class RequestRevision(_SubmissionUseCase):
 
 
 class ApproveSubmission(_SubmissionUseCase):
-    """U-25: setujui hasil → Selesai + dana RELEASED dalam satu transaksi. Request ulang tidak melepas dana lagi."""
-
     def __init__(
         self,
         workflow: WorkflowRepository,

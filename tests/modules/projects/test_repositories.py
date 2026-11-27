@@ -1,4 +1,3 @@
-
 import os
 from datetime import date, datetime, timedelta
 from uuid import uuid4
@@ -22,8 +21,6 @@ from app.modules.projects.infrastructure.repositories import (
 
 @pytest.fixture
 def mysql_engine():
-    """Aktif hanya untuk integration test lokal."""
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration tests are not enabled")
 
@@ -50,8 +47,6 @@ def mysql_engine():
 
 
 def test_project_repository_mysql_integration(mysql_engine):
-    """Uji repository dengan transaksi MySQL yang di-rollback."""
-
     user_id = str(uuid4())
     project_id = str(uuid4())
 
@@ -61,10 +56,6 @@ def test_project_repository_mysql_integration(mysql_engine):
     try:
         with Session(bind=connection) as session:
             repository = SqlAlchemyProjectRepository(session)
-
-            # ----------------------------------------
-            # 1. Prepare existing master data
-            # ----------------------------------------
 
             category_id = session.execute(
                 text(
@@ -76,10 +67,6 @@ def test_project_repository_mysql_integration(mysql_engine):
             skill_id = session.execute(
                 text("SELECT id FROM skills LIMIT 1")
             ).scalar_one()
-
-            # ----------------------------------------
-            # 2. Create temporary UMKM
-            # ----------------------------------------
 
             session.execute(
                 text("""
@@ -131,10 +118,6 @@ def test_project_repository_mysql_integration(mysql_engine):
                 [skill_id]
             )
 
-            # ----------------------------------------
-            # 3. Create Project
-            # ----------------------------------------
-
             project = Project(
                 id=project_id,
                 umkm_id=user_id,
@@ -153,10 +136,6 @@ def test_project_repository_mysql_integration(mysql_engine):
             assert saved.status == "TERBUKA"
             assert saved.budget == 100000
 
-            # ----------------------------------------
-            # 4. Save Project Skills
-            # ----------------------------------------
-
             repository.add_skills(project_id, [skill_id])
             session.flush()
 
@@ -171,19 +150,11 @@ def test_project_repository_mysql_integration(mysql_engine):
 
             assert skill_count == 1
 
-            # ----------------------------------------
-            # 5. Read Project
-            # ----------------------------------------
-
             loaded = repository.get_by_id(project_id)
 
             assert loaded is not None
             assert loaded.title == project.title
             assert loaded.umkm_id == user_id
-
-            # ----------------------------------------
-            # 6. List Projects by UMKM
-            # ----------------------------------------
 
             projects = repository.list_by_umkm_id(user_id)
 
@@ -195,10 +166,6 @@ def test_project_repository_mysql_integration(mysql_engine):
     finally:
         transaction.rollback()
         connection.close()
-
-    # ----------------------------------------
-    # 7. Verify Rollback
-    # ----------------------------------------
 
     with mysql_engine.connect() as connection:
         for table, column, identifier in [
@@ -219,11 +186,6 @@ def test_project_repository_mysql_integration(mysql_engine):
 
 
 def test_project_repository_mysql_update(mysql_engine):
-    """
-    Menguji UPDATE project, penggantian skills,
-    pengecekan status, dan rollback MySQL.
-    """
-
     from dataclasses import replace
 
     user_id = str(uuid4())
@@ -235,10 +197,6 @@ def test_project_repository_mysql_update(mysql_engine):
     try:
         with Session(bind=connection) as session:
             repository = SqlAlchemyProjectRepository(session)
-
-            # ==================================================
-            # 1. PREPARE MASTER DATA
-            # ==================================================
 
             category_id = session.execute(
                 text("""
@@ -265,10 +223,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
             old_skill = skill_ids[0]
             new_skill = skill_ids[1]
-
-            # ==================================================
-            # 2. CREATE TEMPORARY UMKM
-            # ==================================================
 
             session.execute(
                 text("""
@@ -316,10 +270,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
             assert repository.umkm_profile_exists(user_id)
 
-            # ==================================================
-            # 3. CREATE ORIGINAL PROJECT
-            # ==================================================
-
             original = Project(
                 id=project_id,
                 umkm_id=user_id,
@@ -342,10 +292,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
             print("\nCREATE ORIGINAL PROJECT: OK")
 
-            # ==================================================
-            # 4. UPDATE PROJECT + REPLACE SKILLS
-            # ==================================================
-
             updated = replace(
                 original,
                 title="Project Setelah Update",
@@ -366,10 +312,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
             print("PROJECT UPDATE: OK")
 
-            # ==================================================
-            # 5. VERIFY MYSQL VALUES
-            # ==================================================
-
             row = session.execute(
                 text("""
                     SELECT title, description, budget
@@ -387,10 +329,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
             print("MYSQL PROJECT VALUES: OK")
 
-            # ==================================================
-            # 6. VERIFY SKILL REPLACEMENT
-            # ==================================================
-
             saved_skills = set(
                 session.execute(
                     text("""
@@ -406,10 +344,6 @@ def test_project_repository_mysql_update(mysql_engine):
             assert old_skill not in saved_skills
 
             print("PROJECT SKILLS REPLACED: OK")
-
-            # ==================================================
-            # 7. VERIFY STATUS PROTECTION
-            # ==================================================
 
             session.execute(
                 text("""
@@ -451,10 +385,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
         print("TRANSACTION ROLLBACK: EXECUTED")
 
-    # ======================================================
-    # 8. VERIFY DATABASE CLEANUP
-    # ======================================================
-
     with mysql_engine.connect() as connection:
         checks = [
             ("users", "id", user_id),
@@ -479,14 +409,6 @@ def test_project_repository_mysql_update(mysql_engine):
 
 
 def test_project_repository_mysql_delete(mysql_engine):
-    """
-    Integration test DELETE Project:
-    1. Hapus project yang memenuhi syarat.
-    2. Verifikasi ON DELETE CASCADE pada project_skills.
-    3. Tolak DELETE project dengan attachment.
-    4. Rollback semua data pengujian.
-    """
-
     user_id = str(uuid4())
     deletable_project_id = str(uuid4())
     blocked_project_id = str(uuid4())
@@ -498,10 +420,6 @@ def test_project_repository_mysql_delete(mysql_engine):
     try:
         with Session(bind=connection) as session:
             repository = SqlAlchemyProjectRepository(session)
-
-            # ==================================================
-            # 1. PREPARE MASTER DATA
-            # ==================================================
 
             category_id = session.execute(
                 text("""
@@ -519,10 +437,6 @@ def test_project_repository_mysql_delete(mysql_engine):
                     LIMIT 1
                 """)
             ).scalar_one()
-
-            # ==================================================
-            # 2. CREATE TEMPORARY UMKM
-            # ==================================================
 
             session.execute(
                 text("""
@@ -572,10 +486,6 @@ def test_project_repository_mysql_delete(mysql_engine):
 
             print("\nTEMPORARY UMKM: CREATED")
 
-            # ==================================================
-            # 3. CREATE TWO PROJECTS
-            # ==================================================
-
             project_a = Project(
                 id=deletable_project_id,
                 umkm_id=user_id,
@@ -612,10 +522,6 @@ def test_project_repository_mysql_delete(mysql_engine):
 
             print("TWO PROJECTS: CREATED")
 
-            # ==================================================
-            # 4. VERIFY OWNERSHIP PROTECTION
-            # ==================================================
-
             wrong_user_id = str(uuid4())
 
             unauthorized_delete = repository.delete(
@@ -630,10 +536,6 @@ def test_project_repository_mysql_delete(mysql_engine):
             ) is not None
 
             print("OWNERSHIP PROTECTION: OK")
-
-            # ==================================================
-            # 5. DELETE PROJECT WITHOUT BLOCKERS
-            # ==================================================
 
             deleted = repository.delete(
                 project_id=deletable_project_id,
@@ -655,10 +557,6 @@ def test_project_repository_mysql_delete(mysql_engine):
 
             print("PROJECT DELETE: OK")
 
-            # ==================================================
-            # 6. VERIFY ON DELETE CASCADE
-            # ==================================================
-
             remaining_skills = session.execute(
                 text("""
                     SELECT COUNT(*)
@@ -671,10 +569,6 @@ def test_project_repository_mysql_delete(mysql_engine):
             assert remaining_skills == 0
 
             print("PROJECT SKILLS CASCADE: OK")
-
-            # ==================================================
-            # 7. CREATE ATTACHMENT FOR SECOND PROJECT
-            # ==================================================
 
             session.execute(
                 text("""
@@ -711,10 +605,6 @@ def test_project_repository_mysql_delete(mysql_engine):
 
             print("TEST ATTACHMENT: CREATED")
 
-            # ==================================================
-            # 8. VERIFY ATTACHMENT BLOCKS DELETE
-            # ==================================================
-
             blocked = repository.delete(
                 project_id=blocked_project_id,
                 umkm_id=user_id,
@@ -750,10 +640,6 @@ def test_project_repository_mysql_delete(mysql_engine):
         connection.close()
 
         print("TRANSACTION ROLLBACK: EXECUTED")
-
-    # ======================================================
-    # 9. VERIFY DATABASE CLEANUP
-    # ======================================================
 
     with mysql_engine.connect() as connection:
         checks = [

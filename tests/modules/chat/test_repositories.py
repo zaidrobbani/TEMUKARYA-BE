@@ -26,29 +26,19 @@ from app.modules.chat.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# 1. TEST CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
 )
 
 
-# ============================================================
-# 2. SQLITE TEST DATABASE
-# ============================================================
-
 @pytest.fixture
 def db():
-
     engine = create_engine(
         "sqlite+pysqlite:///:memory:"
     )
 
     with engine.begin() as conn:
-
         conn.execute(
             text("""
                 CREATE TABLE users (
@@ -158,7 +148,6 @@ def db():
 
     try:
         with Session(engine) as session:
-
             yield (
                 session,
                 SqlAlchemyConversationRepository(
@@ -172,10 +161,6 @@ def db():
     finally:
         engine.dispose()
 
-
-# ============================================================
-# 3. TEST DATA HELPERS
-# ============================================================
 
 def conv(
     id="c1",
@@ -210,12 +195,7 @@ def message(
     )
 
 
-# ============================================================
-# 4. MODEL METADATA
-# ============================================================
-
 def test_model_metadata():
-
     assert (
         ConversationModel
         .__table__
@@ -238,12 +218,7 @@ def test_model_metadata():
     )
 
 
-# ============================================================
-# 5. USER ROLES AND PROJECT OWNER
-# ============================================================
-
 def test_user_roles_and_project_owner(db):
-
     _, conv_repo, _ = db
 
     assert conv_repo.get_user_role("u1") == "UMKM"
@@ -257,12 +232,7 @@ def test_user_roles_and_project_owner(db):
     assert conv_repo.get_project_owner_id("missing") is None
 
 
-# ============================================================
-# 6. CREATE OR GET GENERAL CONVERSATION
-# ============================================================
-
 def test_create_or_get_general_conversation(db):
-
     session, conv_repo, _ = db
 
     first = conv_repo.create_or_get(
@@ -288,12 +258,7 @@ def test_create_or_get_general_conversation(db):
     assert first.project_id is None
 
 
-# ============================================================
-# 7. PROJECT CONVERSATION IS DIFFERENT
-# ============================================================
-
 def test_project_conversation_distinct_from_general(db):
-
     _, conv_repo, _ = db
 
     first = conv_repo.create_or_get(
@@ -319,12 +284,7 @@ def test_project_conversation_distinct_from_general(db):
     ).id == "c2"
 
 
-# ============================================================
-# 8. GET CONVERSATION
-# ============================================================
-
 def test_get_missing_and_get_by_id(db):
-
     _, conv_repo, _ = db
 
     assert conv_repo.get_by_id("missing") is None
@@ -338,12 +298,7 @@ def test_get_missing_and_get_by_id(db):
     ).freelancer_id == "f1"
 
 
-# ============================================================
-# 9. PRIVATE CONVERSATION LIST
-# ============================================================
-
 def test_list_conversations_private_and_ordered(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -401,12 +356,7 @@ def test_list_conversations_private_and_ordered(db):
     ] == ["c2"]
 
 
-# ============================================================
-# 10. SEND MESSAGE
-# ============================================================
-
 def test_send_message_updates_last_message_at(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -429,12 +379,7 @@ def test_send_message_updates_last_message_at(db):
     ).last_message_at == NOW
 
 
-# ============================================================
-# 11. REJECT INVALID SENDER
-# ============================================================
-
 def test_sender_must_be_participant(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -442,7 +387,6 @@ def test_sender_must_be_participant(db):
     )
 
     with pytest.raises(NotFoundError):
-
         message_repo.create_with_attachments(
             message(
                 "m1",
@@ -454,12 +398,7 @@ def test_sender_must_be_participant(db):
     assert message_repo.get_by_id("m1") is None
 
 
-# ============================================================
-# 12. MESSAGE HISTORY PAGINATION
-# ============================================================
-
 def test_message_history_keyset(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -467,7 +406,6 @@ def test_message_history_keyset(db):
     )
 
     for i in range(3):
-
         msg = message(
             f"m{i}",
             at=NOW + timedelta(seconds=i),
@@ -503,12 +441,7 @@ def test_message_history_keyset(db):
     ] == ["m0"]
 
 
-# ============================================================
-# 13. MESSAGE ORDER WITH SAME TIMESTAMP
-# ============================================================
-
 def test_message_history_tie_breaks_id(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -543,12 +476,7 @@ def test_message_history_tie_breaks_id(db):
     assert second[0].id == "m1"
 
 
-# ============================================================
-# 14. ATTACHMENT METADATA
-# ============================================================
-
 def test_attachment_metadata(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -596,12 +524,7 @@ def test_attachment_metadata(db):
     ).message_type == MessageType.FILE
 
 
-# ============================================================
-# 15. FAILED ATTACHMENT ROLLS BACK MESSAGE
-# ============================================================
-
 def test_invalid_attachment_rolls_back_message(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -628,11 +551,7 @@ def test_invalid_attachment_rolls_back_message(db):
         uploaded_at=NOW,
     )
 
-    # Dua attachment dengan primary key sama.
-    # INSERT kedua harus gagal dan rollback
-    # seluruh savepoint.
     with pytest.raises(Exception):
-
         message_repo.create_with_attachments(
             source,
             (attachment, attachment),
@@ -649,12 +568,7 @@ def test_invalid_attachment_rolls_back_message(db):
     ).last_message_at is None
 
 
-# ============================================================
-# 16. MARK MESSAGES READ
-# ============================================================
-
 def test_mark_received_read_and_idempotent(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -701,12 +615,7 @@ def test_mark_received_read_and_idempotent(db):
     ).read_at == NOW
 
 
-# ============================================================
-# 17. OUTSIDER CANNOT MARK READ
-# ============================================================
-
 def test_outsider_cannot_mark_read(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(
@@ -714,7 +623,6 @@ def test_outsider_cannot_mark_read(db):
     )
 
     with pytest.raises(NotFoundError):
-
         message_repo.mark_received_messages_read(
             "c1",
             "u2",
@@ -722,12 +630,7 @@ def test_outsider_cannot_mark_read(db):
         )
 
 
-# ============================================================
-# 18. PREVENT LAST MESSAGE TIME REGRESSION
-# ============================================================
-
 def test_updated_timestamp_does_not_move_backward(db):
-
     _, conv_repo, message_repo = db
 
     conv_repo.create_or_get(

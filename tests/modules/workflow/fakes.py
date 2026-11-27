@@ -1,5 +1,3 @@
-"""Fake repository in-memory untuk workflow, payments, submissions, reviews, notifications, admin finance."""
-
 import io
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
@@ -50,7 +48,7 @@ from app.modules.workflow.domain.entities import (
 )
 from app.modules.workflow.domain.repositories import WorkflowRepository
 
-NOW = datetime(2026, 11, 10, 3, 0, tzinfo=UTC)  # 10.00 WIB
+NOW = datetime(2026, 11, 10, 3, 0, tzinfo=UTC)
 UMKM_ID = "umkm-1"
 FREELANCER_ID = "freelancer-1"
 OTHER_FREELANCER_ID = "freelancer-2"

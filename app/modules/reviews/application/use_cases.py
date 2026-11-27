@@ -37,8 +37,6 @@ class FreelancerReviewsPage:
 
 
 class ReviewCreator:
-    """Membuat ulasan; dipakai endpoint ulasan dan alur Setujui & Selesai. Tidak commit."""
-
     def __init__(self, reviews: ReviewRepository, notifier: Notifier):
         self._reviews = reviews
         self._notifier = notifier

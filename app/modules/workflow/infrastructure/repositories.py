@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 from sqlalchemy import exists, select, text, update
 from sqlalchemy.orm import Session
@@ -23,6 +22,7 @@ from app.modules.workflow.domain.entities import (
 )
 from app.modules.workflow.domain.repositories import WorkflowRepository
 from app.modules.workflow.infrastructure.models import ProjectAgreementModel, ProjectStatusHistoryModel
+from decimal import Decimal
 
 _RATINGS_SQL = """
     SELECT pa.freelancer_id, AVG(fr.rating) AS average_rating, COUNT(*) AS review_count
@@ -100,7 +100,7 @@ def _application(model: ProjectApplicationModel) -> ApplicationSnapshot:
     )
 
 
-def _rating(value) -> float | None:
+def _rating(value: Decimal | float | None) -> float | None:
     return round(float(value), 2) if value is not None else None
 
 
@@ -122,7 +122,7 @@ class SqlAlchemyWorkflowRepository(WorkflowRepository):
         started_at: datetime | None = None,
         completed_at: datetime | None = None,
     ) -> None:
-        values: dict = {"status": status}
+        values: dict[str, str | datetime] = {"status": status}
         if started_at is not None:
             values["started_at"] = to_db_utc(started_at)
         if completed_at is not None:
@@ -454,4 +454,3 @@ class SqlAlchemyWorkflowRepository(WorkflowRepository):
             {"uid": user_id},
         ).all()
         return {row[0]: int(row[1]) for row in rows}
-

@@ -1,4 +1,3 @@
-
 from datetime import date, datetime, timezone
 
 import pytest
@@ -31,10 +30,6 @@ from app.modules.admin_statistics.presentation.router import (
 )
 
 
-# ============================================================
-# 1. TEST CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
@@ -64,20 +59,8 @@ PROJECTS_URL = "/admin/projects"
 STATISTICS_URL = "/admin/statistics"
 
 
-# ============================================================
-# 2. FAKE ADMIN REPOSITORY
-# ============================================================
-
 class FakeAdminRepository:
-    """
-    Repository simulasi untuk HTTP testing.
-
-    Semua operasi bersifat read-only.
-    Tidak memakai MySQL.
-    """
-
     def __init__(self):
-
         self.calls = []
 
         self.users = (
@@ -142,10 +125,6 @@ class FakeAdminRepository:
             platform_income=25000,
         )
 
-    # ========================================================
-    # A. FILTER USERS
-    # ========================================================
-
     def _filter_users(
         self,
         *,
@@ -175,10 +154,6 @@ class FakeAdminRepository:
 
         return tuple(items)
 
-    # ========================================================
-    # B. LIST USERS
-    # ========================================================
-
     def list_users(
         self,
         *,
@@ -196,10 +171,6 @@ class FakeAdminRepository:
 
         return items[offset:offset + limit]
 
-    # ========================================================
-    # C. COUNT USERS
-    # ========================================================
-
     def count_users(
         self,
         *,
@@ -214,10 +185,6 @@ class FakeAdminRepository:
                 search=search,
             )
         )
-
-    # ========================================================
-    # D. GET USER DETAIL
-    # ========================================================
 
     def get_user_detail(
         self,
@@ -267,10 +234,6 @@ class FakeAdminRepository:
             user=user
         )
 
-    # ========================================================
-    # E. FILTER PROJECTS
-    # ========================================================
-
     def _filter_projects(
         self,
         *,
@@ -297,10 +260,6 @@ class FakeAdminRepository:
 
         return tuple(items)
 
-    # ========================================================
-    # F. LIST PROJECTS
-    # ========================================================
-
     def list_projects(
         self,
         *,
@@ -318,10 +277,6 @@ class FakeAdminRepository:
 
         return items[offset:offset + limit]
 
-    # ========================================================
-    # G. COUNT PROJECTS
-    # ========================================================
-
     def count_projects(
         self,
         *,
@@ -336,10 +291,6 @@ class FakeAdminRepository:
                 search=search,
             )
         )
-
-    # ========================================================
-    # H. GET PROJECT DETAIL
-    # ========================================================
 
     def get_project_detail(
         self,
@@ -384,10 +335,6 @@ class FakeAdminRepository:
             ),
         )
 
-    # ========================================================
-    # I. GET SYSTEM STATISTICS
-    # ========================================================
-
     def get_system_statistics(self):
         self.calls.append(
             "get_system_statistics"
@@ -396,20 +343,8 @@ class FakeAdminRepository:
         return self.statistics
 
 
-# ============================================================
-# 3. FASTAPI TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def http_context():
-    """
-    Membuat FastAPI khusus unit test.
-
-    Dependency repository diganti dengan Fake.
-    JWT tetap fail-closed kecuali
-    secara eksplisit di-override dalam test.
-    """
-
     app = FastAPI()
 
     register_error_handlers(app)
@@ -428,28 +363,14 @@ def http_context():
     app.dependency_overrides.clear()
 
 
-# ============================================================
-# 4. AUTHORIZATION TEST HELPER
-# ============================================================
-
 def authorize(
     app: FastAPI,
     actor: AdminActor,
 ):
-    """
-    Override authentication hanya untuk test.
-
-    Jangan dipakai dalam kode production.
-    """
-
     app.dependency_overrides[
         get_authenticated_admin_actor
     ] = lambda: actor
 
-
-# ============================================================
-# 5. UNAUTHENTICATED REQUESTS
-# ============================================================
 
 @pytest.mark.parametrize(
     "url",
@@ -473,10 +394,6 @@ def test_unauthenticated_returns_401(
     assert repo.calls == []
 
 
-# ============================================================
-# 6. FAKE TOKEN CANNOT BYPASS AUTH
-# ============================================================
-
 def test_fake_bearer_token_rejected(
     http_context,
 ):
@@ -492,10 +409,6 @@ def test_fake_bearer_token_rejected(
     assert response.status_code == 401
     assert repo.calls == []
 
-
-# ============================================================
-# 7. FORGED ROLE HEADER CANNOT BYPASS
-# ============================================================
 
 def test_forged_role_header_rejected(
     http_context,
@@ -513,10 +426,6 @@ def test_forged_role_header_rejected(
     assert response.status_code == 401
     assert repo.calls == []
 
-
-# ============================================================
-# 8. NON-ADMIN AUTHORIZATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "actor",
@@ -553,14 +462,8 @@ def test_non_admin_returns_403(
 
     assert response.status_code == 403
 
-    # Authorization harus terjadi sebelum
-    # Repository mengakses database.
     assert repo.calls == []
 
-
-# ============================================================
-# 9. INVALID ADMIN IDENTITY
-# ============================================================
 
 def test_invalid_admin_identity_rejected(
     http_context,
@@ -579,10 +482,6 @@ def test_invalid_admin_identity_rejected(
     assert response.status_code == 403
     assert repo.calls == []
 
-
-# ============================================================
-# 10. LIST ALL USERS
-# ============================================================
 
 def test_admin_list_users(
     http_context,
@@ -604,10 +503,6 @@ def test_admin_list_users(
     assert body["limit"] == 20
     assert body["offset"] == 0
 
-
-# ============================================================
-# 11. FILTER USERS BY ROLE
-# ============================================================
 
 def test_admin_user_role_filter(
     http_context,
@@ -631,10 +526,6 @@ def test_admin_user_role_filter(
     assert body["items"][0]["role"] == "umkm"
 
 
-# ============================================================
-# 12. SEARCH USERS
-# ============================================================
-
 def test_admin_user_search(
     http_context,
 ):
@@ -654,10 +545,6 @@ def test_admin_user_search(
 
     assert response.json()["data"]["items"][0]["id"] == "f1"
 
-
-# ============================================================
-# 13. USER PAGINATION
-# ============================================================
 
 def test_admin_user_pagination(
     http_context,
@@ -683,10 +570,6 @@ def test_admin_user_pagination(
     assert body["offset"] == 1
 
 
-# ============================================================
-# 14. INVALID USER ROLE
-# ============================================================
-
 def test_invalid_user_role_filter(
     http_context,
 ):
@@ -703,10 +586,6 @@ def test_invalid_user_role_filter(
 
     assert response.status_code == 400
 
-
-# ============================================================
-# 15. INVALID PAGINATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "params",
@@ -733,10 +612,6 @@ def test_invalid_pagination_returns_422(
     assert response.status_code == 422
 
 
-# ============================================================
-# 16. USER DETAIL UMKM
-# ============================================================
-
 def test_admin_get_umkm_detail(
     http_context,
 ):
@@ -760,10 +635,6 @@ def test_admin_get_umkm_detail(
 
     assert body["freelancer_profile"] is None
 
-
-# ============================================================
-# 17. USER DETAIL FREELANCER
-# ============================================================
 
 def test_admin_get_freelancer_detail(
     http_context,
@@ -790,10 +661,6 @@ def test_admin_get_freelancer_detail(
     assert body["umkm_profile"] is None
 
 
-# ============================================================
-# 18. USER DETAIL ADMIN
-# ============================================================
-
 def test_admin_get_admin_user_detail(
     http_context,
 ):
@@ -815,10 +682,6 @@ def test_admin_get_admin_user_detail(
     assert body["freelancer_profile"] is None
 
 
-# ============================================================
-# 19. USER NOT FOUND
-# ============================================================
-
 def test_admin_user_not_found(
     http_context,
 ):
@@ -832,10 +695,6 @@ def test_admin_user_not_found(
 
     assert response.status_code == 404
 
-
-# ============================================================
-# 20. PASSWORD HASH NEVER EXPOSED
-# ============================================================
 
 def test_admin_user_response_safe(
     http_context,
@@ -857,10 +716,6 @@ def test_admin_user_response_safe(
 
     assert "password_hash" not in response.text
 
-
-# ============================================================
-# 21. LIST ALL PROJECTS
-# ============================================================
 
 def test_admin_list_projects(
     http_context,
@@ -886,10 +741,6 @@ def test_admin_list_projects(
     )
 
 
-# ============================================================
-# 22. FILTER PROJECT STATUS
-# ============================================================
-
 def test_admin_project_status_filter(
     http_context,
 ):
@@ -911,10 +762,6 @@ def test_admin_project_status_filter(
     assert body["total"] == 1
     assert body["items"][0]["id"] == "p2"
 
-
-# ============================================================
-# 23. SEARCH PROJECTS
-# ============================================================
 
 def test_admin_project_search(
     http_context,
@@ -940,10 +787,6 @@ def test_admin_project_search(
     )
 
 
-# ============================================================
-# 24. PROJECT PAGINATION
-# ============================================================
-
 def test_admin_project_pagination(
     http_context,
 ):
@@ -966,10 +809,6 @@ def test_admin_project_pagination(
     assert body["total"] == 2
     assert len(body["items"]) == 1
 
-
-# ============================================================
-# 25. PROJECT WITHOUT FREELANCER
-# ============================================================
 
 def test_admin_project_without_freelancer(
     http_context,
@@ -996,10 +835,6 @@ def test_admin_project_without_freelancer(
     assert body["agreed_price"] is None
 
 
-# ============================================================
-# 26. PROJECT WITH FREELANCER
-# ============================================================
-
 def test_admin_project_with_freelancer(
     http_context,
 ):
@@ -1025,10 +860,6 @@ def test_admin_project_with_freelancer(
     assert body["agreed_price"] == 450000
 
 
-# ============================================================
-# 27. PROJECT NOT FOUND
-# ============================================================
-
 def test_admin_project_not_found(
     http_context,
 ):
@@ -1042,10 +873,6 @@ def test_admin_project_not_found(
 
     assert response.status_code == 404
 
-
-# ============================================================
-# 28. INVALID PROJECT STATUS
-# ============================================================
 
 def test_invalid_project_status(
     http_context,
@@ -1063,10 +890,6 @@ def test_invalid_project_status(
 
     assert response.status_code == 400
 
-
-# ============================================================
-# 29. SYSTEM STATISTICS
-# ============================================================
 
 def test_admin_system_statistics(
     http_context,
@@ -1092,10 +915,6 @@ def test_admin_system_statistics(
         "platform_income": 25000,
     }
 
-
-# ============================================================
-# 30. EMPTY SYSTEM STATISTICS
-# ============================================================
 
 def test_admin_empty_statistics(
     http_context,
@@ -1123,10 +942,6 @@ def test_admin_empty_statistics(
     assert response.json()["data"]["platform_income"] == 0
 
 
-# ============================================================
-# 31. READ-ONLY HTTP METHODS
-# ============================================================
-
 @pytest.mark.parametrize(
     "method",
     [
@@ -1151,10 +966,6 @@ def test_admin_users_read_only(
 
     assert response.status_code == 405
 
-
-# ============================================================
-# 32. OPENAPI CONTRACT
-# ============================================================
 
 def test_admin_openapi_routes(
     http_context,
@@ -1184,16 +995,7 @@ def test_admin_openapi_routes(
     }
 
 
-# ============================================================
-# 33. MAIN APP ROUTER REGISTRATION
-# ============================================================
-
 def test_main_app_registers_admin_router():
-    """
-    Memastikan router Admin terdaftar
-    pada aplikasi FastAPI utama.
-    """
-
     from app.main import app
 
     paths = app.openapi()["paths"]

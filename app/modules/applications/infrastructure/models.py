@@ -1,4 +1,3 @@
-
 from datetime import datetime
 
 from sqlalchemy import (
@@ -14,13 +13,11 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.modules.profiles.infrastructure import models as _profiles_models  # noqa: F401
-from app.modules.projects.infrastructure import models as _projects_models  # noqa: F401
+from app.modules.profiles.infrastructure import models as _profiles_models
+from app.modules.projects.infrastructure import models as _projects_models
 
 
 class ProjectApplicationModel(Base):
-    """ORM untuk tabel project_applications."""
-
     __tablename__ = "project_applications"
 
     __table_args__ = (

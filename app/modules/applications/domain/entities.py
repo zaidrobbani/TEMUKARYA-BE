@@ -22,11 +22,6 @@ APPLICATION_SUBMITTED = ApplicationStatus.SUBMITTED.value
 
 @dataclass(frozen=True)
 class ProjectApplication:
-    """
-    Merepresentasikan satu lamaran Freelancer
-    terhadap satu proyek UMKM.
-    """
-
     id: str
     project_id: str
     freelancer_id: str

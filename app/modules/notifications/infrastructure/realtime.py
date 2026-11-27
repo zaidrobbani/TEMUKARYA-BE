@@ -1,21 +1,13 @@
-"""
-Push notifikasi real-time per user lewat WebSocket.
-
-Notifikasi baru dicatat di `session.info` saat ditambahkan, lalu baru dikirim setelah transaksi COMMIT
-(listener `after_commit`), jadi notifikasi dari transaksi yang batal tidak pernah terkirim.
-Hub disimpan di memori proses (satu proses uvicorn); multi-worker perlu pub/sub bersama (mis. Redis).
-"""
-
 import asyncio
 import logging
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any
 
 from fastapi import WebSocket
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 
+from app.core.json_types import JsonObject
 from app.modules.notifications.domain.entities import Notification
 
 logger = logging.getLogger(__name__)
@@ -23,13 +15,10 @@ _PENDING_KEY = "temukarya_pending_notifications"
 
 
 class NotificationHub:
-    """Koneksi WebSocket aktif per user (satu user bisa punya beberapa perangkat)."""
-
     def __init__(self) -> None:
         self._sockets: dict[str, set[WebSocket]] = defaultdict(set)
         self._loop: asyncio.AbstractEventLoop | None = None
-        # Diisi lapisan presentation agar bentuk payload sama dengan REST.
-        self.serialize: Callable[[Notification], dict[str, Any]] = lambda n: {"id": n.id}
+        self.serialize: Callable[[Notification], JsonObject] = lambda n: {"id": n.id}
 
     async def join(self, user_id: str, socket: WebSocket) -> None:
         self._loop = asyncio.get_running_loop()
@@ -54,7 +43,6 @@ class NotificationHub:
                 await self.leave(user_id, socket)
 
     def publish(self, notification: Notification) -> None:
-        """Aman dipanggil dari thread mana pun (endpoint sinkron, worker thread, atau event loop)."""
         loop = self._loop
         if loop is None or loop.is_closed() or not self._sockets.get(notification.user_id):
             return
@@ -89,8 +77,8 @@ def _publish_committed(session: Session) -> None:
 
     dispatcher = push_dispatcher()
     for notification in pending:
-        notification_hub.publish(notification)  # aplikasi yang sedang terbuka (WebSocket)
-        dispatcher.dispatch(notification)  # notifikasi HP lewat FCM, juga saat aplikasi ditutup
+        notification_hub.publish(notification)
+        dispatcher.dispatch(notification)
 
 
 @event.listens_for(Session, "after_rollback")

@@ -1,22 +1,16 @@
-"""
-Chat real-time lewat WebSocket.
-
-Hub disimpan di memori proses: berlaku untuk satu proses uvicorn (setup Docker saat ini). Bila nanti API dijalankan
-multi-worker/multi-instance, broadcast perlu dipindah ke pub/sub bersama (mis. Redis).
-"""
-
 import asyncio
 import logging
 from collections import defaultdict
-from collections.abc import Callable
-from contextlib import contextmanager
-from typing import Any
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
 
 import anyio
 from fastapi import WebSocket
+from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 from app.core.dependencies import get_token_service
+from app.core.json_types import JsonObject
 from app.modules.auth.application.use_cases import AuthenticateToken
 from app.modules.auth.infrastructure.repositories import SqlAlchemyRevokedTokenRepository
 from app.modules.chat.domain.entities import ChatActor
@@ -29,14 +23,11 @@ from app.modules.users.infrastructure.repositories import SqlAlchemyUserReposito
 
 logger = logging.getLogger(__name__)
 
-# Kode close WebSocket (rentang 4000-4999 bebas dipakai aplikasi).
 CLOSE_UNAUTHORIZED = 4401
 CLOSE_NOT_FOUND = 4404
 
 
 class ChatHub:
-    """Daftar koneksi aktif per percakapan."""
-
     def __init__(self) -> None:
         self._rooms: dict[str, set[WebSocket]] = defaultdict(set)
         self._lock = asyncio.Lock()
@@ -56,18 +47,16 @@ class ChatHub:
     def connection_count(self, conversation_id: str) -> int:
         return len(self._rooms.get(conversation_id, ()))
 
-    async def broadcast(self, conversation_id: str, payload: dict[str, Any]) -> None:
+    async def broadcast(self, conversation_id: str, payload: JsonObject) -> None:
         async with self._lock:
             targets = list(self._rooms.get(conversation_id, ()))
         for socket in targets:
             try:
                 await socket.send_json(payload)
             except Exception:
-                # Koneksi putus di tengah jalan: dibersihkan, pengirim lain tidak terganggu.
                 await self.leave(conversation_id, socket)
 
-    def broadcast_from_thread(self, conversation_id: str, payload: dict[str, Any]) -> None:
-        """Dipanggil dari endpoint REST sinkron (berjalan di worker thread AnyIO)."""
+    def broadcast_from_thread(self, conversation_id: str, payload: JsonObject) -> None:
         try:
             anyio.from_thread.run(self.broadcast, conversation_id, payload)
         except Exception:
@@ -81,15 +70,11 @@ def get_chat_hub() -> ChatHub:
     return chat_hub
 
 
-# ------------------------------------------------------------
-# Session DB per aksi (bukan per koneksi) agar koneksi pool tidak tertahan selama socket terbuka.
-# ------------------------------------------------------------
-
-ChatContextFactory = Callable[[], Any]
+ChatContextFactory = Callable[[], AbstractContextManager[ChatDatabaseContext]]
 
 
 @contextmanager
-def _open_chat_context():
+def _open_chat_context() -> Iterator[ChatDatabaseContext]:
     session = SessionLocal()
     try:
         yield ChatDatabaseContext(
@@ -126,7 +111,7 @@ def get_socket_authenticator() -> SocketAuthenticator:
     return _authenticate
 
 
-MessageNotifier = Callable[[Any, str, str, str], None]
+MessageNotifier = Callable[[Session, str, str, str], None]
 
 
 def get_socket_message_notifier() -> MessageNotifier:
@@ -136,7 +121,6 @@ def get_socket_message_notifier() -> MessageNotifier:
 
 
 def token_from(socket: WebSocket) -> str | None:
-    """Token dari header `Authorization: Bearer` (Android/OkHttp) atau query `?token=` (browser/websocat)."""
     header = socket.headers.get("authorization", "")
     if header.lower().startswith("bearer "):
         return header[7:].strip() or None

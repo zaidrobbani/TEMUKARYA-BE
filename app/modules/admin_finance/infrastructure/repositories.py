@@ -14,6 +14,7 @@ from app.modules.admin_finance.domain.entities import (
 from app.modules.admin_finance.domain.repositories import AdminFinanceRepository
 from app.modules.payments.infrastructure.models import PaymentAttemptModel, PaymentModel
 from app.modules.payments.infrastructure.repositories import to_attempt, to_payment
+from app.core.sql_types import SqlParams
 
 _FROM = """
     FROM payments p
@@ -30,8 +31,9 @@ def _like(search: str) -> str:
     return f"%{escaped}%"
 
 
-def _where(filters: TransactionFilter) -> tuple[str, dict]:
-    clauses, params = ["1 = 1"], {}
+def _where(filters: TransactionFilter) -> tuple[str, SqlParams]:
+    clauses: list[str] = ["1 = 1"]
+    params: SqlParams = {}
     if filters.status:
         clauses.append("p.status = :status")
         params["status"] = filters.status
@@ -91,7 +93,7 @@ class SqlAlchemyAdminFinanceRepository(AdminFinanceRepository):
             total_transactions=int(row["total_count"]),
         )
 
-    def _rows(self, where: str, params: dict, suffix: str = "") -> list[AdminTransaction]:
+    def _rows(self, where: str, params: SqlParams, suffix: str = "") -> list[AdminTransaction]:
         rows = self._session.execute(
             text(
                 "SELECT p.id AS payment_id, pr.id AS project_id, pr.title, pr.status AS project_status, "

@@ -1,14 +1,8 @@
-"""Pengelompokan Swagger (/docs) per sudut pandang pengguna: Umum, UMKM, Freelancer, Admin.
-
-Tag bawaan router modul diganti di sini supaya urutan di Swagger mengikuti alur aplikasi.
-Endpoint yang dipakai lebih dari satu role muncul di beberapa grup. Endpoint baru wajib
-didaftarkan di GROUPS (dicek oleh tests/api/test_openapi_groups.py).
-"""
-
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 
 from app.core.config import API_PREFIX
+from app.core.json_types import JsonObject
 
 DESCRIPTION = f"""
 REST API aplikasi TEMUKARYA. Base path `{API_PREFIX}`.
@@ -21,7 +15,6 @@ Cara mencoba: login lewat `POST {API_PREFIX}/auth/login` (admin: `{API_PREFIX}/a
 salin `data.access_token`, lalu klik **Authorize**.
 """
 
-# (nama tag, deskripsi, daftar "METHOD /path" tanpa prefix /api/v1)
 GROUPS: list[tuple[str, str, list[str]]] = [
     (
         "Umum · Sistem & Master Data",
@@ -264,7 +257,7 @@ def operation_tags() -> dict[str, list[str]]:
 
 
 def install_openapi(app: FastAPI) -> None:
-    def build_schema() -> dict:
+    def build_schema() -> JsonObject:
         if app.openapi_schema:
             return app.openapi_schema
         schema = get_openapi(title=app.title, version=app.version, description=DESCRIPTION, routes=app.routes)
