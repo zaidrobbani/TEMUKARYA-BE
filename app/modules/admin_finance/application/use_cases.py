@@ -23,7 +23,6 @@ _MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt",
 
 
 def wib_day_start(day: date) -> datetime:
-    """Awal hari WIB dalam UTC."""
     return datetime.combine(day, time(), tzinfo=UTC) - WIB
 
 
@@ -73,8 +72,6 @@ class IncomeChart:
 
 
 class GetFinanceSummary:
-    """A-09 Dashboard Income."""
-
     def __init__(self, repository: AdminFinanceRepository, clock: Clock = utc_now):
         self._repository = repository
         self._clock = clock
@@ -86,8 +83,6 @@ class GetFinanceSummary:
 
 
 class ListTransactions:
-    """A-06 Data Transaksi."""
-
     def __init__(self, repository: AdminFinanceRepository):
         self._repository = repository
 
@@ -127,8 +122,6 @@ class GetTransaction:
 
 
 class ListCommissions:
-    """A-07 Komisi 5% dari project yang berhasil dibayar."""
-
     def __init__(self, repository: AdminFinanceRepository):
         self._repository = repository
 
@@ -152,8 +145,6 @@ class ListCommissions:
 
 
 class GetIncomeChart:
-    """A-10 Grafik income per hari/bulan (WIB), periode tanpa transaksi bernilai 0."""
-
     def __init__(self, repository: AdminFinanceRepository, clock: Clock = utc_now):
         self._repository = repository
         self._clock = clock

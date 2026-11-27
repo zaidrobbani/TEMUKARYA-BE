@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.exceptions import BadRequestError, ForbiddenError
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.users.domain.entities import UserRole
 
 from app.modules.projects.application.use_cases import GetMyProjects
@@ -36,12 +36,14 @@ from app.modules.projects.application.use_cases import SearchPublicProjects
 from app.modules.projects.presentation.dependencies import get_search_public_projects_use_case
 from app.modules.projects.presentation.schemas import ProjectOwnerResponse, PublicProjectsPageResponse
 from app.modules.projects.presentation.dependencies import get_project_owner_reader
+from app.modules.projects.domain.entities import Project
+from app.modules.projects.infrastructure.owner_reader import SqlProjectOwnerReader
 
 
-def _with_owners(projects, reader) -> list[ProjectResponse]:
+def _with_owners(projects: list[Project], reader: SqlProjectOwnerReader) -> list[ProjectResponse]:
     owners = reader.owners([p.umkm_id for p in projects])
     skills = reader.skill_ids([p.id for p in projects])
-    out = []
+    out: list[ProjectResponse] = []
     for project in projects:
         response = ProjectResponse.model_validate(project)
         owner = owners.get(response.umkm_id)
@@ -74,21 +76,12 @@ def create_project(
     use_case: CreateProject = Depends(
         get_create_project_use_case
     ),
-):
-    """
-    Membuat proyek baru.
-
-    Hanya UMKM yang terautentikasi dapat
-    menggunakan endpoint ini.
-    """
-
-    # 1. Authorization: hanya role UMKM
+) -> SuccessBody[ProjectResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya pengguna UMKM yang dapat membuat proyek"
         )
 
-    # 2. Ubah Pydantic Request menjadi Application DTO
     data = CreateProjectInput(
         category_id=body.category_id,
         title=body.title,
@@ -98,7 +91,6 @@ def create_project(
         skill_ids=tuple(body.skill_ids),
     )
 
-    # 3. Jalankan business logic
     try:
         project = use_case.execute(
             umkm_id=current_user.user_id,
@@ -107,9 +99,7 @@ def create_project(
     except ValueError as exc:
         raise BadRequestError(str(exc)) from exc
 
-    # 4. Kembalikan informasi proyek
     return success_response("Project berhasil dibuat", ProjectResponse.model_validate(project))
-
 
 
 @router.get(
@@ -126,15 +116,12 @@ def get_my_projects(
     use_case: GetMyProjects = Depends(
         get_my_projects_use_case
     ),
-):
-
-    # Hanya UMKM yang memiliki akses
+) -> SuccessBody[list[ProjectResponse]]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya pengguna UMKM yang dapat melihat proyek miliknya"
         )
 
-    # Identitas berasal dari authentication dependency
     projects = use_case.execute(
         umkm_id=current_user.user_id
     )
@@ -143,7 +130,6 @@ def get_my_projects(
         "Daftar project berhasil diambil",
         [ProjectResponse.model_validate(project) for project in projects],
     )
-
 
 
 @router.get(
@@ -161,9 +147,8 @@ def get_project_detail(
     use_case: GetProjectDetail = Depends(
         get_project_detail_use_case
     ),
-    owner_reader=Depends(get_project_owner_reader),
-):
-
+    owner_reader: SqlProjectOwnerReader = Depends(get_project_owner_reader),
+) -> SuccessBody[ProjectResponse]:
     project = use_case.execute(
         project_id=project_id,
         requester_id=current_user.user_id,
@@ -171,10 +156,6 @@ def get_project_detail(
 
     return success_response("Detail project berhasil diambil", _with_owners([project], owner_reader)[0])
 
-
-# ============================================================
-# UPDATE PROJECT
-# ============================================================
 
 @router.put(
     "/{project_id}",
@@ -192,15 +173,12 @@ def update_project(
     use_case: UpdateProject = Depends(
         get_update_project_use_case
     ),
-):
-
-    # 1. Hanya UMKM yang boleh memperbarui proyek.
+) -> SuccessBody[ProjectResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya pengguna UMKM yang dapat memperbarui proyek"
         )
 
-    # 2. Ubah request menjadi Application DTO.
     data = UpdateProjectInput(
         category_id=body.category_id,
         title=body.title,
@@ -210,7 +188,6 @@ def update_project(
         skill_ids=tuple(body.skill_ids),
     )
 
-    # 3. Jalankan business logic.
     try:
         project = use_case.execute(
             umkm_id=current_user.user_id,
@@ -220,9 +197,7 @@ def update_project(
     except ValueError as exc:
         raise BadRequestError(str(exc)) from exc
 
-    # 4. Kembalikan proyek yang sudah diperbarui.
     return success_response("Project berhasil diperbarui", ProjectResponse.model_validate(project))
-
 
 
 @router.delete(
@@ -240,8 +215,7 @@ def delete_project(
     use_case: DeleteProject = Depends(
         get_delete_project_use_case
     ),
-):
-
+) -> SuccessBody[None]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya pengguna UMKM yang dapat menghapus proyek"
@@ -295,9 +269,8 @@ def search_public_projects(
     use_case: SearchPublicProjects = Depends(
         get_search_public_projects_use_case
     ),
-    owner_reader=Depends(get_project_owner_reader),
-):
-
+    owner_reader: SqlProjectOwnerReader = Depends(get_project_owner_reader),
+) -> SuccessBody[PublicProjectsPageResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat mencari proyek"
@@ -325,6 +298,5 @@ def search_public_projects(
         ),
     )
 
-# Project Attachment HTTP Endpoints
 from app.modules.projects.presentation.attachment_router import router as project_attachment_router
 router.include_router(project_attachment_router)

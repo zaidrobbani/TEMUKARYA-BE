@@ -21,38 +21,19 @@ from app.modules.notifications.infrastructure.hooks import notify_new_message
 from app.modules.users.domain.entities import User
 
 
-# 1. CHAT ACTOR (dari JWT)
-
 def get_authenticated_chat_actor(
     user: Annotated[User, Depends(get_current_user)],
 ) -> ChatActor:
     return ChatActor(user_id=user.id, role=user.role)
 
 
-# 2. CHAT DATABASE CONTEXT
-
 @dataclass(slots=True)
 class ChatDatabaseContext:
-    """
-    Kedua Repository memakai SQLAlchemy
-    Session yang sama.
-
-    Ini diperlukan agar proses:
-      - membuat conversation
-      - menyimpan message
-      - memperbarui last_message_at
-      - memperbarui read_at
-
-    menggunakan transaksi yang konsisten.
-    """
-
     session: Session
 
     conversations: SqlAlchemyConversationRepository
     messages: SqlAlchemyMessageRepository
 
-
-# 3. CONTEXT DEPENDENCY
 
 def get_chat_database_context(
     session: Annotated[
@@ -60,7 +41,6 @@ def get_chat_database_context(
         Depends(get_db),
     ],
 ) -> ChatDatabaseContext:
-
     return ChatDatabaseContext(
         session=session,
         conversations=SqlAlchemyConversationRepository(
@@ -71,8 +51,6 @@ def get_chat_database_context(
         ),
     )
 
-
-# 4. NOTIFIKASI PESAN BARU (ikut transaksi pengiriman pesan)
 
 NewMessageHook = Callable[[str, str, str], None]
 
@@ -88,9 +66,6 @@ def get_new_message_hook(
 
     return hook
 
-
-
-# 5. PENYIMPANAN LAMPIRAN CHAT
 
 def get_chat_attachment_storage() -> ChatAttachmentStorage:
     root = os.getenv("CHAT_STORAGE_ROOT") or Path.cwd() / "storage" / "chat"

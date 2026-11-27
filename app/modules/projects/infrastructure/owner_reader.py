@@ -1,5 +1,3 @@
-"""Identitas UMKM pemilik proyek untuk ditampilkan ke freelancer (nama usaha, pemilik, kota, foto)."""
-
 from dataclasses import dataclass
 
 from sqlalchemy import bindparam, text

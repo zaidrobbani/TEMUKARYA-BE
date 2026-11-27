@@ -1,9 +1,3 @@
-"""Token FCM perangkat untuk push notifikasi.
-
-Revision ID: b7c2e91f4a10
-Revises: 17a58015bd8b
-"""
-
 from typing import Sequence, Union
 
 import sqlalchemy as sa

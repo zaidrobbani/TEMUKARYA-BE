@@ -35,7 +35,6 @@ class UmkmProfileResponse(BaseModel):
     city: str
 
 
-
 class CreateFreelancerProfileRequest(BaseModel):
     professional_title: str = Field(
         min_length=1,
@@ -73,14 +72,10 @@ class FreelancerProfileResponse(BaseModel):
 
 
 class UpdateUmkmProfileRequest(CreateUmkmProfileRequest):
-    """PUT requires all editable fields and rejects identity/audit fields."""
-
     model_config = ConfigDict(extra="forbid")
 
 
 class UpdateFreelancerProfileRequest(CreateFreelancerProfileRequest):
-    """PUT clears omitted nullable fields; availability must be explicit."""
-
     model_config = ConfigDict(extra="forbid")
     availability_status: str = Field(min_length=1, max_length=25)
     service_price_min: int | None = Field(default=None, strict=True, ge=0, le=18446744073709551615)
@@ -98,8 +93,6 @@ class FreelancerSkillsResponse(BaseModel):
     freelancer_id: str
     skill_ids: list[str]
 
-
-# CREATE FREELANCER EXPERIENCE SCHEMAS
 
 class CreateFreelancerExperienceRequest(BaseModel):
     job_title: str = Field(
@@ -122,7 +115,6 @@ class CreateFreelancerExperienceRequest(BaseModel):
 
 
 class UpdateFreelancerExperienceRequest(CreateFreelancerExperienceRequest):
-    # PUT menerima isi experience saja; ID dan ownership tidak dapat diganti.
     model_config = ConfigDict(extra="forbid")
 
 
@@ -148,7 +140,7 @@ class CreatePortfolioRequest(BaseModel):
 
 
 class UpdatePortfolioRequest(CreatePortfolioRequest):
-    """PUT mengganti seluruh metadata; project_url yang dihilangkan menjadi null."""
+    pass
 
 
 class PortfolioResponse(BaseModel):

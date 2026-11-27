@@ -1,4 +1,3 @@
-
 from datetime import date, datetime, timedelta
 from uuid import uuid4
 
@@ -24,10 +23,6 @@ FREELANCER_ID = "22222222-2222-4222-8222-222222222222"
 UMKM_ID = "11111111-1111-4111-8111-111111111111"
 
 
-# ============================================================
-# TEST DATA
-# ============================================================
-
 def make_project(
     title="Website UMKM",
     category_id="website",
@@ -45,10 +40,6 @@ def make_project(
         published_at=datetime(2026, 11, 2, 10, 0),
     )
 
-
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
 
 class FakeSearchRepository:
     def __init__(self, projects=None):
@@ -104,10 +95,6 @@ class FakeSearchRepository:
 
         return results[offset:offset + limit]
 
-
-# ============================================================
-# UNIT TESTS
-# ============================================================
 
 def test_search_public_projects_success():
     repository = FakeSearchRepository([
@@ -219,10 +206,6 @@ def test_search_rejects_invalid_parameters(params):
     assert repository.calls == []
 
 
-# ============================================================
-# FAKE USE CASE FOR HTTP TESTS
-# ============================================================
-
 class FakeSearchUseCase:
     def __init__(self):
         self.calls = []
@@ -268,10 +251,6 @@ def authenticate(app, role):
         role=role,
     )
 
-
-# ============================================================
-# HTTP TESTS
-# ============================================================
 
 def test_search_requires_authentication(http_context):
     app, client, fake = http_context

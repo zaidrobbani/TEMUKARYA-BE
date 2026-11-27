@@ -5,20 +5,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.core.responses import UtcDateTime
 
 
-# ============================================================
-# PUBLIC SKILL RESPONSE
-# ============================================================
-
 class FreelancerSkillResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
 
-
-# ============================================================
-# PUBLIC EXPERIENCE RESPONSE
-# ============================================================
 
 class FreelancerExperienceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -31,10 +23,6 @@ class FreelancerExperienceResponse(BaseModel):
     end_date: date | None = None
 
 
-# ============================================================
-# PUBLIC PORTFOLIO RESPONSE
-# ============================================================
-
 class FreelancerPortfolioResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,13 +30,8 @@ class FreelancerPortfolioResponse(BaseModel):
     title: str
     description: str
     project_url: str | None = None
-    # Path relatif (seperti profile_image_url) ke gambar cover; butuh Bearer token. null bila belum ada gambar.
     cover_image_url: str | None = None
 
-
-# ============================================================
-# PUBLIC REVIEW RESPONSE
-# ============================================================
 
 class FreelancerReviewResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -60,19 +43,7 @@ class FreelancerReviewResponse(BaseModel):
     created_at: UtcDateTime | None = None
 
 
-# ============================================================
-# FREELANCER SUMMARY RESPONSE
-# ============================================================
-
 class FreelancerSummaryResponse(BaseModel):
-    """
-    Response untuk hasil pencarian Freelancer.
-
-    Hanya field publik yang diizinkan.
-    Email, password_hash, dan data autentikasi
-    tidak dimasukkan.
-    """
-
     model_config = ConfigDict(from_attributes=True)
 
     user_id: str
@@ -94,18 +65,9 @@ class FreelancerSummaryResponse(BaseModel):
     review_count: int = 0
 
 
-# ============================================================
-# FREELANCER DETAIL RESPONSE
-# ============================================================
-
 class FreelancerDetailResponse(
     FreelancerSummaryResponse
 ):
-    """
-    Detail profil Freelancer yang dapat
-    dilihat oleh UMKM.
-    """
-
     bio: str | None = None
 
     experiences: list[
@@ -120,10 +82,6 @@ class FreelancerDetailResponse(
         FreelancerReviewResponse
     ] = Field(default_factory=list)
 
-
-# ============================================================
-# FREELANCER SEARCH PAGE RESPONSE
-# ============================================================
 
 class FreelancersPageResponse(BaseModel):
     items: list[FreelancerSummaryResponse]

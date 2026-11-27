@@ -13,11 +13,11 @@ from app.modules.admin_finance.domain.entities import (
 class AdminFinanceRepository(ABC):
     @abstractmethod
     def summary(self, month_start: datetime, month_end: datetime) -> FinanceSummary:
-        """month_start/month_end (UTC) untuk income_this_month."""
+        pass
 
     @abstractmethod
     def list_transactions(self, filters: TransactionFilter, limit: int, offset: int) -> list[AdminTransaction]:
-        """Urut terbaru (paid_at, lalu created_at)."""
+        pass
 
     @abstractmethod
     def count_transactions(self, filters: TransactionFilter) -> int: ...
@@ -27,4 +27,4 @@ class AdminFinanceRepository(ABC):
 
     @abstractmethod
     def paid_rows(self, start: datetime, end: datetime) -> list[PaidRow]:
-        """Pembayaran BERHASIL dengan paid_at di [start, end)."""
+        pass

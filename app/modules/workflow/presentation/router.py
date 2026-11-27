@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, Depends, Query, status
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.workflow.application.dto import (
     Actor,
     CancelProjectInput,
@@ -58,7 +58,7 @@ def list_my_projects(
     offset: int = Query(0, ge=0),
     actor: Actor = Depends(get_actor),
     use_case: ListMyProjects = Depends(list_my_projects_use_case),
-):
+) -> SuccessBody[MyProjectsResponse]:
     page = use_case.execute(actor, status_filter.value if status_filter else None, limit, offset)
     return success_response("Daftar proyek", MyProjectsResponse.build(page, limit, offset))
 
@@ -73,7 +73,7 @@ def get_project_workflow(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: GetProjectWorkflow = Depends(get_project_workflow_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     return success_response("Detail alur proyek", WorkflowDetailResponse.build(use_case.execute(actor, project_id)))
 
 
@@ -89,7 +89,7 @@ def select_freelancer(
     body: SelectFreelancerRequest,
     actor: Actor = Depends(get_actor),
     use_case: SelectFreelancer = Depends(select_freelancer_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     detail = use_case.execute(actor, project_id, SelectFreelancerInput(**body.model_dump()))
     return success_response("Freelancer dipilih, lanjutkan negosiasi kesepakatan", WorkflowDetailResponse.build(detail))
 
@@ -103,7 +103,7 @@ def get_agreement(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: GetAgreement = Depends(get_agreement_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     return success_response("Detail kesepakatan", WorkflowDetailResponse.build(use_case.execute(actor, project_id)))
 
 
@@ -118,7 +118,7 @@ def update_agreement(
     body: UpdateAgreementRequest,
     actor: Actor = Depends(get_actor),
     use_case: UpdateAgreement = Depends(update_agreement_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     data = UpdateAgreementInput(**body.model_dump())
     return success_response(
         "Kesepakatan diperbarui", WorkflowDetailResponse.build(use_case.execute(actor, project_id, data))
@@ -136,7 +136,7 @@ def approve_agreement(
     body: ApproveAgreementRequest | None = Body(None),
     actor: Actor = Depends(get_actor),
     use_case: ApproveAgreement = Depends(approve_agreement_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     detail = use_case.execute(actor, project_id, body.agreement_version if body else None)
     if detail.agreement.status == AgreementStatus.APPROVED:
         message = "Kesepakatan final, proyek menunggu pembayaran"
@@ -156,7 +156,7 @@ def request_agreement_changes(
     body: RequestChangesRequest,
     actor: Actor = Depends(get_actor),
     use_case: RequestAgreementChanges = Depends(request_changes_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     detail = use_case.execute(actor, project_id, body.note)
     return success_response("Permintaan perubahan dikirim ke freelancer", WorkflowDetailResponse.build(detail))
 
@@ -172,7 +172,7 @@ def cancel_project(
     body: CancelProjectRequest,
     actor: Actor = Depends(get_actor),
     use_case: CancelProject = Depends(cancel_project_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     detail = use_case.execute(actor, project_id, CancelProjectInput(reason=body.reason.value, note=body.note))
     return success_response("Project dibatalkan", WorkflowDetailResponse.build(detail))
 
@@ -187,6 +187,6 @@ def start_work(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: StartWork = Depends(start_work_use_case),
-):
+) -> SuccessBody[WorkflowDetailResponse]:
     detail = use_case.execute(actor, project_id)
     return success_response("Pengerjaan dimulai", WorkflowDetailResponse.build(detail))

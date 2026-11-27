@@ -13,7 +13,6 @@ from app.modules.skills.infrastructure.repositories import (
 def get_master_data_use_case(
     db: Session = Depends(get_db),
 ) -> ListMasterData:
-
     repository = SqlAlchemyMasterDataRepository(db)
 
     return ListMasterData(repository)

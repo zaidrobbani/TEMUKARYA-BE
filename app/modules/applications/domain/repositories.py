@@ -6,10 +6,6 @@ from app.modules.applications.domain.entities import (
 
 
 class ApplicationRepository(Protocol):
-    """
-    Kontrak akses data Project Applications.
-    """
-
     def freelancer_profile_exists(
         self,
         freelancer_id: str,

@@ -14,7 +14,6 @@ from app.modules.applications.domain.repositories import (
 )
 
 
-# TEST DATA FACTORY
 def make_application():
     return ProjectApplication(
         id=str(uuid4()),
@@ -29,7 +28,6 @@ def make_application():
     )
 
 
-# TEST ENTITY
 def test_application_default_status():
     application = make_application()
 
@@ -80,7 +78,6 @@ def test_application_is_immutable():
         application.status = "OTHER_STATUS"
 
 
-# TEST REPOSITORY CONTRACT
 @pytest.mark.parametrize(
     "method_name",
     [

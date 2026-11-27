@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 
 from app.modules.milestones.application.dto import (
     GetDelayRiskInput,
@@ -34,19 +34,11 @@ from app.modules.milestones.presentation.schemas import (
 )
 
 
-# ============================================================
-# ROUTER CONFIGURATION
-# ============================================================
-
 router = APIRouter(
     prefix="/projects",
     tags=["milestones"],
 )
 
-
-# ============================================================
-# 1. GET PROJECT MILESTONE PLAN
-# ============================================================
 
 @router.get(
     "/{project_id}/milestones",
@@ -63,15 +55,7 @@ def get_project_milestones(
         SqlAlchemyMilestoneRepository,
         Depends(get_milestone_repository),
     ],
-):
-    """
-    Mengambil daftar milestone satu project.
-
-    Akses:
-    - UMKM pemilik project
-    - Freelancer yang ditugaskan
-    """
-
+) -> SuccessBody[MilestonePlanResponse]:
     use_case = GetMilestonePlan(
         repository
     )
@@ -89,10 +73,6 @@ def get_project_milestones(
     )
 
 
-# ============================================================
-# 2. GET PROJECT MILESTONE PROGRESS
-# ============================================================
-
 @router.get(
     "/{project_id}/milestones/progress",
     response_model=ApiResponse[MilestoneProgressResponse],
@@ -108,15 +88,7 @@ def get_project_milestone_progress(
         SqlAlchemyMilestoneRepository,
         Depends(get_milestone_repository),
     ],
-):
-    """
-    Mengembalikan:
-    - Total bobot
-    - Bobot selesai
-    - Bobot tersisa
-    - Persentase progres project
-    """
-
+) -> SuccessBody[MilestoneProgressResponse]:
     use_case = GetMilestoneProgress(
         repository
     )
@@ -133,10 +105,6 @@ def get_project_milestone_progress(
         MilestoneProgressResponse.model_validate(result),
     )
 
-
-# ============================================================
-# 3. GET PROJECT DELAY RISK
-# ============================================================
 
 @router.get(
     "/{project_id}/milestones/delay-risk",
@@ -157,14 +125,7 @@ def get_project_milestone_delay_risk(
         date,
         Depends(get_milestone_today),
     ],
-):
-    """
-    Menghitung risiko keterlambatan.
-
-    Tanggal bersumber dari server,
-    bukan dari request pengguna.
-    """
-
+) -> SuccessBody[MilestoneDelayRiskResponse]:
     use_case = GetProjectDelayRisk(
         repository
     )

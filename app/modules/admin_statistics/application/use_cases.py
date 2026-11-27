@@ -40,20 +40,9 @@ from app.modules.admin_statistics.domain.statistics_rules import (
 )
 
 
-# ============================================================
-# 1. SHARED HELPERS
-# ============================================================
-
 def _require_admin(
     actor: AdminActor,
 ) -> None:
-    """
-    Menolak pengguna yang bukan Admin.
-
-    Actor harus berasal dari JWT terverifikasi
-    yang disediakan Authentication Module.
-    """
-
     try:
         require_admin_actor(actor)
 
@@ -67,11 +56,6 @@ def _validate_identifier(
     value: str,
     field_name: str,
 ) -> str:
-    """
-    Mengubah ValueError dari Domain Layer
-    menjadi BadRequestError.
-    """
-
     try:
         return validate_identifier(
             value,
@@ -90,13 +74,6 @@ def _validate_filters(
     role: str | None = None,
     status: str | None = None,
 ) -> tuple[str | None, str | None, str | None]:
-    """
-    Normalisasi seluruh parameter pencarian.
-
-    Query SQL tetap harus memakai
-    parameter binding pada Infrastructure.
-    """
-
     try:
         normalized_search = normalize_search_query(
             search
@@ -128,10 +105,6 @@ def _validate_page(
     limit: int,
     offset: int,
 ) -> None:
-    """
-    Memvalidasi ukuran halaman dan offset.
-    """
-
     try:
         validate_pagination(
             limit,
@@ -148,11 +121,6 @@ def _validate_count(
     value: int,
     field_name: str,
 ) -> int:
-    """
-    Memastikan Repository tidak mengembalikan
-    nilai COUNT yang tidak valid.
-    """
-
     try:
         return validate_non_negative_integer(
             value,
@@ -165,21 +133,7 @@ def _validate_count(
         ) from exc
 
 
-# ============================================================
-# 2. LIST ADMIN USERS
-# ============================================================
-
 class ListAdminUsers:
-    """
-    Mengambil daftar pengguna yang terdaftar.
-
-    Fitur:
-    - TK-F-A-02
-    - Pagination
-    - Search
-    - Filter role
-    """
-
     def __init__(
         self,
         repository: AdminStatisticsRepository,
@@ -190,36 +144,19 @@ class ListAdminUsers:
         self,
         data: ListAdminUsersInput,
     ) -> AdminUserPage:
-
-        # ====================================================
-        # 1. ADMIN AUTHORIZATION
-        # ====================================================
-
         _require_admin(
             data.actor
         )
-
-        # ====================================================
-        # 2. VALIDATE PAGINATION
-        # ====================================================
 
         _validate_page(
             data.limit,
             data.offset,
         )
 
-        # ====================================================
-        # 3. NORMALIZE FILTERS
-        # ====================================================
-
         search, role, _ = _validate_filters(
             search=data.search,
             role=data.role,
         )
-
-        # ====================================================
-        # 4. COUNT MATCHING USERS
-        # ====================================================
 
         total = self.repository.count_users(
             role=role,
@@ -231,10 +168,6 @@ class ListAdminUsers:
             "total_users",
         )
 
-        # ====================================================
-        # 5. FETCH USER LIST
-        # ====================================================
-
         items = tuple(
             self.repository.list_users(
                 role=role,
@@ -244,10 +177,6 @@ class ListAdminUsers:
             )
         )
 
-        # ====================================================
-        # 6. VERIFY REPOSITORY RESULT
-        # ====================================================
-
         if len(items) > data.limit:
             raise ConflictError(
                 "Repository mengembalikan "
@@ -255,7 +184,6 @@ class ListAdminUsers:
             )
 
         for user in items:
-
             if not isinstance(
                 user,
                 AdminUserSummary,
@@ -273,10 +201,6 @@ class ListAdminUsers:
                     "pengguna dengan role berbeda"
                 )
 
-        # ====================================================
-        # 7. BUILD RESULT
-        # ====================================================
-
         return AdminUserPage(
             items=items,
             total=total,
@@ -285,21 +209,7 @@ class ListAdminUsers:
         )
 
 
-# ============================================================
-# 3. GET ADMIN USER DETAIL
-# ============================================================
-
 class GetAdminUser:
-    """
-    Mengambil detail pengguna dan profilnya.
-
-    Fitur:
-    - TK-F-A-03
-
-    Password hash tidak boleh ikut
-    dalam entity ataupun response.
-    """
-
     def __init__(
         self,
         repository: AdminStatisticsRepository,
@@ -310,27 +220,14 @@ class GetAdminUser:
         self,
         data: GetAdminUserInput,
     ) -> AdminUserDetail:
-
-        # ====================================================
-        # 1. ADMIN AUTHORIZATION
-        # ====================================================
-
         _require_admin(
             data.actor
         )
-
-        # ====================================================
-        # 2. VALIDATE USER ID
-        # ====================================================
 
         user_id = _validate_identifier(
             data.user_id,
             "User ID",
         )
-
-        # ====================================================
-        # 3. GET USER DETAIL
-        # ====================================================
 
         result = self.repository.get_user_detail(
             user_id
@@ -340,10 +237,6 @@ class GetAdminUser:
             raise NotFoundError(
                 "Pengguna tidak ditemukan"
             )
-
-        # ====================================================
-        # 4. VERIFY RESULT IDENTITY
-        # ====================================================
 
         if (
             not isinstance(result, AdminUserDetail)
@@ -356,10 +249,6 @@ class GetAdminUser:
             raise ConflictError(
                 "Data detail pengguna tidak konsisten"
             )
-
-        # ====================================================
-        # 5. VERIFY PROFILE ROLE
-        # ====================================================
 
         role = result.user.role.lower()
 
@@ -393,24 +282,7 @@ class GetAdminUser:
         return result
 
 
-# ============================================================
-# 4. LIST ADMIN PROJECTS
-# ============================================================
-
 class ListAdminProjects:
-    """
-    Mengambil seluruh Project.
-
-    Fitur:
-    - TK-F-A-04
-    - Search judul
-    - Filter status
-    - Pagination
-
-    Project tanpa assigned Freelancer
-    tetap harus ditampilkan.
-    """
-
     def __init__(
         self,
         repository: AdminStatisticsRepository,
@@ -421,36 +293,19 @@ class ListAdminProjects:
         self,
         data: ListAdminProjectsInput,
     ) -> AdminProjectPage:
-
-        # ====================================================
-        # 1. ADMIN AUTHORIZATION
-        # ====================================================
-
         _require_admin(
             data.actor
         )
-
-        # ====================================================
-        # 2. VALIDATE PAGINATION
-        # ====================================================
 
         _validate_page(
             data.limit,
             data.offset,
         )
 
-        # ====================================================
-        # 3. NORMALIZE FILTERS
-        # ====================================================
-
         search, _, status = _validate_filters(
             search=data.search,
             status=data.status,
         )
-
-        # ====================================================
-        # 4. COUNT MATCHING PROJECTS
-        # ====================================================
 
         total = self.repository.count_projects(
             status=status,
@@ -462,10 +317,6 @@ class ListAdminProjects:
             "total_projects",
         )
 
-        # ====================================================
-        # 5. FETCH PROJECT LIST
-        # ====================================================
-
         items = tuple(
             self.repository.list_projects(
                 status=status,
@@ -475,10 +326,6 @@ class ListAdminProjects:
             )
         )
 
-        # ====================================================
-        # 6. VERIFY RESULT
-        # ====================================================
-
         if len(items) > data.limit:
             raise ConflictError(
                 "Repository mengembalikan "
@@ -486,7 +333,6 @@ class ListAdminProjects:
             )
 
         for project in items:
-
             if not isinstance(
                 project,
                 AdminProjectSummary,
@@ -504,10 +350,6 @@ class ListAdminProjects:
                     "status project berbeda"
                 )
 
-        # ====================================================
-        # 7. BUILD RESULT
-        # ====================================================
-
         return AdminProjectPage(
             items=items,
             total=total,
@@ -516,25 +358,7 @@ class ListAdminProjects:
         )
 
 
-# ============================================================
-# 5. GET ADMIN PROJECT DETAIL
-# ============================================================
-
 class GetAdminProject:
-    """
-    Mengambil informasi lengkap Project.
-
-    Fitur:
-    - TK-F-A-05
-
-    Data meliputi:
-    - UMKM pemilik
-    - Freelancer yang ditugaskan
-    - Budget
-    - Harga kesepakatan
-    - Deadline dan status
-    """
-
     def __init__(
         self,
         repository: AdminStatisticsRepository,
@@ -545,27 +369,14 @@ class GetAdminProject:
         self,
         data: GetAdminProjectInput,
     ) -> AdminProjectDetail:
-
-        # ====================================================
-        # 1. ADMIN AUTHORIZATION
-        # ====================================================
-
         _require_admin(
             data.actor
         )
-
-        # ====================================================
-        # 2. VALIDATE PROJECT ID
-        # ====================================================
 
         project_id = _validate_identifier(
             data.project_id,
             "Project ID",
         )
-
-        # ====================================================
-        # 3. GET PROJECT DETAIL
-        # ====================================================
 
         result = self.repository.get_project_detail(
             project_id
@@ -575,10 +386,6 @@ class GetAdminProject:
             raise NotFoundError(
                 "Project tidak ditemukan"
             )
-
-        # ====================================================
-        # 4. VERIFY RESULT IDENTITY
-        # ====================================================
 
         if (
             not isinstance(result, AdminProjectDetail)
@@ -595,22 +402,7 @@ class GetAdminProject:
         return result
 
 
-# ============================================================
-# 6. GET SYSTEM STATISTICS
-# ============================================================
-
 class GetAdminStatistics:
-    """
-    Mengambil ringkasan statistik sistem.
-
-    Fitur:
-    - TK-F-A-11
-
-    Semua agregasi dihitung Repository.
-    Application hanya melakukan otorisasi
-    dan validasi hasil.
-    """
-
     def __init__(
         self,
         repository: AdminStatisticsRepository,
@@ -621,18 +413,9 @@ class GetAdminStatistics:
         self,
         data: GetAdminStatisticsInput,
     ) -> AdminSystemStatistics:
-
-        # ====================================================
-        # 1. ADMIN AUTHORIZATION
-        # ====================================================
-
         _require_admin(
             data.actor
         )
-
-        # ====================================================
-        # 2. FETCH STATISTICS
-        # ====================================================
 
         result = (
             self.repository.get_system_statistics()
@@ -645,10 +428,6 @@ class GetAdminStatistics:
             raise ConflictError(
                 "Format statistik database tidak valid"
             )
-
-        # ====================================================
-        # 3. REVALIDATE STATISTICS
-        # ====================================================
 
         try:
             validated = build_system_statistics(

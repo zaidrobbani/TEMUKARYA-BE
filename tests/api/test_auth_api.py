@@ -308,8 +308,6 @@ class TestLogin:
 
 
 class TestAccountsCreatedByScript:
-    """Akun dari `app.scripts.create_user` harus bisa langsung login tanpa verifikasi email."""
-
     @pytest.mark.parametrize("role", [UserRole.UMKM, UserRole.FREELANCER])
     def test_app_account_can_login_immediately(self, client, users, emails, role):
         CreateVerifiedUser(users, ScryptPasswordHasher(), FakeUnitOfWork()).execute(

@@ -1,4 +1,3 @@
-
 from sqlalchemy import (
     bindparam,
     delete,
@@ -19,18 +18,10 @@ from app.modules.projects.infrastructure.models import (
 
 
 class SqlAlchemyProjectRepository(ProjectRepository):
-    """Implementasi ProjectRepository menggunakan SQLAlchemy."""
-
     def __init__(self, session: Session):
         self._session = session
 
-    # ========================================================
-    # PROJECT CRUD
-    # ========================================================
-
     def add(self, project: Project) -> Project:
-        """Menyimpan project baru ke database."""
-
         model = ProjectModel(
             id=project.id,
             umkm_id=project.umkm_id,
@@ -50,8 +41,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         return _to_entity(model)
 
     def get_by_id(self, project_id: str) -> Project | None:
-        """Mengambil project berdasarkan UUID."""
-
         model = self._session.get(
             ProjectModel,
             project_id,
@@ -60,8 +49,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         return _to_entity(model) if model else None
 
     def list_by_umkm_id(self, umkm_id: str) -> list[Project]:
-        """Mengambil daftar project milik UMKM."""
-
         statement = (
             select(ProjectModel)
             .where(ProjectModel.umkm_id == umkm_id)
@@ -75,10 +62,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
 
         return [_to_entity(model) for model in models]
 
-    # ========================================================
-    # PUBLIC PROJECT SEARCH
-    # ========================================================
-
     def search_public(
         self,
         search: str | None,
@@ -88,24 +71,11 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         limit: int,
         offset: int,
     ) -> list[Project]:
-        """
-        Mencari project yang telah dipublikasikan
-        dan masih berstatus TERBUKA.
-
-        Mendukung:
-        - Pencarian judul dan deskripsi
-        - Filter kategori
-        - Filter rentang budget
-        - Pagination limit dan offset
-        """
-
-        # 1. Hanya tampilkan project publik yang terbuka.
         statement = select(ProjectModel).where(
             ProjectModel.status == "TERBUKA",
             ProjectModel.published_at.is_not(None),
         )
 
-        # 2. Pencarian berdasarkan judul atau deskripsi.
         if search:
             keyword = search.strip().lower()
 
@@ -127,25 +97,21 @@ class SqlAlchemyProjectRepository(ProjectRepository):
                     )
                 )
 
-        # 3. Filter kategori project.
         if category_id:
             statement = statement.where(
                 ProjectModel.category_id == category_id
             )
 
-        # 4. Filter minimum budget.
         if min_budget is not None:
             statement = statement.where(
                 ProjectModel.budget >= min_budget
             )
 
-        # 5. Filter maksimum budget.
         if max_budget is not None:
             statement = statement.where(
                 ProjectModel.budget <= max_budget
             )
 
-        # 6. Urutkan dari project terbaru.
         statement = (
             statement
             .order_by(
@@ -156,28 +122,15 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             .offset(offset)
         )
 
-        # 7. Jalankan query.
         models = self._session.scalars(statement).all()
 
-        # 8. Konversi SQLAlchemy Model ke Domain Entity.
         return [_to_entity(model) for model in models]
-
-    # ========================================================
-    # UPDATE PROJECT
-    # ========================================================
 
     def update(
         self,
         project: Project,
         skill_ids: tuple[str, ...],
     ) -> Project | None:
-        """
-        Memperbarui metadata dan skills project
-        dalam satu transaksi database.
-        """
-
-        # 1. Update metadata hanya jika project masih
-        # TERBUKA, belum dimulai, dan milik UMKM terkait.
         result = self._session.execute(
             update(ProjectModel)
             .where(
@@ -199,14 +152,12 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         if result.rowcount == 0:
             return None
 
-        # 2. Hapus relasi skill lama.
         self._session.execute(
             delete(ProjectSkillModel).where(
                 ProjectSkillModel.project_id == project.id
             )
         )
 
-        # 3. Tambahkan relasi skill baru.
         for skill_id in skill_ids:
             self._session.add(
                 ProjectSkillModel(
@@ -215,37 +166,16 @@ class SqlAlchemyProjectRepository(ProjectRepository):
                 )
             )
 
-        # 4. Sinkronisasi dengan database.
         self._session.flush()
         self._session.expire_all()
 
-        # 5. Ambil project setelah diperbarui.
         return self.get_by_id(project.id)
-
-    # ========================================================
-    # DELETE PROJECT
-    # ========================================================
 
     def delete(
         self,
         project_id: str,
         umkm_id: str,
     ) -> bool:
-        """
-        Menghapus project jika:
-        - Dimiliki oleh UMKM yang meminta.
-        - Status masih TERBUKA.
-        - Project belum dimulai.
-        - Tidak memiliki data terkait yang dilindungi.
-
-        Project skills otomatis terhapus melalui
-        Foreign Key ON DELETE CASCADE.
-
-        Commit dilakukan oleh UnitOfWork.
-        """
-
-        # 1. Daftar tabel yang harus kosong sebelum
-        # project boleh dihapus.
         blocker_tables = (
             "project_applications",
             "project_agreements",
@@ -256,9 +186,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             "freelancer_reviews",
         )
 
-        # 2. Susun pemeriksaan NOT EXISTS.
-        # Nama tabel berasal dari konstanta internal,
-        # bukan dari input pengguna.
         blocker_checks = " AND ".join(
             (
                 "NOT EXISTS ("
@@ -269,7 +196,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             for table in blocker_tables
         )
 
-        # 3. Hapus hanya jika seluruh syarat terpenuhi.
         statement = text(
             """
             DELETE FROM projects
@@ -290,21 +216,13 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             },
         )
 
-        # 4. Berhasil menghapus tepat satu project.
         if result.rowcount == 1:
             self._session.expire_all()
             return True
 
-        # Project tidak memenuhi syarat.
         return False
 
-    # ========================================================
-    # BUSINESS VALIDATION QUERIES
-    # ========================================================
-
     def umkm_profile_exists(self, umkm_id: str) -> bool:
-        """Memastikan UMKM memiliki profil."""
-
         statement = text(
             "SELECT 1 FROM umkm_profiles "
             "WHERE user_id = :umkm_id LIMIT 1"
@@ -318,8 +236,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         return result is not None
 
     def is_active_category(self, category_id: str) -> bool:
-        """Memastikan kategori tersedia dan aktif."""
-
         statement = text(
             "SELECT 1 FROM project_categories "
             "WHERE id = :category_id "
@@ -337,8 +253,6 @@ class SqlAlchemyProjectRepository(ProjectRepository):
         self,
         skill_ids: list[str],
     ) -> set[str]:
-        """Mengambil ID skill yang tersedia di database."""
-
         if not skill_ids:
             return set()
 
@@ -355,17 +269,11 @@ class SqlAlchemyProjectRepository(ProjectRepository):
 
         return set(result.scalars().all())
 
-    # ========================================================
-    # PROJECT SKILLS
-    # ========================================================
-
     def add_skills(
         self,
         project_id: str,
         skill_ids: list[str],
     ) -> None:
-        """Menambahkan relasi project dengan skill."""
-
         for skill_id in skill_ids:
             model = ProjectSkillModel(
                 project_id=project_id,
@@ -375,13 +283,7 @@ class SqlAlchemyProjectRepository(ProjectRepository):
             self._session.add(model)
 
 
-# ============================================================
-# MAPPER: SQLALCHEMY MODEL -> DOMAIN ENTITY
-# ============================================================
-
 def _to_entity(model: ProjectModel) -> Project:
-    """Mengubah SQLAlchemy Model menjadi Domain Entity."""
-
     return Project(
         id=model.id,
         umkm_id=model.umkm_id,

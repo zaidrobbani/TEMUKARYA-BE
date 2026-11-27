@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Body, Depends, Header, Query
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.payments.application.use_cases import (
     GetProjectPayment,
     GetWallet,
@@ -41,7 +41,7 @@ def get_project_payment(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: GetProjectPayment = Depends(get_project_payment_use_case),
-):
+) -> SuccessBody[PaymentDetailResponse]:
     return success_response("Detail pembayaran", PaymentDetailResponse.build(use_case.execute(actor, project_id)))
 
 
@@ -55,7 +55,7 @@ def refresh_qris(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: RefreshQris = Depends(refresh_qris_use_case),
-):
+) -> SuccessBody[PaymentDetailResponse]:
     return success_response("QRIS siap dibayar", PaymentDetailResponse.build(use_case.execute(actor, project_id)))
 
 
@@ -71,7 +71,7 @@ def simulate_payment(
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     actor: Actor = Depends(get_actor),
     use_case: SimulatePayment = Depends(simulate_payment_use_case),
-):
+) -> SuccessBody[PaymentDetailResponse]:
     outcome = body.outcome if body else PaymentOutcome.SUCCESS
     result = use_case.execute(actor, project_id, outcome, idempotency_key)
     if result.already_paid:
@@ -96,7 +96,7 @@ def payment_history(
     offset: int = Query(0, ge=0),
     actor: Actor = Depends(get_actor),
     use_case: ListPaymentHistory = Depends(list_payment_history_use_case),
-):
+) -> SuccessBody[PaymentHistoryResponse]:
     page = use_case.execute(actor, group, search, limit, offset)
     return success_response("Riwayat transaksi", PaymentHistoryResponse.build(page, limit, offset))
 
@@ -107,7 +107,7 @@ def payment_history(
     responses=error_responses(401, 403),
     summary="Saldo dompet freelancer",
 )
-def get_wallet(actor: Actor = Depends(get_actor), use_case: GetWallet = Depends(get_wallet_use_case)):
+def get_wallet(actor: Actor = Depends(get_actor), use_case: GetWallet = Depends(get_wallet_use_case)) -> SuccessBody[WalletResponse]:
     return success_response("Saldo dompet", WalletResponse.build(use_case.execute(actor)))
 
 
@@ -123,6 +123,6 @@ def wallet_transactions(
     offset: int = Query(0, ge=0),
     actor: Actor = Depends(get_actor),
     use_case: ListWalletEntries = Depends(list_wallet_entries_use_case),
-):
+) -> SuccessBody[WalletEntriesResponse]:
     page = use_case.execute(actor, type_filter, limit, offset)
     return success_response("Riwayat dompet", WalletEntriesResponse.build(page, limit, offset))

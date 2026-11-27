@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from io import BytesIO
 from uuid import uuid4
@@ -38,10 +37,6 @@ from app.modules.projects.presentation.router import (
 )
 
 
-# ============================================================
-# TEST IDENTIFIERS
-# ============================================================
-
 UMKM_ID = "11111111-1111-4111-8111-111111111111"
 OTHER_USER_ID = "22222222-2222-4222-8222-222222222222"
 PROJECT_ID = "33333333-3333-4333-8333-333333333333"
@@ -52,17 +47,7 @@ FILE_URL = f"{BASE_URL}/{ATTACHMENT_ID}/file"
 DELETE_URL = f"{BASE_URL}/{ATTACHMENT_ID}"
 
 
-# ============================================================
-# FAKE APPLICATION SERVICE
-# ============================================================
-
 class FakeAttachmentService:
-    """
-    Fake Service untuk HTTP testing.
-
-    Tidak menggunakan MySQL atau filesystem asli.
-    """
-
     def __init__(self):
         self.items = []
         self.files = {}
@@ -199,10 +184,6 @@ class FakeAttachmentService:
         self.files.pop(attachment_id, None)
 
 
-# ============================================================
-# TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
     app = FastAPI()
@@ -221,10 +202,6 @@ def context():
 
     app.dependency_overrides.clear()
 
-
-# ============================================================
-# TEST AUTHENTICATION HELPER
-# ============================================================
 
 def authenticate(
     app,
@@ -252,10 +229,6 @@ def upload_example(client):
     )
 
 
-# ============================================================
-# AUTHENTICATION TESTS
-# ============================================================
-
 @pytest.mark.parametrize(
     "method,url",
     [
@@ -280,10 +253,6 @@ def test_attachment_requires_authentication(
     assert response.status_code == 401
     assert service.calls == []
 
-
-# ============================================================
-# ROLE AUTHORIZATION TESTS
-# ============================================================
 
 @pytest.mark.parametrize(
     "method,url",
@@ -314,10 +283,6 @@ def test_freelancer_cannot_manage_attachments(
     assert service.calls == []
 
 
-# ============================================================
-# UPLOAD SUCCESS
-# ============================================================
-
 def test_upload_returns_201(context):
     app, client, service = context
 
@@ -338,7 +303,6 @@ def test_upload_returns_201(context):
         b"example file content"
     )
 
-    # Storage key tidak boleh dibocorkan.
     assert "storage_key" not in body
 
     assert service.calls == [
@@ -346,10 +310,6 @@ def test_upload_returns_201(context):
         "upload",
     ]
 
-
-# ============================================================
-# LIST SUCCESS
-# ============================================================
 
 def test_list_returns_200(context):
     app, client, service = context
@@ -368,10 +328,6 @@ def test_list_returns_200(context):
 
     assert service.calls == ["list"]
 
-
-# ============================================================
-# DOWNLOAD SUCCESS
-# ============================================================
 
 def test_download_returns_private_file(context):
     app, client, service = context
@@ -407,10 +363,6 @@ def test_download_returns_private_file(context):
     assert service.calls == ["file"]
 
 
-# ============================================================
-# DELETE SUCCESS
-# ============================================================
-
 def test_delete_returns_200(context):
     app, client, service = context
 
@@ -431,10 +383,6 @@ def test_delete_returns_200(context):
     assert service.calls == ["delete"]
 
 
-# ============================================================
-# MISSING ATTACHMENT
-# ============================================================
-
 def test_missing_attachment_returns_404(context):
     app, client, service = context
 
@@ -444,10 +392,6 @@ def test_missing_attachment_returns_404(context):
 
     assert response.status_code == 404
 
-
-# ============================================================
-# FOREIGN OR MISSING PROJECT
-# ============================================================
 
 def test_foreign_project_returns_404(context):
     app, client, service = context
@@ -463,10 +407,6 @@ def test_foreign_project_returns_404(context):
     assert "upload" not in service.calls
 
 
-# ============================================================
-# INVALID CONTENT TYPE
-# ============================================================
-
 def test_upload_rejects_json(context):
     app, client, service = context
 
@@ -480,10 +420,6 @@ def test_upload_rejects_json(context):
     assert response.status_code == 415
     assert "upload" not in service.calls
 
-
-# ============================================================
-# MULTIPLE FILES
-# ============================================================
 
 def test_upload_rejects_multiple_files(context):
     app, client, service = context
@@ -501,10 +437,6 @@ def test_upload_rejects_multiple_files(context):
     assert response.status_code == 422
     assert "upload" not in service.calls
 
-
-# ============================================================
-# OVERSIZED UPLOAD
-# ============================================================
 
 def test_upload_rejects_oversized_file(context):
     app, client, service = context
@@ -526,10 +458,6 @@ def test_upload_rejects_oversized_file(context):
     assert "upload" not in service.calls
 
 
-# ============================================================
-# INVALID ATTACHMENT ERROR
-# ============================================================
-
 def test_invalid_attachment_returns_422(context):
     app, client, service = context
 
@@ -543,10 +471,6 @@ def test_invalid_attachment_returns_422(context):
 
     assert response.status_code == 422
 
-
-# ============================================================
-# UNSUPPORTED ATTACHMENT ERROR
-# ============================================================
 
 def test_unsupported_attachment_returns_415(context):
     app, client, service = context
@@ -562,10 +486,6 @@ def test_unsupported_attachment_returns_415(context):
     assert response.status_code == 415
 
 
-# ============================================================
-# STORAGE FAILURE
-# ============================================================
-
 def test_storage_failure_returns_503(context):
     app, client, service = context
 
@@ -579,7 +499,6 @@ def test_storage_failure_returns_503(context):
 
     assert response.status_code == 503
 
-    # Jangan tampilkan detail internal filesystem.
     assert "Storage tidak tersedia" not in (
         response.json()["message"]
     )

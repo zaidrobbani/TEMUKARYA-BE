@@ -1,9 +1,3 @@
-"""Buat akun yang langsung terverifikasi (tanpa email verifikasi): admin, akun demo, akun uji.
-
-    python -m app.scripts.create_user --role UMKM --name "Rina" --email rina@demo.id --phone 081234567890
-    echo 'rahasia123' | python -m app.scripts.create_user --role FREELANCER ... --password-stdin
-"""
-
 import argparse
 import sys
 from collections.abc import Callable, Sequence
@@ -25,8 +19,6 @@ class InvalidArguments(Exception):
 
 
 class _AccountFields(BaseModel):
-    """Aturan sama dengan `POST /auth/register`, supaya akun CLI tidak lolos dari validasi API."""
-
     name: Name
     email: Email
     phone_number: PhoneNumber | None = None

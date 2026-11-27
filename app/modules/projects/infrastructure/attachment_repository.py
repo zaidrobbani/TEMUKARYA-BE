@@ -12,19 +12,8 @@ from app.modules.projects.infrastructure.models import (
 
 
 class SqlAlchemyAttachmentRepository(AttachmentRepository):
-    """
-    Repository metadata attachment.
-
-    Tidak melakukan commit.
-    Transaction boundary dikelola oleh UnitOfWork.
-    """
-
     def __init__(self, session: Session):
         self._session = session
-
-    # ========================================================
-    # PROJECT OWNERSHIP
-    # ========================================================
 
     def owns_project(
         self,
@@ -33,18 +22,6 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
         editable_only: bool = False,
         lock: bool = False,
     ) -> bool:
-        """
-        Pastikan project dimiliki UMKM terkait.
-
-        editable_only=True membatasi akses tulis
-        pada project yang masih TERBUKA dan
-        belum dimulai.
-
-        lock=True menggunakan SELECT FOR UPDATE
-        untuk mengunci parent project saat
-        transaksi perubahan attachment.
-        """
-
         statement = select(ProjectModel.id).where(
             ProjectModel.id == project_id,
             ProjectModel.umkm_id == umkm_id,
@@ -80,17 +57,11 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
         ).first()
         return row is not None
 
-    # ========================================================
-    # LIST ATTACHMENTS
-    # ========================================================
-
     def list_by_project(
         self,
         project_id: str,
         lock: bool = False,
     ) -> list[AttachmentRecord]:
-        """Mengambil attachment berdasarkan project ID."""
-
         statement = (
             select(ProjectAttachmentModel)
             .where(
@@ -114,20 +85,11 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
             for model in models
         ]
 
-    # ========================================================
-    # GET ATTACHMENT
-    # ========================================================
-
     def get_by_id(
         self,
         project_id: str,
         attachment_id: str,
     ) -> AttachmentRecord | None:
-        """
-        Ambil attachment yang benar-benar
-        terhubung dengan project terkait.
-        """
-
         statement = select(ProjectAttachmentModel).where(
             ProjectAttachmentModel.id == attachment_id,
             ProjectAttachmentModel.project_id == project_id,
@@ -140,16 +102,10 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
 
         return _to_attachment_record(model)
 
-    # ========================================================
-    # ADD ATTACHMENT
-    # ========================================================
-
     def add(
         self,
         attachment: AttachmentRecord,
     ) -> AttachmentRecord:
-        """Menyimpan metadata file ke database."""
-
         model = ProjectAttachmentModel(
             id=attachment.id,
             project_id=attachment.project_id,
@@ -165,24 +121,11 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
 
         return _to_attachment_record(model)
 
-    # ========================================================
-    # DELETE ATTACHMENT METADATA
-    # ========================================================
-
     def delete(
         self,
         project_id: str,
         attachment_id: str,
     ) -> bool:
-        """
-        Menghapus metadata attachment dari database.
-
-        File fisik TIDAK dihapus di sini.
-
-        Pemanggil harus melakukan commit database
-        sebelum membersihkan file fisik.
-        """
-
         statement = delete(
             ProjectAttachmentModel
         ).where(
@@ -197,15 +140,9 @@ class SqlAlchemyAttachmentRepository(AttachmentRepository):
         return result.rowcount == 1
 
 
-# ============================================================
-# MAPPER: SQLALCHEMY MODEL -> DOMAIN RECORD
-# ============================================================
-
 def _to_attachment_record(
     model: ProjectAttachmentModel,
 ) -> AttachmentRecord:
-    """Mengubah ORM Model ke domain record."""
-
     return AttachmentRecord(
         id=model.id,
         project_id=model.project_id,

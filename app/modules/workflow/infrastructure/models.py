@@ -5,8 +5,8 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, CreatedAt, UpdatedAt, UuidPk
-from app.modules.applications.infrastructure import models as _applications_models  # noqa: F401
-from app.modules.projects.infrastructure import models as _projects_models  # noqa: F401
+from app.modules.applications.infrastructure import models as _applications_models
+from app.modules.projects.infrastructure import models as _projects_models
 
 
 class ProjectAgreementModel(Base):

@@ -29,10 +29,10 @@ def second_project(w, project_id, price):
 @pytest.fixture
 def w():
     world = World()
-    world.to_completed()  # project-1: 1.500.000 dibayar 10 Nov, dana RELEASED
+    world.to_completed()
     world.clock.advance(days=1)
     second_project(world, "p2", 1_000_000)
-    world.pay(project_id="p2")  # dibayar 11 Nov, dana HELD
+    world.pay(project_id="p2")
     second_project(world, "p3", 500_000)
     world.pay(project_id="p3", outcome=PaymentOutcome.FAILED)
     second_project(world, "p4", 200_000)
@@ -130,7 +130,6 @@ def test_income_chart_defaults(w):
 
 def test_income_uses_wib_day(w):
     payment = w.store.payment_for("p2")
-    # 23.30 WIB tanggal 11 = 16.30 UTC
     w.store.payments[payment.id] = payment.__class__(
         **{**payment.__dict__, "paid_at": datetime(2026, 11, 11, 16, 30, tzinfo=UTC)}
     )

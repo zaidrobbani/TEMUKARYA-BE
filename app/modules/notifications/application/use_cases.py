@@ -29,8 +29,6 @@ def _clip(value: str, size: int) -> str:
 
 
 class Notifier:
-    """Kontrak notify() untuk semua modul. Tidak commit: ikut transaksi pemanggil."""
-
     def __init__(self, repository: NotificationRepository, clock: Clock = utc_now):
         self._repository = repository
         self._clock = clock

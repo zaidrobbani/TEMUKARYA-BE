@@ -1,4 +1,3 @@
-
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -18,10 +17,6 @@ from app.modules.matching.domain.scoring import (
     calculate_skill_match,
 )
 
-
-# ============================================================
-# PROJECT SOURCE TEST
-# ============================================================
 
 def test_project_source_fields():
     project = ProjectMatchingSource(
@@ -43,10 +38,6 @@ def test_project_source_fields():
     )
 
 
-# ============================================================
-# FREELANCER SOURCE TEST
-# ============================================================
-
 def test_freelancer_source_fields():
     freelancer = FreelancerMatchingSource(
         freelancer_id="f1",
@@ -60,10 +51,6 @@ def test_freelancer_source_fields():
     assert freelancer.service_price_min is None
     assert freelancer.skill_ids == ("python",)
 
-
-# ============================================================
-# BIDIRECTIONAL RECOMMENDATIONS
-# ============================================================
 
 def test_recommendations_work_in_both_directions():
     project = ProjectMatchingSource(
@@ -107,10 +94,6 @@ def test_recommendations_work_in_both_directions():
     assert project_result.project.project_id == "p1"
 
 
-# ============================================================
-# IMMUTABILITY
-# ============================================================
-
 def test_entities_are_immutable():
     project = ProjectMatchingSource(
         "p1",
@@ -123,10 +106,6 @@ def test_entities_are_immutable():
     with pytest.raises(FrozenInstanceError):
         project.title = "Changed"
 
-
-# ============================================================
-# REPOSITORY CONTRACT
-# ============================================================
 
 @pytest.mark.parametrize(
     "method_name",

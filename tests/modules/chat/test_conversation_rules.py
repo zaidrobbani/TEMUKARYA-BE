@@ -24,20 +24,12 @@ NOW = datetime(
 )
 
 
-# ============================================================
-# HELPER
-# ============================================================
-
 def conv(project=None):
     return Conversation(
         "c1", "u1", "f1",
         project, None, NOW, NOW,
     )
 
-
-# ============================================================
-# 1. VALIDATE ID
-# ============================================================
 
 def test_valid_chat_id():
     assert validate_chat_id(
@@ -62,10 +54,6 @@ def test_invalid_chat_id(bad):
     with pytest.raises(ValueError):
         validate_chat_id(bad)
 
-
-# ============================================================
-# 2. VALIDATE PARTICIPANTS
-# ============================================================
 
 def test_validate_general_participants():
     assert validate_conversation_participants(
@@ -105,10 +93,6 @@ def test_identity_key_distinguishes_general_from_project():
     )
 
 
-# ============================================================
-# 3. VALIDATE CHAT ACTOR
-# ============================================================
-
 @pytest.mark.parametrize(
     "actor",
     [
@@ -132,10 +116,6 @@ def test_invalid_actor(actor):
     with pytest.raises(PermissionError):
         require_chat_actor(actor)
 
-
-# ============================================================
-# 4. CONVERSATION ACCESS
-# ============================================================
 
 @pytest.mark.parametrize(
     "actor",
@@ -165,10 +145,6 @@ def test_reject_nonparticipant_or_wrong_role(actor):
         )
 
 
-# ============================================================
-# 5. CONVERSATION INITIATOR
-# ============================================================
-
 @pytest.mark.parametrize(
     "actor",
     [
@@ -190,10 +166,6 @@ def test_reject_fake_initiator():
             "f1",
         )
 
-
-# ============================================================
-# 6. PROJECT OWNERSHIP
-# ============================================================
 
 def test_general_chat_needs_no_project_owner():
     require_project_owner(

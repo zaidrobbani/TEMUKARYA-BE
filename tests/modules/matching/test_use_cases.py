@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.core.exceptions import (
@@ -23,10 +22,6 @@ from app.modules.matching.domain.entities import (
 )
 
 
-# ============================================================
-# TEST CONSTANTS
-# ============================================================
-
 REQUIRED = (
     "python",
     "fastapi",
@@ -35,10 +30,6 @@ REQUIRED = (
     "react",
 )
 
-
-# ============================================================
-# TEST DATA FACTORIES
-# ============================================================
 
 def project(
     project_id="p1",
@@ -73,14 +64,8 @@ def freelancer(
     )
 
 
-# ============================================================
-# FAKE MATCHING REPOSITORY
-# ============================================================
-
 class FakeMatchingRepository:
-
     def __init__(self):
-
         self.projects = {
             "p1": project(),
         }
@@ -182,13 +167,8 @@ class FakeMatchingRepository:
         )
 
 
-# ============================================================
-# FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-
     repo = FakeMatchingRepository()
 
     return (
@@ -197,10 +177,6 @@ def context():
         RecommendProjectsForFreelancer(repo),
     )
 
-
-# ============================================================
-# 1. FREELANCER RECOMMENDATIONS
-# ============================================================
 
 def test_freelancer_recommendations_sort_and_threshold(
     context,
@@ -258,10 +234,6 @@ def test_freelancer_recommendations_explain_match(
     )
 
 
-# ============================================================
-# 2. FREELANCER PAGINATION
-# ============================================================
-
 def test_freelancer_pagination(context):
     repo, recommend, _ = context
 
@@ -294,10 +266,6 @@ def test_freelancer_pagination(context):
     assert result.has_more is False
 
 
-# ============================================================
-# 3. OWNERSHIP AND NOT FOUND
-# ============================================================
-
 def test_freelancer_nonowner_and_notfound_same_error(
     context,
 ):
@@ -306,7 +274,6 @@ def test_freelancer_nonowner_and_notfound_same_error(
     with pytest.raises(
         NotFoundError
     ) as forbidden:
-
         recommend.execute(
             RecommendFreelancersInput(
                 "p1",
@@ -317,7 +284,6 @@ def test_freelancer_nonowner_and_notfound_same_error(
     with pytest.raises(
         NotFoundError
     ) as absent:
-
         recommend.execute(
             RecommendFreelancersInput(
                 "missing",
@@ -332,10 +298,6 @@ def test_freelancer_nonowner_and_notfound_same_error(
 
     assert repo.available_calls == 0
 
-
-# ============================================================
-# 4. PROJECT STATUS
-# ============================================================
 
 def test_freelancer_closed_project_conflict(
     context,
@@ -357,10 +319,6 @@ def test_freelancer_closed_project_conflict(
     assert repo.available_calls == 0
 
 
-# ============================================================
-# 5. EMPTY PROJECT SKILLS
-# ============================================================
-
 def test_freelancer_empty_required_skills(
     context,
 ):
@@ -381,10 +339,6 @@ def test_freelancer_empty_required_skills(
     assert repo.available_calls == 0
 
 
-# ============================================================
-# 6. EMPTY CANDIDATES
-# ============================================================
-
 def test_freelancer_empty_eligible_candidates(
     context,
 ):
@@ -402,10 +356,6 @@ def test_freelancer_empty_eligible_candidates(
     assert result.items == ()
     assert not result.has_more
 
-
-# ============================================================
-# 7. DUPLICATE FREELANCERS
-# ============================================================
 
 def test_freelancer_duplicate_candidate_ids(
     context,
@@ -434,10 +384,6 @@ def test_freelancer_duplicate_candidate_ids(
     assert len(ids) == len(set(ids))
 
 
-# ============================================================
-# 8. NORMALIZE PROJECT AND UMKM IDS
-# ============================================================
-
 def test_freelancer_trims_user_and_project_ids(
     context,
 ):
@@ -452,10 +398,6 @@ def test_freelancer_trims_user_and_project_ids(
 
     assert page.project_id == "p1"
 
-
-# ============================================================
-# 9. PROJECT RECOMMENDATIONS
-# ============================================================
 
 def test_project_recommendations_sort_and_threshold(
     context,
@@ -484,10 +426,6 @@ def test_project_recommendations_sort_and_threshold(
         100.0,
     ]
 
-
-# ============================================================
-# 10. PROJECT SCORE THRESHOLD
-# ============================================================
 
 def test_project_recommendations_score_60_percent(
     context,
@@ -520,10 +458,6 @@ def test_project_recommendations_score_60_percent(
         60.0,
     ]
 
-
-# ============================================================
-# 11. PROJECT PAGINATION
-# ============================================================
 
 def test_project_pagination(context):
     _, _, recommend = context
@@ -561,10 +495,6 @@ def test_project_pagination(context):
     assert next_page.has_more is False
 
 
-# ============================================================
-# 12. FREELANCER NOT FOUND
-# ============================================================
-
 def test_project_freelancer_notfound(
     context,
 ):
@@ -579,10 +509,6 @@ def test_project_freelancer_notfound(
 
     assert repo.published_calls == 0
 
-
-# ============================================================
-# 13. FREELANCER WITHOUT SKILLS
-# ============================================================
 
 def test_project_freelancer_without_skills(
     context,
@@ -601,10 +527,6 @@ def test_project_freelancer_without_skills(
     assert repo.published_calls == 0
 
 
-# ============================================================
-# 14. BUSY FREELANCER CAN BROWSE PROJECTS
-# ============================================================
-
 def test_busy_freelancer_can_browse_projects(
     context,
 ):
@@ -618,10 +540,6 @@ def test_busy_freelancer_can_browse_projects(
         RecommendProjectsInput("f1")
     ).items
 
-
-# ============================================================
-# 15. STALE AND EMPTY PROJECTS EXCLUDED
-# ============================================================
 
 def test_projects_stale_or_empty_skills_excluded(
     context,
@@ -640,10 +558,6 @@ def test_projects_stale_or_empty_skills_excluded(
     assert "p4" not in ids
     assert "p5" not in ids
 
-
-# ============================================================
-# 16. DUPLICATE PROJECTS
-# ============================================================
 
 def test_projects_duplicate_candidates_excluded(
     context,
@@ -667,10 +581,6 @@ def test_projects_duplicate_candidates_excluded(
     assert len(ids) == len(set(ids))
 
 
-# ============================================================
-# 17. NORMALIZE FREELANCER ID
-# ============================================================
-
 def test_project_recommendations_trims_identity(
     context,
 ):
@@ -682,10 +592,6 @@ def test_project_recommendations_trims_identity(
 
     assert result.freelancer_id == "f1"
 
-
-# ============================================================
-# 18. INVALID PAGINATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "limit,offset",
@@ -730,10 +636,6 @@ def test_invalid_pagination_for_both_use_cases(
         == 0
     )
 
-
-# ============================================================
-# 19. INVALID IDS
-# ============================================================
 
 @pytest.mark.parametrize(
     "bad_id",

@@ -14,10 +14,8 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-from app.modules.skills.infrastructure import models as _master_data_models  # noqa: F401
+from app.modules.skills.infrastructure import models as _master_data_models
 
-
-# 1. PROJECT MODEL
 
 class ProjectModel(Base):
     __tablename__ = "projects"
@@ -114,8 +112,6 @@ class ProjectModel(Base):
     )
 
 
-# 2. PROJECT SKILL MODEL
-
 class ProjectSkillModel(Base):
     __tablename__ = "project_skills"
 
@@ -137,8 +133,6 @@ class ProjectSkillModel(Base):
         primary_key=True,
     )
 
-
-# 3. PROJECT ATTACHMENT MODEL
 
 class ProjectAttachmentModel(Base):
     __tablename__ = "project_attachments"

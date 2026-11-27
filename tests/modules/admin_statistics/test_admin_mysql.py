@@ -17,10 +17,6 @@ from app.modules.admin_statistics.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# 1. MYSQL TEST CONFIGURATION
-# ============================================================
-
 REQUIRED_COLUMNS = {
     "users": {
         "id",
@@ -72,23 +68,7 @@ REQUIRED_COLUMNS = {
 }
 
 
-# ============================================================
-# 2. MYSQL SAFETY GUARD
-# ============================================================
-
 def require_safe_mysql() -> None:
-    """
-    Integration test hanya boleh dijalankan
-    pada database development lokal.
-
-    Tidak membuat, mengubah, atau menghapus
-    record database.
-    """
-
-    # --------------------------------------------------------
-    # A. EXPLICIT OPT-IN
-    # --------------------------------------------------------
-
     if os.getenv(
         "TEMUKARYA_RUN_MYSQL_TESTS"
     ) != "1":
@@ -96,18 +76,10 @@ def require_safe_mysql() -> None:
             "MySQL integration test belum diaktifkan"
         )
 
-    # --------------------------------------------------------
-    # B. MYSQL ONLY
-    # --------------------------------------------------------
-
     if engine.dialect.name != "mysql":
         pytest.fail(
             "Admin integration test membutuhkan MySQL"
         )
-
-    # --------------------------------------------------------
-    # C. LOCALHOST ONLY
-    # --------------------------------------------------------
 
     if engine.url.host not in {
         "localhost",
@@ -117,18 +89,10 @@ def require_safe_mysql() -> None:
             "Hanya MySQL lokal yang diizinkan"
         )
 
-    # --------------------------------------------------------
-    # D. DATABASE NAME
-    # --------------------------------------------------------
-
     if engine.url.database != "temukarya":
         pytest.fail(
             "Database harus bernama temukarya"
         )
-
-    # --------------------------------------------------------
-    # E. PRODUCTION GUARD
-    # --------------------------------------------------------
 
     from app.core.config import settings
 
@@ -145,10 +109,6 @@ def require_safe_mysql() -> None:
             "pada environment production"
         )
 
-    # --------------------------------------------------------
-    # F. VERIFY DATABASE SCHEMA
-    # --------------------------------------------------------
-
     inspector = inspect(engine)
 
     existing_tables = set(
@@ -156,7 +116,6 @@ def require_safe_mysql() -> None:
     )
 
     for table, required in REQUIRED_COLUMNS.items():
-
         if table not in existing_tables:
             pytest.fail(
                 f"Required table belum ada: {table}"
@@ -178,22 +137,9 @@ def require_safe_mysql() -> None:
     print("\nMYSQL ADMIN SCHEMA AUDIT: PASSED")
 
 
-# ============================================================
-# 3. SQL READ-ONLY GUARD
-# ============================================================
-
 def capture_read_only_queries(
     statements: list[str],
 ):
-    """
-    Membuat listener untuk memastikan
-    seluruh query pada tahap pengujian
-    menggunakan SELECT.
-
-    Jika ada INSERT/UPDATE/DELETE,
-    test langsung gagal.
-    """
-
     def guard(
         conn,
         cursor,
@@ -215,26 +161,12 @@ def capture_read_only_queries(
     return guard
 
 
-# ============================================================
-# 4. MYSQL INTEGRATION TEST
-# ============================================================
-
 def test_admin_mysql_read_only_integration():
-
-    # ========================================================
-    # A. SAFETY CHECK
-    # ========================================================
-
     require_safe_mysql()
 
     captured_sql = []
 
-    # ========================================================
-    # B. CONNECTION AND SESSION
-    # ========================================================
-
     with engine.connect() as connection:
-
         guard = capture_read_only_queries(
             captured_sql
         )
@@ -246,22 +178,16 @@ def test_admin_mysql_read_only_integration():
         )
 
         try:
-
             with Session(
                 bind=connection,
                 autoflush=False,
                 expire_on_commit=False,
             ) as session:
-
                 repo = (
                     SqlAlchemyAdminStatisticsRepository(
                         session
                     )
                 )
-
-                # ============================================
-                # 1. GET SYSTEM STATISTICS
-                # ============================================
 
                 stats = repo.get_system_statistics()
 
@@ -280,10 +206,6 @@ def test_admin_mysql_read_only_integration():
                 print(
                     "MYSQL SYSTEM STATISTICS: PASSED"
                 )
-
-                # ============================================
-                # 2. VERIFY USER COUNTS
-                # ============================================
 
                 umkm_count = repo.count_users(
                     role="umkm",
@@ -307,10 +229,6 @@ def test_admin_mysql_read_only_integration():
                     "MYSQL USER COUNTS: PASSED"
                 )
 
-                # ============================================
-                # 3. VERIFY USER LIST
-                # ============================================
-
                 users = repo.list_users(
                     role=None,
                     search=None,
@@ -327,13 +245,10 @@ def test_admin_mysql_read_only_integration():
                 assert len(users) <= total_users
 
                 for user in users:
-
                     assert user.id
                     assert user.name
                     assert user.email
 
-                    # Jangan sampai password hash
-                    # masuk ke Domain Entity.
                     user_fields = asdict(user)
 
                     assert "password_hash" not in (
@@ -348,15 +263,10 @@ def test_admin_mysql_read_only_integration():
                     "MYSQL USER LIST: PASSED"
                 )
 
-                # ============================================
-                # 4. FILTER USERS BY ROLE
-                # ============================================
-
                 for role in (
                     "umkm",
                     "freelancer",
                 ):
-
                     filtered = repo.list_users(
                         role=role,
                         search=None,
@@ -371,12 +281,7 @@ def test_admin_mysql_read_only_integration():
                     "MYSQL USER ROLE FILTERS: PASSED"
                 )
 
-                # ============================================
-                # 5. GET USER DETAIL
-                # ============================================
-
                 if users:
-
                     selected_user = users[0]
 
                     detail = repo.get_user_detail(
@@ -407,15 +312,10 @@ def test_admin_mysql_read_only_integration():
                     )
 
                 else:
-
                     print(
                         "MYSQL USER DETAIL: "
                         "SKIPPED (database kosong)"
                     )
-
-                # ============================================
-                # 6. VERIFY PROJECT COUNTS
-                # ============================================
 
                 project_count = repo.count_projects(
                     status=None,
@@ -441,10 +341,6 @@ def test_admin_mysql_read_only_integration():
                     "MYSQL PROJECT COUNTS: PASSED"
                 )
 
-                # ============================================
-                # 7. VERIFY PROJECT LIST
-                # ============================================
-
                 projects = repo.list_projects(
                     status=None,
                     search=None,
@@ -459,7 +355,6 @@ def test_admin_mysql_read_only_integration():
                 )
 
                 for project in projects:
-
                     assert project.id
                     assert project.title
 
@@ -473,12 +368,7 @@ def test_admin_mysql_read_only_integration():
                     "MYSQL PROJECT LIST: PASSED"
                 )
 
-                # ============================================
-                # 8. VERIFY PROJECT DETAIL
-                # ============================================
-
                 if projects:
-
                     selected_project = projects[0]
 
                     detail = repo.get_project_detail(
@@ -499,7 +389,6 @@ def test_admin_mysql_read_only_integration():
                         selected_project
                         .assigned_freelancer_id is None
                     ):
-
                         assert (
                             detail.project
                             .assigned_freelancer_id
@@ -511,18 +400,12 @@ def test_admin_mysql_read_only_integration():
                     )
 
                 else:
-
                     print(
                         "MYSQL PROJECT DETAIL: "
                         "SKIPPED (database kosong)"
                     )
 
-                # ============================================
-                # 9. VERIFY PROJECT STATUS FILTER
-                # ============================================
-
                 if projects:
-
                     sample_status = (
                         projects[0].status
                     )
@@ -545,10 +428,6 @@ def test_admin_mysql_read_only_integration():
                     print(
                         "MYSQL PROJECT STATUS FILTER: PASSED"
                     )
-
-                # ============================================
-                # 10. INDEPENDENT PAYMENT CHECK
-                # ============================================
 
                 payment_row = session.execute(
                     text(
@@ -584,12 +463,7 @@ def test_admin_mysql_read_only_integration():
                     "MYSQL PAYMENT AGGREGATION: PASSED"
                 )
 
-                # ============================================
-                # 11. TEST SEARCH
-                # ============================================
-
                 if users:
-
                     keyword = users[0].name[:5]
 
                     search_count = repo.count_users(
@@ -600,7 +474,6 @@ def test_admin_mysql_read_only_integration():
                     assert search_count >= 1
 
                 if projects:
-
                     keyword = projects[0].title[:5]
 
                     search_count = repo.count_projects(
@@ -615,24 +488,11 @@ def test_admin_mysql_read_only_integration():
                 )
 
         finally:
-
-            # =================================================
-            # C. REMOVE SQL LISTENER
-            # =================================================
-
             event.remove(
                 connection,
                 "before_cursor_execute",
                 guard,
             )
-
-            # Connection ditutup tanpa commit.
-            # Transaksi aktif di-rollback
-            # oleh pengelolaan Session/Connection.
-
-    # ========================================================
-    # D. VERIFY READ-ONLY QUERIES
-    # ========================================================
 
     assert captured_sql, (
         "Tidak ada SQL yang dieksekusi"

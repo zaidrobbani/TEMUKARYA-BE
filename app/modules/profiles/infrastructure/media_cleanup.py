@@ -1,18 +1,24 @@
-"""Maintenance-only orphan cleanup; dry-run by default, no database writes."""
 import argparse
 import os
 import re
 import time
+from collections.abc import Collection
 
 from sqlalchemy import text
 
 from app.modules.profiles.infrastructure.media_storage import KEY_PATTERN, LocalImageStorage
 
 
-def cleanup_orphans(storage, referenced_keys, *, apply=False, minimum_age=86400):
+def cleanup_orphans(
+    storage: LocalImageStorage,
+    referenced_keys: Collection[str],
+    *,
+    apply: bool = False,
+    minimum_age: int = 86400,
+) -> list[str]:
     if minimum_age < 86400:
         raise ValueError("Orphan grace period must be at least 24 hours")
-    candidates = []
+    candidates: list[str] = []
     cutoff = time.time() - minimum_age
     for path in storage.root.iterdir():
         if path.is_symlink() or not path.is_file() or path.name in referenced_keys:
@@ -26,11 +32,11 @@ def cleanup_orphans(storage, referenced_keys, *, apply=False, minimum_age=86400)
             if KEY_PATTERN.fullmatch(path.name):
                 storage.delete(path.name)
             else:
-                path.unlink()  # Errors propagate; no silent failed cleanup.
+                path.unlink()
     return sorted(candidates)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--maintenance-window", action="store_true",

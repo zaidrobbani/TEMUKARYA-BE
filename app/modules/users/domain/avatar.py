@@ -3,9 +3,7 @@ from typing import BinaryIO
 
 from app.core.exceptions import BadRequestError, NotFoundError, PayloadTooLargeError, ServiceUnavailableError, UnsupportedMediaTypeError
 
-# Batas unggahan mentah (Figma: "JPG atau PNG, maks. 2 MB"); Android sudah mengompres ke WebP sebelum kirim.
 MAX_AVATAR_UPLOAD_BYTES = 2 * 1024 * 1024
-# Hasil yang disimpan server: sisi terpanjang maks 512 px, WebP maks ~150 KB.
 AVATAR_MAX_DIMENSION = 512
 AVATAR_MAX_STORED_BYTES = 150 * 1024
 AVATAR_MIME_TYPE = "image/webp"
@@ -37,8 +35,6 @@ class AvatarStorageError(ServiceUnavailableError):
 
 
 class AvatarStorage(ABC):
-    """Menyimpan foto profil yang sudah dinormalisasi (WebP kecil). Key berupa `<32 hex>.webp`."""
-
     @abstractmethod
     def save(self, source: BinaryIO) -> str: ...
 
@@ -50,7 +46,6 @@ class AvatarStorage(ABC):
 
 
 def avatar_url(api_prefix: str, user_id: str, key: str) -> str:
-    """Nilai `users.profile_image_url`. `v` = nama file tersimpan, sekaligus pemecah cache di client."""
     return f"{api_prefix}/users/{user_id}/photo?v={key.removesuffix('.webp')}"
 
 

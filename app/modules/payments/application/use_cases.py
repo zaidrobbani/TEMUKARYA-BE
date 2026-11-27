@@ -104,8 +104,6 @@ class WalletEntriesPage:
 
 
 class PaymentService(PaymentPort):
-    """Implementasi PaymentPort untuk workflow. Tidak commit: ikut transaksi pemanggil."""
-
     def __init__(self, payments: PaymentRepository):
         self._payments = payments
 
@@ -130,7 +128,6 @@ class PaymentService(PaymentPort):
             return
         if existing.status == PaymentStatus.BERHASIL:
             raise ConflictError("Pembayaran proyek ini sudah berhasil")
-        # Tagihan yang belum berhasil mengikuti nilai kesepakatan terbaru.
         self._payments.update(
             replace(
                 existing,
@@ -156,8 +153,6 @@ class PaymentService(PaymentPort):
 
 
 class FundReleaser:
-    """Pelepasan dana HELD → RELEASED. Dipanggil saat UMKM menyetujui hasil, dalam transaksi yang sama."""
-
     def __init__(self, payments: PaymentRepository, wallets: WalletRepository):
         self._payments = payments
         self._wallets = wallets
@@ -225,16 +220,12 @@ class _PaymentUseCase:
 
 
 class GetProjectPayment(_PaymentUseCase):
-    """U-18/U-20/U-21: detail tagihan, status, dan bukti pembayaran."""
-
     def execute(self, actor: Actor, project_id: str) -> PaymentDetail:
         context, payment = self._load_payment(actor, project_id)
         return self._detail(context, payment)
 
 
 class RefreshQris(_PaymentUseCase):
-    """Buat ulang QRIS (simulasi diulang): status kembali MENUNGGU dengan masa berlaku baru."""
-
     def __init__(
         self, workflow: WorkflowRepository, payments: PaymentRepository, uow: UnitOfWork, clock: Clock = utc_now
     ):
@@ -263,8 +254,6 @@ def _ensure_payable(context: ProjectContext, payment: Payment) -> None:
 
 
 class SimulatePayment(_PaymentUseCase):
-    """U-19: bayar (simulasi). Berhasil → dana HELD + project Siap Dikerjakan dalam satu transaksi."""
-
     def __init__(
         self,
         workflow: WorkflowRepository,
@@ -306,7 +295,6 @@ class SimulatePayment(_PaymentUseCase):
                     raise ConflictError("Idempotency-Key sudah dipakai untuk pembayaran lain")
                 return SimulationResult(self._detail(context, payment), previous, replayed=True)
 
-        # Pembayaran ganda: kembalikan data sebelumnya tanpa transaksi baru.
         if payment.status == PaymentStatus.BERHASIL:
             return SimulationResult(self._detail(context, payment), None, already_paid=True)
         _ensure_payable(context, payment)
@@ -404,8 +392,6 @@ class SimulatePayment(_PaymentUseCase):
 
 
 class ListPaymentHistory:
-    """U-22: riwayat transaksi UMKM."""
-
     def __init__(self, payments: PaymentRepository):
         self._payments = payments
 
@@ -429,8 +415,6 @@ class ListPaymentHistory:
 
 
 class GetWallet:
-    """F-20: saldo tersedia, tertahan, dan total."""
-
     def __init__(self, wallets: WalletRepository):
         self._wallets = wallets
 
@@ -442,8 +426,6 @@ class GetWallet:
 
 
 class ListWalletEntries:
-    """F-24: riwayat dana masuk freelancer."""
-
     def __init__(self, wallets: WalletRepository):
         self._wallets = wallets
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.auth.presentation.dependencies import get_current_user
 from app.modules.users.application.use_cases import GetProfilePhoto, GetUser, RemoveProfilePhoto, UpdateProfilePhoto
 from app.modules.users.domain.avatar import AVATAR_MIME_TYPE
@@ -28,7 +28,7 @@ def update_my_photo(
     file: UploadFile = File(..., description="JPG, PNG, atau WebP, maks 2 MB"),
     current_user: User = Depends(get_current_user),
     use_case: UpdateProfilePhoto = Depends(update_profile_photo_use_case),
-):
+) -> SuccessBody[UserResponse]:
     return success_response("Foto profil berhasil diperbarui", use_case.execute(current_user, file.file))
 
 
@@ -41,7 +41,7 @@ def update_my_photo(
 def remove_my_photo(
     current_user: User = Depends(get_current_user),
     use_case: RemoveProfilePhoto = Depends(remove_profile_photo_use_case),
-):
+) -> SuccessBody[UserResponse]:
     return success_response("Foto profil dihapus", use_case.execute(current_user))
 
 
@@ -55,12 +55,11 @@ def get_user_photo(
     user_id: str,
     _: User = Depends(get_current_user),
     use_case: GetProfilePhoto = Depends(get_profile_photo_use_case),
-):
+) -> StreamingResponse:
     stream = use_case.execute(user_id)
     return StreamingResponse(
         iter(lambda: stream.read(64 * 1024), b""),
         media_type=AVATAR_MIME_TYPE,
-        # URL di profile_image_url berganti tiap foto baru (?v=...), jadi aman di-cache client.
         headers={"Cache-Control": "private, max-age=86400"},
         background=BackgroundTask(stream.close),
     )
@@ -75,6 +74,6 @@ def get_user(
     user_id: str,
     current_user: User = Depends(get_current_user),
     use_case: GetUser = Depends(get_user_use_case),
-):
+) -> SuccessBody[UserResponse]:
     user = use_case.execute(user_id, requester=current_user)
     return success_response("Data user berhasil diambil", user)

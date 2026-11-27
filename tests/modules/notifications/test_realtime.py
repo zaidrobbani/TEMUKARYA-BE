@@ -103,7 +103,6 @@ def test_ping_pong_and_cleanup_on_disconnect(setup):
         ws.send_json({"type": "ping"})
         assert ws.receive_json() == {"type": "pong"}
         assert hub.connection_count("user-a") == 1
-    # Server melepas koneksi secara asinkron setelah klien menutup socket.
     deadline = time.monotonic() + 2
     while hub.connection_count("user-a") and time.monotonic() < deadline:
         time.sleep(0.01)

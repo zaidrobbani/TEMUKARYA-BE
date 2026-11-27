@@ -1,12 +1,12 @@
-
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.exceptions import ForbiddenError
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 
 from app.modules.users.domain.entities import UserRole
 
 from app.modules.applications.application.dto import (
+    ApplicationsPage,
     SubmitApplicationInput,
 )
 
@@ -31,16 +31,12 @@ from app.modules.applications.presentation.schemas import (
 )
 
 
-# ============================================================
-# ROUTER CONFIGURATION
-# ============================================================
-
 router = APIRouter(
     tags=["applications"],
 )
 
 
-def _page_response(message: str, result) -> dict:
+def _page_response(message: str, result: ApplicationsPage) -> SuccessBody[ApplicationsPageResponse]:
     return success_response(message, ApplicationsPageResponse(
         items=[
             ApplicationResponse.model_validate(item)
@@ -51,10 +47,6 @@ def _page_response(message: str, result) -> dict:
         has_more=result.has_more,
     ))
 
-
-# ============================================================
-# 1. SUBMIT PROJECT APPLICATION
-# ============================================================
 
 @router.post(
     "/projects/{project_id}/applications",
@@ -76,30 +68,17 @@ def submit_project_application(
     use_case: SubmitApplication = Depends(
         get_submit_application_use_case
     ),
-):
-
-    # ========================================================
-    # 1. AUTHORIZATION
-    # ========================================================
-
+) -> SuccessBody[ApplicationResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat melamar proyek"
         )
-
-    # ========================================================
-    # 2. CONVERT REQUEST TO APPLICATION DTO
-    # ========================================================
 
     data = SubmitApplicationInput(
         proposed_price=body.proposed_price,
         estimated_duration_days=body.estimated_duration_days,
         proposal_message=body.proposal_message,
     )
-
-    # ========================================================
-    # 3. EXECUTE APPLICATION USE CASE
-    # ========================================================
 
     application = use_case.execute(
         freelancer_id=current_user.user_id,
@@ -112,10 +91,6 @@ def submit_project_application(
         ApplicationResponse.model_validate(application),
     )
 
-
-# ============================================================
-# 2. GET MY APPLICATIONS
-# ============================================================
 
 @router.get(
     "/applications/mine",
@@ -144,8 +119,7 @@ def get_my_applications(
     use_case: GetMyApplications = Depends(
         get_my_applications_use_case
     ),
-):
-
+) -> SuccessBody[ApplicationsPageResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat melihat "
@@ -160,11 +134,6 @@ def get_my_applications(
 
     return _page_response("Daftar lamaran berhasil diambil", result)
 
-
-
-# ============================================================
-# 3. GET PROJECT APPLICANTS
-# ============================================================
 
 @router.get(
     "/projects/{project_id}/applications",
@@ -194,8 +163,7 @@ def get_project_applicants(
     use_case: GetProjectApplicants = Depends(
         get_project_applicants_use_case
     ),
-):
-
+) -> SuccessBody[ApplicationsPageResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya UMKM yang dapat melihat "

@@ -12,7 +12,7 @@ def test_profile_repository_update_is_scoped_no_upsert_and_rollback(self_profile
     repository = repositories[kind]
     own = repository.get_by_user_id("owner-1")
     foreign = repository.get_by_user_id("owner-2")
-    loaded = session.get(model, "owner-1")  # Hold identity map entry to detect stale reads.
+    loaded = session.get(model, "owner-1")
     created = loaded.created_at
     assert repository.get_by_user_id("missing") is None
     assert repository.update(replace(own, user_id="missing", city="Attack")) is None
@@ -20,7 +20,7 @@ def test_profile_repository_update_is_scoped_no_upsert_and_rollback(self_profile
     updated = replace(own, city="Surabaya")
     assert repository.update(updated) == updated
     assert repository.get_by_user_id("owner-1") == updated
-    assert repository.update(updated) == updated  # An idempotent PUT remains successful.
+    assert repository.update(updated) == updated
     assert repository.get_by_user_id("owner-2") == foreign
     assert session.scalar(select(model.created_at).where(model.user_id == "owner-1")) == created
     session.rollback()

@@ -1,4 +1,3 @@
-
 from datetime import date, datetime
 
 import pytest
@@ -30,18 +29,10 @@ from app.modules.discovery.presentation.dependencies import (
 )
 
 
-# ============================================================
-# TEST CONSTANTS
-# ============================================================
-
 FREELANCER_ID = (
     "11111111-1111-4111-8111-111111111111"
 )
 
-
-# ============================================================
-# TEST DATA
-# ============================================================
 
 def make_summary(number: int) -> FreelancerSummary:
     return FreelancerSummary(
@@ -113,20 +104,7 @@ def make_detail() -> FreelancerDetail:
     )
 
 
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
-
 class FakeDiscoveryRepository:
-    """
-    Fake Repository untuk pengujian HTTP.
-
-    Tidak terhubung ke MySQL.
-
-    Pengujian query database sudah dilakukan
-    pada STEP 5 dan STEP 6.
-    """
-
     def __init__(self):
         self.freelancers = [
             make_summary(1),
@@ -173,10 +151,6 @@ class FakeDiscoveryRepository:
         return None
 
 
-# ============================================================
-# FASTAPI TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
     app = FastAPI()
@@ -186,16 +160,9 @@ def context():
 
     repository = FakeDiscoveryRepository()
 
-    # Dependency Injection Override:
-    # API menggunakan Fake Repository,
-    # bukan database sebenarnya.
-
     app.dependency_overrides[
         get_discovery_repository
     ] = lambda: repository
-
-    # Simulasi UMKM yang sudah login.
-    # Ini hanya berlaku selama pengujian.
 
     app.dependency_overrides[
         get_authenticated_discovery_user
@@ -209,10 +176,6 @@ def context():
 
     app.dependency_overrides.clear()
 
-
-# ============================================================
-# 1. SUCCESSFUL FREELANCER LIST
-# ============================================================
 
 def test_search_freelancers_200(context):
     client, app, repository = context
@@ -232,10 +195,6 @@ def test_search_freelancers_200(context):
         "Freelancer 1"
     )
 
-
-# ============================================================
-# 2. SUMMARY RESPONSE DATA
-# ============================================================
 
 def test_search_response_contains_public_fields(context):
     client, app, repository = context
@@ -260,10 +219,6 @@ def test_search_response_contains_public_fields(context):
     assert freelancer["average_rating"] == 4.5
     assert freelancer["review_count"] == 2
 
-
-# ============================================================
-# 3. SEARCH PARAMETER FORWARDING
-# ============================================================
 
 def test_search_params_forwarded_to_use_case(context):
     client, app, repository = context
@@ -297,10 +252,6 @@ def test_search_params_forwarded_to_use_case(context):
     assert filters.min_experience_count == 2
     assert filters.min_rating == 4.0
 
-
-# ============================================================
-# 4. AVAILABILITY FILTER
-# ============================================================
 
 def test_default_availability_available(context):
     client, app, repository = context
@@ -351,10 +302,6 @@ def test_availability_normalized(context):
     )
 
 
-# ============================================================
-# 5. PAGINATION
-# ============================================================
-
 def test_search_pagination(context):
     client, app, repository = context
 
@@ -373,7 +320,6 @@ def test_search_pagination(context):
     assert len(body["items"]) == 2
     assert body["has_more"] is True
 
-    # Use Case meminta limit + 1
     assert repository.last_limit == 3
 
 
@@ -395,10 +341,6 @@ def test_search_last_page(context):
     assert len(body["items"]) == 1
     assert body["has_more"] is False
 
-
-# ============================================================
-# 6. FREELANCER DETAIL
-# ============================================================
 
 def test_get_freelancer_detail_200(context):
     client, app, repository = context
@@ -447,10 +389,6 @@ def test_detail_serializes_dates(context):
     )
 
 
-# ============================================================
-# 7. NOT FOUND — 404
-# ============================================================
-
 def test_get_unknown_freelancer_404(context):
     client, app, repository = context
 
@@ -461,10 +399,6 @@ def test_get_unknown_freelancer_404(context):
     assert response.status_code == 404
     assert response.json() == {"success": False, "message": "Profil Freelancer tidak ditemukan", "data": None}
 
-
-# ============================================================
-# 8. UNAUTHENTICATED — 401
-# ============================================================
 
 @pytest.mark.parametrize(
     "path",
@@ -479,9 +413,6 @@ def test_unauthenticated_returns_401(
 ):
     client, app, repository = context
 
-    # Hilangkan simulasi user login.
-    # Auth asli masih fail-closed.
-
     app.dependency_overrides.pop(
         get_authenticated_discovery_user,
         None,
@@ -491,10 +422,6 @@ def test_unauthenticated_returns_401(
 
     assert response.status_code == 401
 
-
-# ============================================================
-# 9. WRONG ROLE — 403
-# ============================================================
 
 @pytest.mark.parametrize(
     "path",
@@ -537,10 +464,6 @@ def test_wrong_role_does_not_query_repository(context):
     assert repository.search_calls == 0
 
 
-# ============================================================
-# 10. INVALID QUERY PARAMETERS — 422
-# ============================================================
-
 @pytest.mark.parametrize(
     "params",
     [
@@ -570,10 +493,6 @@ def test_invalid_query_returns_422(
     assert response.status_code == 422
 
 
-# ============================================================
-# 11. BUSINESS VALIDATION — 400
-# ============================================================
-
 @pytest.mark.parametrize(
     "params",
     [
@@ -602,10 +521,6 @@ def test_invalid_business_filters_return_400(
     assert response.status_code == 400
 
 
-# ============================================================
-# 12. INVALID FREELANCER ID
-# ============================================================
-
 def test_invalid_freelancer_id_returns_400(context):
     client, app, repository = context
 
@@ -615,10 +530,6 @@ def test_invalid_freelancer_id_returns_400(context):
 
     assert response.status_code == 400
 
-
-# ============================================================
-# 13. DATA LEAK PREVENTION
-# ============================================================
 
 @pytest.mark.parametrize(
     "path",
@@ -644,10 +555,6 @@ def test_sensitive_fields_not_exposed(
     assert '"email"' not in response_text
     assert "access_token" not in response_text
 
-
-# ============================================================
-# 14. OPENAPI DOCUMENTATION
-# ============================================================
 
 def test_discovery_openapi(context):
     client, app, repository = context

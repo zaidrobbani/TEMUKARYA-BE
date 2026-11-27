@@ -35,7 +35,7 @@ class PaymentRepository(ABC):
 
     @abstractmethod
     def list_attempts(self, payment_id: str) -> list[PaymentAttempt]:
-        """Urut dari percobaan pertama."""
+        pass
 
     @abstractmethod
     def transaction_number_exists(self, number: str) -> bool: ...
@@ -44,11 +44,11 @@ class PaymentRepository(ABC):
     def list_umkm_history(
         self, umkm_id: str, group: TransactionGroup, search: str | None, limit: int, offset: int
     ) -> list[PaymentHistoryItem]:
-        """Urut dari waktu bayar/dibuat terbaru."""
+        pass
 
     @abstractmethod
     def count_umkm_history(self, umkm_id: str, search: str | None) -> dict[str, int]:
-        """Jumlah per TransactionGroup (termasuk ALL)."""
+        pass
 
 
 class WalletRepository(ABC):
@@ -57,7 +57,7 @@ class WalletRepository(ABC):
 
     @abstractmethod
     def get_or_create_wallet(self, freelancer_id: str, now: datetime) -> Wallet:
-        """Dibuat lazy saat pembayaran pertama; aman dipanggil bersamaan."""
+        pass
 
     @abstractmethod
     def add_transaction(self, transaction: WalletTransaction) -> None: ...
@@ -69,4 +69,4 @@ class WalletRepository(ABC):
     def list_entries(
         self, wallet_id: str, entry_filter: WalletEntryFilter, limit: int, offset: int
     ) -> list[WalletEntry]:
-        """Urut terbaru dulu. Baris debit HELD saat pelepasan tidak ditampilkan."""
+        pass

@@ -5,7 +5,7 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, CreatedAt, UpdatedAt, UuidPk
-from app.modules.users.infrastructure import models as _users_models  # noqa: F401
+from app.modules.users.infrastructure import models as _users_models
 
 
 class NotificationModel(Base):
@@ -27,8 +27,6 @@ class NotificationModel(Base):
 
 
 class DeviceTokenModel(Base):
-    """Token FCM per perangkat. Satu token hanya milik satu user (login ulang akun lain memindahkannya)."""
-
     __tablename__ = "device_tokens"
     __table_args__ = (Index("ix_device_tokens_user_id", "user_id"),)
 

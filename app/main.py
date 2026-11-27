@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 from fastapi import APIRouter, Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -5,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import API_PREFIX, settings
 from app.core.database import get_db
 from app.core.error_handlers import register_error_handlers
-from app.core.responses import success_response
+from app.core.responses import SuccessBody, success_response
 from app.openapi import install_openapi
 from app.modules.admin_statistics.presentation.router import router as admin_statistics_router
 from app.modules.applications.presentation.router import router as applications_router
@@ -37,8 +39,13 @@ register_error_handlers(app)
 api_router = APIRouter(prefix=API_PREFIX)
 
 
-@api_router.get("/health", tags=["health"])
-def health_check(db: Session = Depends(get_db)):
+class HealthData(TypedDict):
+    env: str
+    database: str
+
+
+@api_router.get("/health", tags=["health"], response_model=None)
+def health_check(db: Session = Depends(get_db)) -> SuccessBody[HealthData]:
     db.execute(text("SELECT 1"))
     return success_response("API berjalan", {"env": settings.APP_ENV, "database": "connected"})
 

@@ -25,12 +25,10 @@ from app.modules.workflow.application.use_cases import (
     UpdateAgreement,
 )
 from app.modules.workflow.domain.repositories import MilestoneWeightReader, PaymentPort, WorkflowRepository
-from app.modules.workflow.presentation.providers import get_actor, get_workflow_repository  # noqa: F401
+from app.modules.workflow.presentation.providers import get_actor, get_workflow_repository
 
 
 class _MilestoneWeightAdapter:
-    """Memakai kontrak get_total_weight milik modul milestones."""
-
     def __init__(self, session: Session):
         self._use_case = GetTotalMilestoneWeight(SqlAlchemyMilestoneRepository(session))
 

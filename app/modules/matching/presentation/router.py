@@ -1,8 +1,7 @@
-
 from fastapi import APIRouter, Depends, Path, Query
 
 from app.core.exceptions import ForbiddenError
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 
 from app.modules.users.domain.entities import UserRole
 
@@ -29,18 +28,10 @@ from app.modules.matching.presentation.schemas import (
 )
 
 
-# ============================================================
-# MATCHING ROUTER
-# ============================================================
-
 router = APIRouter(
     tags=["matching"],
 )
 
-
-# ============================================================
-# 1. RECOMMEND FREELANCERS FOR UMKM
-# ============================================================
 
 @router.get(
     "/projects/{project_id}/recommendations/freelancers",
@@ -79,24 +70,12 @@ def recommend_freelancers_for_project(
     use_case: RecommendFreelancersForProject = Depends(
         get_recommend_freelancers_use_case
     ),
-):
-
-    # ========================================================
-    # 1. ROLE AUTHORIZATION
-    # ========================================================
-
+) -> SuccessBody[FreelancerRecommendationsPageResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya UMKM yang dapat meminta "
             "rekomendasi Freelancer"
         )
-
-    # ========================================================
-    # 2. BUILD APPLICATION INPUT
-    # ========================================================
-
-    # umkm_id WAJIB berasal dari authenticated user,
-    # bukan dari input query parameter.
 
     data = RecommendFreelancersInput(
         project_id=project_id,
@@ -105,25 +84,13 @@ def recommend_freelancers_for_project(
         offset=offset,
     )
 
-    # ========================================================
-    # 3. EXECUTE USE CASE
-    # ========================================================
-
     result = use_case.execute(data)
-
-    # ========================================================
-    # 4. RETURN VALIDATED JSON RESPONSE
-    # ========================================================
 
     return success_response(
         "Rekomendasi Freelancer berhasil diambil",
         FreelancerRecommendationsPageResponse.model_validate(result),
     )
 
-
-# ============================================================
-# 2. RECOMMEND PROJECTS FOR FREELANCER
-# ============================================================
 
 @router.get(
     "/freelancers/me/recommendations/projects",
@@ -157,24 +124,12 @@ def recommend_projects_for_freelancer(
     use_case: RecommendProjectsForFreelancer = Depends(
         get_recommend_projects_use_case
     ),
-):
-
-    # ========================================================
-    # 1. ROLE AUTHORIZATION
-    # ========================================================
-
+) -> SuccessBody[ProjectRecommendationsPageResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat meminta "
             "rekomendasi Project"
         )
-
-    # ========================================================
-    # 2. BUILD APPLICATION INPUT
-    # ========================================================
-
-    # freelancer_id berasal dari JWT user,
-    # bukan berasal dari request client.
 
     data = RecommendProjectsInput(
         freelancer_id=current_user.user_id,
@@ -182,15 +137,7 @@ def recommend_projects_for_freelancer(
         offset=offset,
     )
 
-    # ========================================================
-    # 3. EXECUTE USE CASE
-    # ========================================================
-
     result = use_case.execute(data)
-
-    # ========================================================
-    # 4. RETURN VALIDATED JSON RESPONSE
-    # ========================================================
 
     return success_response(
         "Rekomendasi project berhasil diambil",

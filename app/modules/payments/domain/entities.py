@@ -64,8 +64,6 @@ class BalanceType(StrEnum):
 
 
 class TransactionGroup(StrEnum):
-    """Tab Riwayat Transaksi UMKM."""
-
     ALL = "ALL"
     PENDING = "PENDING"
     HELD = "HELD"
@@ -108,7 +106,6 @@ class WalletEntryFilter(StrEnum):
 
 
 def split_amount(gross_amount: int) -> tuple[int, int]:
-    """(komisi, hak freelancer). Komisi = floor(nilai * 5 / 100)."""
     if type(gross_amount) is not int or gross_amount <= 0:
         raise ValueError("Nilai proyek harus bilangan bulat lebih dari nol")
     fee = gross_amount * COMMISSION_PERCENT // 100

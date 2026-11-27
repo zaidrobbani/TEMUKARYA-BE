@@ -17,15 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
-# ============================================================
-# 1. CONVERSATION MODEL
-# ============================================================
-
 class ConversationModel(Base):
-    """
-    Menyimpan percakapan antara UMKM dan Freelancer.
-    """
-
     __tablename__ = "conversations"
 
     __table_args__ = (
@@ -80,8 +72,6 @@ class ConversationModel(Base):
         nullable=True,
     )
 
-    # Generated column dari schema resmi.
-    # Jangan mengisinya melalui INSERT.
     project_key: Mapped[str] = mapped_column(
         CHAR(36),
         Computed(
@@ -111,19 +101,10 @@ class ConversationModel(Base):
     )
 
 
-# ============================================================
-# 2. MESSAGE MODEL
-# ============================================================
-
 class MessageModel(Base):
-    """
-    Satu pesan yang dikirim dalam sebuah conversation.
-    """
-
     __tablename__ = "messages"
 
     __table_args__ = (
-        # Pesan yang dihapus untuk semua orang tidak lagi menyimpan teks.
         CheckConstraint(
             "message_type <> 'TEXT' OR message_text IS NOT NULL OR deleted_at IS NOT NULL",
             name="ck_messages_text_required",
@@ -194,8 +175,6 @@ class MessageModel(Base):
 
 
 class HiddenMessageModel(Base):
-    """Pesan yang dihapus "untuk saya": hanya disembunyikan dari user ini."""
-
     __tablename__ = "hidden_messages"
 
     message_id: Mapped[str] = mapped_column(
@@ -217,17 +196,7 @@ class HiddenMessageModel(Base):
     )
 
 
-# ============================================================
-# 3. MESSAGE ATTACHMENT MODEL
-# ============================================================
-
 class MessageAttachmentModel(Base):
-    """
-    Metadata file yang dilampirkan pada pesan.
-
-    Isi file disimpan di Storage, bukan database.
-    """
-
     __tablename__ = "message_attachments"
 
     id: Mapped[str] = mapped_column(

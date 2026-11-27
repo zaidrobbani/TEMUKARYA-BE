@@ -6,7 +6,6 @@ WIB = timedelta(hours=7)
 
 
 def wib_date(moment: datetime) -> date:
-    """Tanggal kalender Indonesia (WIB) dari waktu UTC."""
     return (moment + WIB).date()
 
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.exceptions import ServiceUnavailableError
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.profiles.domain.media import StorageFailure
 from app.modules.profiles.presentation.media_router import build_media_router, build_public_media_router
 
@@ -17,7 +17,6 @@ from app.modules.profiles.presentation.dependencies import (
 from app.modules.profiles.presentation.schemas import UpdateUmkmProfileRequest, UpdateFreelancerProfileRequest
 from app.modules.users.domain.entities import UserRole
 
-# Application DTO
 from app.modules.profiles.application.dto import (
     CreateUmkmProfileInput,
     CreateFreelancerProfileInput,
@@ -28,7 +27,6 @@ from app.modules.profiles.application.dto import (
     UpdatePortfolioInput,
 )
 
-# Application Use Cases
 from app.modules.profiles.application.use_cases import (
     CreateUmkmProfile,
     CreateFreelancerProfile,
@@ -41,13 +39,11 @@ from app.modules.profiles.application.use_cases import (
     CreatePortfolio, GetPortfolios, GetPortfolio, UpdatePortfolio, DeletePortfolio,
 )
 
-# Authentication
 from app.modules.profiles.presentation.auth import (
     AuthenticatedProfileUser,
     get_authenticated_profile_user,
 )
 
-# Dependency Injection
 from app.modules.profiles.presentation.dependencies import (
     create_umkm_profile_use_case,
     create_freelancer_profile_use_case,
@@ -62,7 +58,6 @@ from app.modules.profiles.presentation.dependencies import (
     get_media_service,
 )
 
-# Pydantic Schemas
 from app.modules.profiles.presentation.schemas import (
     CreateUmkmProfileRequest,
     UmkmProfileResponse,
@@ -83,7 +78,6 @@ router = APIRouter(
 )
 
 
-# 1. CREATE UMKM PROFILE
 @router.post(
     "/umkm",
     response_model=ApiResponse[UmkmProfileResponse],
@@ -98,7 +92,7 @@ def create_umkm_profile(
     use_case: CreateUmkmProfile = Depends(
         create_umkm_profile_use_case
     ),
-):
+) -> SuccessBody[UmkmProfileResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya pengguna UMKM yang dapat membuat profil UMKM"
@@ -111,7 +105,6 @@ def create_umkm_profile(
     return success_response("Profil UMKM berhasil dibuat", profile)
 
 
-# 2. CREATE FREELANCER PROFILE
 @router.post(
     "/freelancer",
     response_model=ApiResponse[FreelancerProfileResponse],
@@ -126,7 +119,7 @@ def create_freelancer_profile(
     use_case: CreateFreelancerProfile = Depends(
         create_freelancer_profile_use_case
     ),
-):
+) -> SuccessBody[FreelancerProfileResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat membuat profil Freelancer"
@@ -143,7 +136,7 @@ def create_freelancer_profile(
 def get_my_umkm_profile(
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: GetUmkmProfile = Depends(get_umkm_profile_use_case),
-):
+) -> SuccessBody[UmkmProfileResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError("Hanya pengguna UMKM yang dapat membaca profil UMKM")
     return success_response("Profil UMKM berhasil diambil", use_case.execute(user_id=current_user.user_id))
@@ -158,7 +151,7 @@ def update_my_umkm_profile(
     body: UpdateUmkmProfileRequest,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: UpdateUmkmProfile = Depends(update_umkm_profile_use_case),
-):
+) -> SuccessBody[UmkmProfileResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError("Hanya pengguna UMKM yang dapat mengubah profil UMKM")
     profile = use_case.execute(user_id=current_user.user_id, data=UpdateUmkmProfileInput(**body.model_dump()))
@@ -173,7 +166,7 @@ def update_my_umkm_profile(
 def get_my_freelancer_profile(
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: GetFreelancerProfile = Depends(get_freelancer_profile_use_case),
-):
+) -> SuccessBody[FreelancerProfileResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat membaca profil Freelancer")
     return success_response("Profil Freelancer berhasil diambil", use_case.execute(user_id=current_user.user_id))
@@ -188,14 +181,13 @@ def update_my_freelancer_profile(
     body: UpdateFreelancerProfileRequest,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: UpdateFreelancerProfile = Depends(update_freelancer_profile_use_case),
-):
+) -> SuccessBody[FreelancerProfileResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat mengubah profil Freelancer")
     profile = use_case.execute(user_id=current_user.user_id, data=UpdateFreelancerProfileInput(**body.model_dump()))
     return success_response("Profil Freelancer berhasil diperbarui", profile)
 
 
-# 3. UPDATE FREELANCER SKILLS
 @router.put(
     "/freelancer/skills",
     response_model=ApiResponse[FreelancerSkillsResponse],
@@ -209,7 +201,7 @@ def update_freelancer_skills(
     use_case: SetFreelancerSkills = Depends(
         set_freelancer_skills_use_case
     ),
-):
+) -> SuccessBody[FreelancerSkillsResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat mengubah keahlian"
@@ -228,7 +220,6 @@ def update_freelancer_skills(
     )
 
 
-# 4. GET FREELANCER SKILLS
 @router.get(
     "/freelancer/skills",
     response_model=ApiResponse[FreelancerSkillsResponse],
@@ -241,7 +232,7 @@ def get_freelancer_skills(
     use_case: GetFreelancerSkills = Depends(
         get_freelancer_skills_use_case
     ),
-):
+) -> SuccessBody[FreelancerSkillsResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat melihat keahliannya"
@@ -257,7 +248,6 @@ def get_freelancer_skills(
     )
 
 
-# 5. CREATE FREELANCER EXPERIENCE
 @router.post(
     "/freelancer/experiences",
     response_model=ApiResponse[FreelancerExperienceResponse],
@@ -272,14 +262,12 @@ def create_freelancer_experience(
     use_case: CreateFreelancerExperience = Depends(
         create_freelancer_experience_use_case
     ),
-):
-    # 1. Pastikan pengguna memiliki role Freelancer
+) -> SuccessBody[FreelancerExperienceResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError(
             "Hanya Freelancer yang dapat menambahkan pengalaman kerja"
         )
 
-    # 2. Jalankan Use Case CreateFreelancerExperience
     experience = use_case.execute(
         freelancer_id=current_user.user_id,
         data=CreateFreelancerExperienceInput(
@@ -287,7 +275,6 @@ def create_freelancer_experience(
         ),
     )
 
-    # 3. Kembalikan data pengalaman yang berhasil dibuat
     return success_response(
         "Pengalaman kerja berhasil ditambahkan",
         FreelancerExperienceResponse(
@@ -310,7 +297,7 @@ def create_freelancer_experience(
 def get_freelancer_experiences(
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: GetFreelancerExperiences = Depends(get_freelancer_experiences_use_case),
-):
+) -> SuccessBody[list[FreelancerExperienceResponse]]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat melihat pengalaman kerja")
 
@@ -330,7 +317,7 @@ def update_freelancer_experience(
     body: UpdateFreelancerExperienceRequest,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: UpdateFreelancerExperience = Depends(update_freelancer_experience_use_case),
-):
+) -> SuccessBody[FreelancerExperienceResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat mengubah pengalaman kerja")
 
@@ -351,7 +338,7 @@ def delete_freelancer_experience(
     experience_id: str,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: DeleteFreelancerExperience = Depends(delete_freelancer_experience_use_case),
-):
+) -> SuccessBody[None]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat menghapus pengalaman kerja")
 
@@ -372,7 +359,7 @@ def create_portfolio(
     body: CreatePortfolioRequest,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: CreatePortfolio = Depends(create_portfolio_use_case),
-):
+) -> SuccessBody[PortfolioResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat membuat portfolio")
     portfolio = use_case.execute(
@@ -391,7 +378,7 @@ def get_portfolios(
     use_case: GetPortfolios = Depends(get_portfolios_use_case),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0, le=10000),
-):
+) -> SuccessBody[PortfolioPageResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat melihat portfolio")
     page = use_case.execute(freelancer_id=current_user.user_id, limit=limit, offset=offset)
@@ -407,7 +394,7 @@ def get_portfolio(
     portfolio_id: str,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: GetPortfolio = Depends(get_portfolio_use_case),
-):
+) -> SuccessBody[PortfolioResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat melihat portfolio")
     portfolio = use_case.execute(freelancer_id=current_user.user_id, portfolio_id=portfolio_id)
@@ -424,7 +411,7 @@ def update_portfolio(
     body: UpdatePortfolioRequest,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: UpdatePortfolio = Depends(update_portfolio_use_case),
-):
+) -> SuccessBody[PortfolioResponse]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat mengubah portfolio")
     portfolio = use_case.execute(
@@ -443,7 +430,7 @@ def delete_portfolio(
     portfolio_id: str,
     current_user: AuthenticatedProfileUser = Depends(get_authenticated_profile_user),
     use_case: DeletePortfolio = Depends(delete_portfolio_use_case),
-):
+) -> SuccessBody[None]:
     if current_user.role != UserRole.FREELANCER:
         raise ForbiddenError("Hanya Freelancer yang dapat menghapus portfolio")
     try:

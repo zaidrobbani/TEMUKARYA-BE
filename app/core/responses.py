@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Annotated, Any, Generic, TypeVar
+from typing import Annotated, Generic, Literal, NotRequired, TypedDict, TypeVar
 
 from pydantic import BaseModel, PlainSerializer
 
@@ -34,16 +34,39 @@ class ErrorResponse(BaseModel):
     code: str | None = None
 
 
-def success_response(message: str, data: Any = None) -> dict[str, Any]:
+class SuccessBody(TypedDict, Generic[T]):
+    success: Literal[True]
+    message: str
+    data: T | None
+
+
+class FieldErrorBody(TypedDict):
+    field: str
+    message: str
+
+
+class ErrorBody(TypedDict):
+    success: Literal[False]
+    message: str
+    data: None
+    errors: NotRequired[list[FieldErrorBody]]
+    code: NotRequired[str]
+
+
+class OpenApiErrorResponse(TypedDict):
+    model: type[ErrorResponse]
+
+
+def success_response(message: str, data: T | None = None) -> SuccessBody[T]:
     return {"success": True, "message": message, "data": data}
 
 
 def error_body(
     message: str,
-    errors: list[dict[str, str]] | None = None,
+    errors: list[FieldErrorBody] | None = None,
     code: str | None = None,
-) -> dict[str, Any]:
-    content: dict[str, Any] = {"success": False, "message": message, "data": None}
+) -> ErrorBody:
+    content: ErrorBody = {"success": False, "message": message, "data": None}
     if errors is not None:
         content["errors"] = errors
     if code is not None:
@@ -51,5 +74,5 @@ def error_body(
     return content
 
 
-def error_responses(*status_codes: int) -> dict[int | str, dict[str, Any]]:
+def error_responses(*status_codes: int) -> dict[int | str, OpenApiErrorResponse]:
     return {code: {"model": ErrorResponse} for code in status_codes}

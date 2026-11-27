@@ -1,4 +1,3 @@
-
 from io import BytesIO
 
 import pytest
@@ -18,18 +17,12 @@ from app.modules.projects.infrastructure.attachment_storage import (
 )
 
 
-# ============================================================
-# TEST APPLICATION
-# ============================================================
-
 @pytest.fixture
 def client():
-
     app = FastAPI()
 
     @app.post("/upload-test")
     async def upload_test(request: Request):
-
         destination = BytesIO()
 
         try:
@@ -72,10 +65,6 @@ def client():
     with TestClient(app) as test_client:
         yield test_client
 
-
-# ============================================================
-# MULTIPART TEST HELPERS
-# ============================================================
 
 BOUNDARY = b"testboundary"
 
@@ -121,12 +110,7 @@ def send_multipart(client, body):
     )
 
 
-# ============================================================
-# TEST 1: VALID MULTIPART
-# ============================================================
-
 def test_valid_single_file_upload(client):
-
     content = b"%PDF-1.4\nExample PDF data"
 
     response = send_multipart(
@@ -141,12 +125,7 @@ def test_valid_single_file_upload(client):
     assert response.json()["size"] == len(content)
 
 
-# ============================================================
-# TEST 2: OVERSIZED FILE
-# ============================================================
-
 def test_rejects_oversized_upload(client):
-
     content = b"X" * (
         5 * 1024 * 1024 + 1
     )
@@ -161,12 +140,7 @@ def test_rejects_oversized_upload(client):
     assert response.status_code == 413
 
 
-# ============================================================
-# TEST 3: EMPTY FILE
-# ============================================================
-
 def test_rejects_empty_file(client):
-
     response = send_multipart(
         client,
         build_multipart([
@@ -177,12 +151,7 @@ def test_rejects_empty_file(client):
     assert response.status_code == 422
 
 
-# ============================================================
-# TEST 4: MULTIPLE FILES
-# ============================================================
-
 def test_rejects_multiple_files(client):
-
     response = send_multipart(
         client,
         build_multipart([
@@ -194,12 +163,7 @@ def test_rejects_multiple_files(client):
     assert response.status_code == 422
 
 
-# ============================================================
-# TEST 5: WRONG FIELD NAME
-# ============================================================
-
 def test_rejects_wrong_field_name(client):
-
     headers = [
         (
             b'Content-Disposition: form-data; '
@@ -217,12 +181,7 @@ def test_rejects_wrong_field_name(client):
     assert response.status_code == 422
 
 
-# ============================================================
-# TEST 6: MISSING FILENAME
-# ============================================================
-
 def test_rejects_missing_filename(client):
-
     headers = [
         (
             b'Content-Disposition: form-data; '
@@ -240,12 +199,7 @@ def test_rejects_missing_filename(client):
     assert response.status_code == 422
 
 
-# ============================================================
-# TEST 7: WRONG CONTENT TYPE
-# ============================================================
-
 def test_rejects_wrong_content_type(client):
-
     response = client.post(
         "/upload-test",
         content=b'{"file":"test.pdf"}',
@@ -257,12 +211,7 @@ def test_rejects_wrong_content_type(client):
     assert response.status_code == 415
 
 
-# ============================================================
-# TEST 8: OVERSIZED MULTIPART HEADER
-# ============================================================
-
 def test_rejects_oversized_header(client):
-
     headers = FILE_HEADERS + [
         b"X-Test: " + b"A" * 9000
     ]
@@ -277,12 +226,7 @@ def test_rejects_oversized_header(client):
     assert response.status_code == 422
 
 
-# ============================================================
-# TEST 9: INCOMPLETE MULTIPART
-# ============================================================
-
 def test_rejects_truncated_multipart(client):
-
     response = send_multipart(
         client,
         build_multipart(

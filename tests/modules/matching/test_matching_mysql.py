@@ -1,4 +1,3 @@
-
 import os
 from dataclasses import asdict
 from datetime import date, datetime
@@ -28,16 +27,7 @@ from app.modules.matching.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# MYSQL SAFETY CHECK
-# ============================================================
-
 def verify_test_database():
-    """
-    Mencegah integration test berjalan tanpa sengaja
-    pada database production atau host asing.
-    """
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip("MySQL integration test disabled")
 
@@ -54,23 +44,9 @@ def verify_test_database():
         pytest.skip("Production database tidak diizinkan")
 
 
-# ============================================================
-# INSERT HELPER
-# ============================================================
-
 def insert_data(session, sql, rows):
-    """
-    Melakukan INSERT menggunakan query terparameter.
-
-    Data hanya digunakan pada transaksi test.
-    """
-
     session.execute(text(sql), rows)
 
-
-# ============================================================
-# MYSQL INTEGRATION TEST
-# ============================================================
 
 def test_matching_mysql_integration():
     verify_test_database()
@@ -99,7 +75,6 @@ def test_matching_mysql_integration():
     freelancer_ids = {f1, f2, f3, f4}
     project_ids = {p1, p2, p3, p4, p5}
 
-    # Semua perubahan dilakukan dalam satu transaksi.
     connection = engine.connect()
     transaction = connection.begin()
 
@@ -109,11 +84,6 @@ def test_matching_mysql_integration():
             autoflush=False,
             expire_on_commit=False,
         ) as session:
-
-            # =================================================
-            # 1. VERIFY UUID DATABASE CONTRACT
-            # =================================================
-
             id_type = session.execute(
                 text("""
                     SELECT DATA_TYPE
@@ -131,10 +101,6 @@ def test_matching_mysql_integration():
                 )
 
             print("\nMYSQL UUID CONTRACT: OK")
-
-            # =================================================
-            # 2. CREATE TEMPORARY USERS
-            # =================================================
 
             users = [
                 (owner_id, "UMKM", "umkm"),
@@ -168,10 +134,6 @@ def test_matching_mysql_integration():
                 ],
             )
 
-            # =================================================
-            # 3. CREATE UMKM PROFILE
-            # =================================================
-
             insert_data(
                 session,
                 """
@@ -198,10 +160,6 @@ def test_matching_mysql_integration():
                     "city": "Malang",
                 },
             )
-
-            # =================================================
-            # 4. CREATE FREELANCER PROFILES
-            # =================================================
 
             profiles = [
                 (f1, "AVAILABLE", "Backend Developer"),
@@ -243,10 +201,6 @@ def test_matching_mysql_integration():
                 ],
             )
 
-            # =================================================
-            # 5. CREATE SKILLS
-            # =================================================
-
             insert_data(
                 session,
                 """
@@ -269,24 +223,16 @@ def test_matching_mysql_integration():
                 ],
             )
 
-            # =================================================
-            # 6. CREATE FREELANCER SKILLS
-            # =================================================
-
             freelancer_skills = [
-                # Andi: 3/3 = 100%
                 (f1, skill_python),
                 (f1, skill_fastapi),
                 (f1, skill_mysql),
 
-                # Budi: 2/3 = 66.67%
                 (f2, skill_python),
                 (f2, skill_fastapi),
 
-                # Cici: 1/3 = 33.33%
                 (f3, skill_mysql),
 
-                # Dina: 3/3, but BUSY
                 (f4, skill_python),
                 (f4, skill_fastapi),
                 (f4, skill_mysql),
@@ -310,10 +256,6 @@ def test_matching_mysql_integration():
                 ],
             )
 
-            # =================================================
-            # 7. CREATE PROJECT CATEGORY
-            # =================================================
-
             insert_data(
                 session,
                 """
@@ -331,26 +273,17 @@ def test_matching_mysql_integration():
                 },
             )
 
-            # =================================================
-            # 8. CREATE PROJECTS
-            # =================================================
-
             published_at = datetime(2026, 11, 2, 12, 0)
 
             projects = [
-                # Published project, 3 skills
                 (p1, "Website UMKM", "TERBUKA", published_at),
 
-                # Published project, 2 skills
                 (p2, "Backend API", "TERBUKA", published_at),
 
-                # Not published
                 (p3, "Unpublished", "TERBUKA", None),
 
-                # Closed project
                 (p4, "Completed", "SELESAI", published_at),
 
-                # Published but no required skills
                 (p5, "Empty Skills", "TERBUKA", published_at),
             ]
 
@@ -401,21 +334,14 @@ def test_matching_mysql_integration():
                 ],
             )
 
-            # =================================================
-            # 9. CREATE PROJECT SKILLS
-            # =================================================
-
             project_skills = [
-                # p1 requires Python + FastAPI + MySQL
                 (p1, skill_python),
                 (p1, skill_fastapi),
                 (p1, skill_mysql),
 
-                # p2 requires Python + MySQL
                 (p2, skill_python),
                 (p2, skill_mysql),
 
-                # Unpublished and completed
                 (p3, skill_python),
                 (p4, skill_python),
             ]
@@ -438,10 +364,6 @@ def test_matching_mysql_integration():
             )
 
             print("MYSQL TEST DATA CREATED: OK")
-
-            # =================================================
-            # 10. TEST ACTUAL REPOSITORY
-            # =================================================
 
             repository = SqlAlchemyMatchingRepository(
                 session=session
@@ -475,10 +397,6 @@ def test_matching_mysql_integration():
             }
 
             print("MYSQL PROJECT AND FREELANCER: OK")
-
-            # =================================================
-            # 11. CHECK CANDIDATE FILTERING
-            # =================================================
 
             all_available = (
                 repository.iter_available_freelancers()
@@ -516,18 +434,7 @@ def test_matching_mysql_integration():
 
             print("MYSQL CANDIDATE FILTERING: OK")
 
-            # =================================================
-            # 12. ISOLATE TEST SEED FOR DETERMINISM
-            # =================================================
-
-            # Repository SQL sudah diuji di atas.
-            # Pembungkus ini hanya membatasi kandidat
-            # pada data yang dibuat oleh test ini,
-            # sehingga data development milik orang
-            # lain tidak mengubah hasil assertion.
-
             class SeededMatchingRepository:
-
                 def get_project(self, project_id):
                     return repository.get_project(project_id)
 
@@ -543,10 +450,6 @@ def test_matching_mysql_integration():
                     return list(seeded_published)
 
             seeded_repository = SeededMatchingRepository()
-
-            # =================================================
-            # 13. RECOMMEND FREELANCERS FOR UMKM
-            # =================================================
 
             recommend_freelancers = (
                 RecommendFreelancersForProject(
@@ -584,10 +487,6 @@ def test_matching_mysql_integration():
 
             print("UMKM FREELANCER MATCHING: OK")
 
-            # =================================================
-            # 14. VERIFY PROJECT OWNERSHIP
-            # =================================================
-
             with pytest.raises(NotFoundError):
                 recommend_freelancers.execute(
                     RecommendFreelancersInput(
@@ -597,10 +496,6 @@ def test_matching_mysql_integration():
                 )
 
             print("PROJECT OWNERSHIP PROTECTION: OK")
-
-            # =================================================
-            # 15. RECOMMEND PROJECTS FOR FREELANCER
-            # =================================================
 
             recommend_projects = (
                 RecommendProjectsForFreelancer(
@@ -632,10 +527,6 @@ def test_matching_mysql_integration():
 
             print("FREELANCER PROJECT MATCHING: OK")
 
-            # =================================================
-            # 16. VERIFY PAGINATION
-            # =================================================
-
             first_page = recommend_freelancers.execute(
                 RecommendFreelancersInput(
                     project_id=p1,
@@ -662,10 +553,6 @@ def test_matching_mysql_integration():
 
             print("MATCHING PAGINATION: OK")
 
-            # =================================================
-            # 17. VERIFY NO SENSITIVE DATA
-            # =================================================
-
             public_data = asdict(
                 freelancer_page.items[0]
             )
@@ -685,20 +572,12 @@ def test_matching_mysql_integration():
             print("SENSITIVE DATA PROTECTION: OK")
 
     finally:
-        # ====================================================
-        # 18. ROLLBACK TEMPORARY RECORDS
-        # ====================================================
-
         if transaction.is_active:
             transaction.rollback()
 
         connection.close()
 
         print("MYSQL TRANSACTION ROLLBACK: EXECUTED")
-
-    # ========================================================
-    # 19. VERIFY DATABASE CLEANUP
-    # ========================================================
 
     checks = [
         (
@@ -736,11 +615,7 @@ def test_matching_mysql_integration():
     ]
 
     with engine.connect() as check_connection:
-
         for table, column, ids in checks:
-
-            # Nama tabel/kolom berasal dari
-            # konstanta internal, bukan user input.
             statement = text(
                 f"SELECT COUNT(*) FROM {table} "
                 f"WHERE {column} IN :ids"

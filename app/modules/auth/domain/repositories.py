@@ -27,4 +27,4 @@ class AuthActionTokenRepository(ABC):
 
     @abstractmethod
     def consume(self, token_id: str, at: datetime) -> bool:
-        """Tandai terpakai secara atomik. False berarti token sudah dipakai request lain."""
+        pass

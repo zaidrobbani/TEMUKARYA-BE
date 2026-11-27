@@ -1,5 +1,3 @@
-"""Opt-in local Compose tests: real schema, random accounts, no DDL or commits."""
-
 import os
 from dataclasses import replace
 from pathlib import Path
@@ -27,7 +25,7 @@ from app.modules.profiles.application.use_cases import CreateFreelancerProfile, 
 from app.modules.profiles.infrastructure.repositories import (
     SqlAlchemyFreelancerProfileRepository, SqlAlchemyUmkmProfileRepository,
 )
-import app.modules.users.infrastructure.models  # noqa: F401 -- FK target registration only
+import app.modules.users.infrastructure.models
 
 
 pytestmark = pytest.mark.skipif(
@@ -103,7 +101,6 @@ def test_mysql_self_profile_create_get_replace_ownership_and_audit(mysql_self_pr
     session, owners = mysql_self_profile_sandbox
     owner, foreign_owner = owners[role]
     uow = MagicMock(spec=UnitOfWork)
-    # Production use cases invoke UoW; here flush retains the outer transaction.
     uow.commit.side_effect = session.flush
     if role == "UMKM":
         repository = SqlAlchemyUmkmProfileRepository(session)
@@ -125,7 +122,7 @@ def test_mysql_self_profile_create_get_replace_ownership_and_audit(mysql_self_pr
     assert getter(repository).execute(owner) == own
     audit_query = text(f"SELECT created_at, updated_at FROM {table} WHERE user_id = :id")
     before = session.execute(audit_query, {"id": owner}).one()
-    sleep(0.02)  # Cross a DATETIME(3) tick.
+    sleep(0.02)
     updated = updater(repository, uow).execute(owner, update_data)
     after = session.execute(audit_query, {"id": owner}).one()
     assert updated.user_id == owner and updated.city == "Surabaya"
@@ -133,7 +130,7 @@ def test_mysql_self_profile_create_get_replace_ownership_and_audit(mysql_self_pr
     assert getter(repository).execute(foreign_owner) == foreign
     assert after.created_at == before.created_at and after.updated_at > before.updated_at
     assert after.updated_at.microsecond % 1000 == 0
-    assert updater(repository, uow).execute(owner, update_data) == updated  # MySQL matched-row semantics.
+    assert updater(repository, uow).execute(owner, update_data) == updated
     missing = str(uuid4())
     with pytest.raises(NotFoundError):
         getter(repository).execute(missing)

@@ -18,10 +18,6 @@ from app.modules.admin_statistics.domain.entities import (
 )
 
 
-# ============================================================
-# 1. TEST CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
@@ -29,10 +25,6 @@ NOW = datetime(
 
 DEADLINE = date(2026, 12, 1)
 
-
-# ============================================================
-# 2. TEST DATA HELPERS
-# ============================================================
 
 def make_user(
     role: str = "umkm",
@@ -88,10 +80,6 @@ def make_project(
     )
 
 
-# ============================================================
-# 3. ADMIN ACTOR
-# ============================================================
-
 def test_admin_actor_creation():
     actor = AdminActor(
         user_id="admin-001",
@@ -111,10 +99,6 @@ def test_admin_actor_is_immutable():
     with pytest.raises(FrozenInstanceError):
         actor.role = "umkm"
 
-
-# ============================================================
-# 4. USER SUMMARY
-# ============================================================
 
 def test_user_summary_creation():
     user = make_user()
@@ -142,10 +126,6 @@ def test_user_summary_is_immutable():
         user.email = "changed@example.com"
 
 
-# ============================================================
-# 5. UMKM PROFILE
-# ============================================================
-
 def test_umkm_profile_creation():
     profile = make_umkm_profile()
 
@@ -161,10 +141,6 @@ def test_umkm_profile_is_immutable():
     with pytest.raises(FrozenInstanceError):
         profile.city = "Jakarta"
 
-
-# ============================================================
-# 6. FREELANCER PROFILE
-# ============================================================
 
 def test_freelancer_profile_creation():
     profile = make_freelancer_profile()
@@ -191,10 +167,6 @@ def test_freelancer_profile_nullable_fields():
     assert profile.service_price_min is None
     assert profile.service_price_max is None
 
-
-# ============================================================
-# 7. USER DETAIL
-# ============================================================
 
 def test_umkm_user_detail():
     detail = AdminUserDetail(
@@ -239,10 +211,6 @@ def test_user_detail_excludes_password():
     assert "password" not in data["user"]
 
 
-# ============================================================
-# 8. PROJECT SUMMARY
-# ============================================================
-
 def test_project_without_freelancer():
     project = make_project(
         assigned=False,
@@ -277,10 +245,6 @@ def test_project_summary_is_immutable():
         project.budget = 0
 
 
-# ============================================================
-# 9. PROJECT DETAIL
-# ============================================================
-
 def test_project_detail_with_agreement():
     detail = AdminProjectDetail(
         project=make_project(assigned=True),
@@ -310,10 +274,6 @@ def test_project_detail_without_agreement():
     assert detail.agreed_price is None
     assert detail.project.assigned_freelancer_id is None
 
-
-# ============================================================
-# 10. SYSTEM STATISTICS
-# ============================================================
 
 def test_system_statistics_creation():
     stats = AdminSystemStatistics(

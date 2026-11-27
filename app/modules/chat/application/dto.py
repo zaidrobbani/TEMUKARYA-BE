@@ -11,37 +11,18 @@ from app.modules.chat.domain.entities import (
 )
 
 
-# ============================================================
-# 1. CREATE OR GET CONVERSATION
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class CreateConversationInput:
-    """
-    Memulai chat dengan pengguna lain.
-
-    Identitas UMKM dan Freelancer ditentukan
-    dari actor dan role pengguna tujuan.
-    """
-
     actor: ChatActor
     counterpart_user_id: str
     project_id: str | None = None
 
-
-# ============================================================
-# 2. GET CONVERSATION
-# ============================================================
 
 @dataclass(frozen=True, slots=True)
 class GetConversationInput:
     conversation_id: str
     actor: ChatActor
 
-
-# ============================================================
-# 3. LIST CONVERSATIONS
-# ============================================================
 
 @dataclass(frozen=True, slots=True)
 class ListConversationsInput:
@@ -57,20 +38,12 @@ class ConversationListResult:
     offset: int
 
 
-# ============================================================
-# 4. SEND TEXT MESSAGE
-# ============================================================
-
 @dataclass(frozen=True, slots=True)
 class SendTextMessageInput:
     conversation_id: str
     actor: ChatActor
     message_text: str
 
-
-# ============================================================
-# 5. LIST MESSAGES
-# ============================================================
 
 @dataclass(frozen=True, slots=True)
 class ListMessagesInput:
@@ -79,7 +52,6 @@ class ListMessagesInput:
 
     limit: int = 20
 
-    # Keyset cursor: (sent_at, message_id)
     before: tuple[datetime, str] | None = None
 
 
@@ -98,10 +70,6 @@ class MessagePage:
 
     next_before: tuple[datetime, str] | None
 
-
-# ============================================================
-# 6. MARK CONVERSATION AS READ
-# ============================================================
 
 @dataclass(frozen=True, slots=True)
 class MarkConversationReadInput:
@@ -146,5 +114,4 @@ class DeleteMessagesResult:
     scope: MessageDeleteScope
     message_ids: tuple[str, ...]
     deleted_at: datetime
-    # File fisik lampiran yang harus dibuang setelah commit (hanya EVERYONE).
     removed_attachments: tuple[MessageAttachment, ...] = ()

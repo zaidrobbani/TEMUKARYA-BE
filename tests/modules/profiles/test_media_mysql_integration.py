@@ -28,7 +28,6 @@ def test_mysql_media_transactions_ownership_cover_and_cleanup(mysql_portfolio_sa
     repository = SqlAlchemyMediaRepository(session)
     storage = LocalImageStorage(tmp_path)
     uow = MagicMock(spec=UnitOfWork)
-    # Preserve the outer rollback-only transaction; no permanent commits.
     uow.commit.side_effect = session.flush
     service = PortfolioMediaService(repository, storage, uow)
     statements = []
@@ -47,8 +46,6 @@ def test_mysql_media_transactions_ownership_cover_and_cleanup(mysql_portfolio_sa
         assert any("FROM portfolios" in sql and "FOR UPDATE" in sql for sql in statements)
         assert any("FROM portfolio_media" in sql and "FOR UPDATE" in sql for sql in statements)
 
-        # A second connection cannot acquire this parent's lock while the outer
-        # transaction is active. Rows remain uncommitted throughout this test.
         with session.bind.engine.connect() as competing:
             competing.exec_driver_sql("SET SESSION innodb_lock_wait_timeout = 1")
             with Session(bind=competing) as competitor:
@@ -72,7 +69,6 @@ def test_mysql_media_transactions_ownership_cover_and_cleanup(mysql_portfolio_sa
         assert portfolios.get_by_id(ids[1], owners[1]) is not None
         print("MySQL media: locks, limit, cover/order, ownership, parent delete and empty test storage verified")
     finally:
-        # Cleanup test-only files even if an assertion fails before the deletion.
         for path in tmp_path.iterdir():
             storage.delete(path.name)
         assert not list(tmp_path.iterdir())

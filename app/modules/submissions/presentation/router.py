@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body, Depends, File, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.submissions.application.use_cases import (
     ApproveSubmission,
     GetSubmission,
@@ -32,6 +32,7 @@ from app.modules.submissions.presentation.schemas import (
 )
 from app.modules.workflow.application.dto import Actor
 from app.modules.workflow.presentation.providers import get_actor
+from collections.abc import Iterator
 
 router = APIRouter(tags=["submissions"])
 
@@ -59,7 +60,7 @@ def submit_result(
     result_url: str | None = Form(None, description="Tautan hasil (mis. Google Drive)"),
     actor: Actor = Depends(get_actor),
     use_case: SubmitResult = Depends(submit_result_use_case),
-):
+) -> SuccessBody[SubmissionResponse]:
     uploads = tuple(UploadedFile(f.filename or "", _size(f), f.file) for f in files)
     submission = use_case.execute(actor, project_id, SubmitResultInput(note, result_url, uploads))
     return success_response("Hasil kerja dikirim ke UMKM", SubmissionResponse.build(submission))
@@ -75,7 +76,7 @@ def list_submissions(
     project_id: str,
     actor: Actor = Depends(get_actor),
     use_case: ListSubmissions = Depends(list_submissions_use_case),
-):
+) -> SuccessBody[SubmissionListResponse]:
     return success_response("Daftar kiriman hasil", SubmissionListResponse.build(use_case.execute(actor, project_id)))
 
 
@@ -89,7 +90,7 @@ def get_submission(
     submission_id: str,
     actor: Actor = Depends(get_actor),
     use_case: GetSubmission = Depends(get_submission_use_case),
-):
+) -> SuccessBody[SubmissionResponse]:
     submission = use_case.execute(actor, project_id, submission_id)
     return success_response("Detail kiriman hasil", SubmissionResponse.build(submission))
 
@@ -105,10 +106,10 @@ def download_submission_file(
     file_id: str,
     actor: Actor = Depends(get_actor),
     use_case: OpenSubmissionFile = Depends(open_submission_file_use_case),
-):
+) -> StreamingResponse:
     file, stream = use_case.execute(actor, project_id, submission_id, file_id)
 
-    def chunks():
+    def chunks() -> Iterator[bytes]:
         while chunk := stream.read(64 * 1024):
             yield chunk
 
@@ -118,7 +119,6 @@ def download_submission_file(
         media_type=file.mime_type,
         headers={
             "Content-Length": str(file.file_size_bytes),
-            # Nama file client tidak dimasukkan ke header; nama asli ada di metadata JSON.
             "Content-Disposition": f'attachment; filename="hasil-{file.id[:8]}.{extension}"',
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
@@ -139,7 +139,7 @@ def request_revision(
     body: RevisionRequest,
     actor: Actor = Depends(get_actor),
     use_case: RequestRevision = Depends(request_revision_use_case),
-):
+) -> SuccessBody[SubmissionResponse]:
     data = RevisionRequestInput(
         note=body.note,
         focus_areas=tuple(body.focus_areas),
@@ -161,7 +161,7 @@ def approve_submission(
     body: ApproveSubmissionRequest | None = Body(None),
     actor: Actor = Depends(get_actor),
     use_case: ApproveSubmission = Depends(approve_submission_use_case),
-):
+) -> SuccessBody[CompletionResponse]:
     review = body.review.to_input() if body and body.review else None
     result = use_case.execute(actor, project_id, submission_id, review)
     message = "Proyek sudah selesai sebelumnya" if result.already_completed else "Proyek selesai, dana diteruskan ke freelancer"

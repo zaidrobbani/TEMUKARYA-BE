@@ -1,4 +1,3 @@
-
 from collections.abc import Callable
 from datetime import datetime
 from uuid import uuid4
@@ -18,8 +17,6 @@ from app.modules.projects.application.dto import UpdateProjectInput
 from app.modules.projects.application.dto import PublicProjectsPage
 
 class CreateProject:
-    """Use case untuk membuat dan memublikasikan proyek UMKM."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
@@ -35,8 +32,6 @@ class CreateProject:
         umkm_id: str,
         data: CreateProjectInput,
     ) -> Project:
-
-        # 1. Validasi informasi dasar proyek
         title = data.title.strip()
         description = data.description.strip()
 
@@ -49,15 +44,12 @@ class CreateProject:
         if data.budget <= 0:
             raise ValueError("Budget proyek harus lebih dari nol.")
 
-        # 2. Validasi profil UMKM
         if not self._repository.umkm_profile_exists(umkm_id):
             raise ValueError("Profil UMKM tidak ditemukan.")
 
-        # 3. Validasi kategori
         if not self._repository.is_active_category(data.category_id):
             raise ValueError("Kategori proyek tidak valid atau tidak aktif.")
 
-        # 4. Validasi skill
         skill_ids = list(data.skill_ids)
 
         if len(skill_ids) != len(set(skill_ids)):
@@ -70,7 +62,6 @@ class CreateProject:
         if set(skill_ids) != existing_skills:
             raise ValueError("Terdapat skill yang tidak terdaftar.")
 
-        # 5. Buat entity proyek
         project = Project(
             id=str(uuid4()),
             umkm_id=umkm_id,
@@ -83,7 +74,6 @@ class CreateProject:
             published_at=self._clock(),
         )
 
-        # 6. Simpan proyek dan skill
         saved_project = self._repository.add(project)
 
         self._repository.add_skills(
@@ -91,15 +81,12 @@ class CreateProject:
             skill_ids,
         )
 
-        # 7. Commit transaksi
         self._uow.commit()
 
         return saved_project
 
 
 class GetMyProjects:
-    """Use case untuk melihat daftar proyek milik UMKM."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
@@ -110,17 +97,13 @@ class GetMyProjects:
         return self._repository.list_by_umkm_id(umkm_id)
 
 
-
 class GetProjectDetail:
-    """Mengambil detail proyek dengan pemeriksaan visibilitas."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
-        is_selected_freelancer=None,
+        is_selected_freelancer: Callable[[str, str], bool] | None = None,
     ):
         self._repository = project_repository
-        # (project_id, user_id) -> bool; freelancer terpilih tetap boleh melihat proyeknya.
         self._is_selected_freelancer = is_selected_freelancer or (lambda project_id, user_id: False)
 
     def execute(
@@ -133,15 +116,12 @@ class GetProjectDetail:
         if project is None:
             raise NotFoundError("Proyek tidak ditemukan")
 
-        # Pemilik dapat melihat proyeknya sendiri.
         if project.umkm_id == requester_id:
             return project
 
         if self._is_selected_freelancer(project_id, requester_id):
             return project
 
-        # Pengguna lain hanya dapat melihat proyek publik
-        # yang masih terbuka.
         is_public = (
             project.published_at is not None
             and project.status == "TERBUKA"
@@ -154,8 +134,6 @@ class GetProjectDetail:
 
 
 class UpdateProject:
-    """Memperbarui proyek milik UMKM sebelum pengerjaan."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
@@ -170,21 +148,16 @@ class UpdateProject:
         project_id: str,
         data: UpdateProjectInput,
     ) -> Project:
-
-        # 1. Ambil proyek.
         existing = self._repository.get_by_id(project_id)
 
-        # Pastikan proyek ada dan dimiliki UMKM.
         if existing is None or existing.umkm_id != umkm_id:
             raise NotFoundError("Proyek tidak ditemukan")
 
-        # 2. Pastikan proyek masih dapat diedit.
         if existing.status != "TERBUKA" or existing.started_at is not None:
             raise ConflictError(
                 "Proyek yang sudah dimulai tidak dapat diubah"
             )
 
-        # 3. Validasi input.
         title = data.title.strip()
         description = data.description.strip()
 
@@ -214,7 +187,6 @@ class UpdateProject:
         if set(data.skill_ids) != existing_skills:
             raise ValueError("Terdapat skill yang tidak valid")
 
-        # 4. Siapkan entity yang diperbarui.
         updated = replace(
             existing,
             category_id=data.category_id,
@@ -224,7 +196,6 @@ class UpdateProject:
             deadline=data.deadline,
         )
 
-        # 5. Update project dan skill.
         saved = self._repository.update(
             project=updated,
             skill_ids=data.skill_ids,
@@ -235,15 +206,12 @@ class UpdateProject:
                 "Proyek tidak dapat diperbarui karena kondisinya berubah"
             )
 
-        # 6. Commit transaksi.
         self._uow.commit()
 
         return saved
 
 
 class DeleteProject:
-    """Menghapus proyek milik UMKM jika masih memenuhi syarat."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
@@ -257,15 +225,11 @@ class DeleteProject:
         umkm_id: str,
         project_id: str,
     ) -> None:
-
-        # 1. Cari proyek.
         project = self._repository.get_by_id(project_id)
 
-        # 2. Verifikasi kepemilikan.
         if project is None or project.umkm_id != umkm_id:
             raise NotFoundError("Proyek tidak ditemukan")
 
-        # 3. Pastikan proyek belum dimulai.
         if (
             project.status != "TERBUKA"
             or project.started_at is not None
@@ -274,8 +238,6 @@ class DeleteProject:
                 "Proyek yang sudah diproses tidak dapat dihapus"
             )
 
-        # 4. Repository memeriksa kembali kondisi
-        # proyek dan relasinya saat DELETE dijalankan.
         deleted = self._repository.delete(
             project_id=project_id,
             umkm_id=umkm_id,
@@ -287,13 +249,10 @@ class DeleteProject:
                 "data terkait atau kondisinya telah berubah"
             )
 
-        # 5. Commit satu transaksi.
         self._uow.commit()
 
 
 class DeleteProject:
-    """Menghapus proyek milik UMKM yang masih memenuhi syarat."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
@@ -307,14 +266,11 @@ class DeleteProject:
         umkm_id: str,
         project_id: str,
     ) -> None:
-
         project = self._repository.get_by_id(project_id)
 
-        # Jangan mengungkap proyek milik UMKM lain.
         if project is None or project.umkm_id != umkm_id:
             raise NotFoundError("Proyek tidak ditemukan")
 
-        # Proyek harus masih terbuka dan belum dimulai.
         if (
             project.status != "TERBUKA"
             or project.started_at is not None
@@ -323,8 +279,6 @@ class DeleteProject:
                 "Proyek yang sudah diproses tidak dapat dihapus"
             )
 
-        # Repository melakukan pemeriksaan kondisi
-        # dan relasi proyek langsung di MySQL.
         deleted = self._repository.delete(
             project_id=project_id,
             umkm_id=umkm_id,
@@ -340,8 +294,6 @@ class DeleteProject:
 
 
 class SearchPublicProjects:
-    """Mencari proyek yang tersedia untuk Freelancer."""
-
     def __init__(
         self,
         project_repository: ProjectRepository,
@@ -357,7 +309,6 @@ class SearchPublicProjects:
         limit: int = 20,
         offset: int = 0,
     ) -> PublicProjectsPage:
-
         if limit < 1 or limit > 100:
             raise ValueError(
                 "Limit harus berada di antara 1 dan 100"
@@ -387,8 +338,6 @@ class SearchPublicProjects:
                 "Minimum budget tidak boleh melebihi maksimum budget"
             )
 
-        # Ambil satu item tambahan untuk mengetahui
-        # apakah masih tersedia halaman berikutnya.
         projects = self._repository.search_public(
             search=search,
             category_id=category_id,

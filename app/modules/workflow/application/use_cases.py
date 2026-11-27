@@ -37,7 +37,12 @@ from app.modules.workflow.domain.entities import (
     WorkflowAction,
     wib_date,
 )
-from app.modules.workflow.domain.repositories import MilestoneWeightReader, PaymentPort, WorkflowRepository
+from app.modules.workflow.domain.repositories import (
+    ApplicationSnapshot,
+    MilestoneWeightReader,
+    PaymentPort,
+    WorkflowRepository,
+)
 from app.modules.workflow.domain.rules import cancel_blocker, start_blocker
 
 MAX_PRICE = 1_000_000_000_000
@@ -78,8 +83,6 @@ class GetProjectWorkflow:
 
 
 class SelectFreelancer:
-    """U-12: UMKM memilih freelancer → Menunggu Kesepakatan."""
-
     def __init__(
         self,
         repository: WorkflowRepository,
@@ -180,7 +183,7 @@ class SelectFreelancer:
         self._uow.commit()
         return build_detail(self._repository, context)
 
-    def _resolve_application(self, project_id: str, data: SelectFreelancerInput):
+    def _resolve_application(self, project_id: str, data: SelectFreelancerInput) -> ApplicationSnapshot | None:
         if data.application_id is not None:
             application = self._repository.get_application(data.application_id)
             if application is None or application.project_id != project_id:
@@ -194,7 +197,6 @@ class SelectFreelancer:
         application = self._repository.find_application(project_id, data.freelancer_id)
         if application is not None and application.status != ApplicationStatus.SUBMITTED:
             raise ConflictError("Pengajuan freelancer ini sudah tidak aktif")
-        # Freelancer yang sudah melamar tetap dicatat lewat lamarannya.
         return application
 
 
@@ -245,8 +247,6 @@ class GetAgreement:
 
 
 class UpdateAgreement(_AgreementUseCase):
-    """Perubahan detail sebelum pembayaran membatalkan kedua persetujuan."""
-
     def execute(self, actor: Actor, project_id: str, data: UpdateAgreementInput) -> WorkflowDetail:
         if all(v is None for v in (data.scope_of_work, data.agreed_price, data.agreed_deadline, data.duration_days)):
             raise BadRequestError("Tidak ada perubahan kesepakatan yang dikirim")
@@ -309,8 +309,6 @@ class UpdateAgreement(_AgreementUseCase):
 
 
 class ApproveAgreement(_AgreementUseCase):
-    """U-15/F-15 Lanjut Project. Kedua pihak setuju → Menunggu Pembayaran + tagihan dibuat."""
-
     def __init__(
         self,
         repository: WorkflowRepository,
@@ -329,7 +327,6 @@ class ApproveAgreement(_AgreementUseCase):
         agreement = context.agreement
         if agreement is None:
             raise NotFoundError("Kesepakatan belum dibuat")
-        # Klik ulang setelah final tidak mengubah apa pun.
         if agreement.status == AgreementStatus.APPROVED:
             return build_detail(self._repository, context)
         if context.project.status != ProjectStatus.MENUNGGU_KESEPAKATAN:
@@ -395,8 +392,6 @@ class ApproveAgreement(_AgreementUseCase):
 
 
 class RequestAgreementChanges(_AgreementUseCase):
-    """UMKM "Minta Ubah" rencana: persetujuan direset dan freelancer diberi tahu."""
-
     def execute(self, actor: Actor, project_id: str, note: str) -> WorkflowDetail:
         context = self._load_negotiation(actor, project_id)
         if context.party != Party.UMKM:
@@ -429,8 +424,6 @@ class RequestAgreementChanges(_AgreementUseCase):
 
 
 class CancelProject:
-    """U-16/F-16: batal hanya sebelum pembayaran berhasil."""
-
     def __init__(
         self,
         repository: WorkflowRepository,
@@ -497,8 +490,6 @@ class CancelProject:
 
 
 class StartWork:
-    """F-17: hanya freelancer terpilih, setelah pembayaran berhasil."""
-
     def __init__(self, repository: WorkflowRepository, notifier: Notifier, uow: UnitOfWork, clock: Clock = utc_now):
         self._repository = repository
         self._notifier = notifier

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import bindparam, text
+from sqlalchemy import RowMapping, bindparam, text
 from sqlalchemy.orm import Session
 
 from app.core.config import API_PREFIX
@@ -18,15 +18,8 @@ from app.modules.discovery.domain.entities import (
 from app.modules.discovery.domain.repositories import (
     DiscoveryRepository,
 )
+from app.core.sql_types import SqlParams
 
-
-# ============================================================
-# BASE FREELANCER QUERY
-# ============================================================
-
-# Pengalaman dan rating dihitung melalui subquery.
-# Tujuannya agar seorang Freelancer tidak muncul
-# berulang ketika memiliki banyak skill atau review.
 
 _BASE_QUERY = """
     SELECT
@@ -80,19 +73,7 @@ _BASE_QUERY = """
 """
 
 
-# ============================================================
-# DATA CONVERSION HELPERS
-# ============================================================
-
 def _escape_like(value: str) -> str:
-    """
-    Memastikan karakter %, _, dan !
-    diperlakukan sebagai teks pencarian biasa.
-
-    Ini bukan pengganti query parameter.
-    Query tetap menggunakan SQL bind parameters.
-    """
-
     return (
         value.replace("!", "!!")
         .replace("%", "!%")
@@ -103,7 +84,6 @@ def _escape_like(value: str) -> str:
 def _as_date(
     value: date | str | None,
 ) -> date | None:
-
     if value is None or isinstance(value, date):
         return value
 
@@ -113,51 +93,23 @@ def _as_date(
 def _as_datetime(
     value: datetime | str | None,
 ) -> datetime | None:
-
     if value is None or isinstance(value, datetime):
         return value
 
     return datetime.fromisoformat(value)
 
 
-# ============================================================
-# DISCOVERY REPOSITORY
-# ============================================================
-
 class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
-    """
-    Implementasi Discovery Repository.
-
-    Repository ini READ-ONLY:
-    - Tidak membuat Freelancer
-    - Tidak memperbarui profil
-    - Tidak menghapus data
-    - Tidak melakukan commit
-
-    Semua operasi hanya membaca database.
-    """
-
     def __init__(
         self,
         session: Session,
     ):
         self._session = session
 
-    # ========================================================
-    # 1. LOAD FREELANCER SKILLS
-    # ========================================================
-
     def _load_skills(
         self,
         freelancer_ids: list[str],
     ) -> dict[str, tuple[FreelancerSkill, ...]]:
-        """
-        Mengambil skills banyak Freelancer
-        dalam satu query.
-
-        Menghindari N+1 query.
-        """
-
         if not freelancer_ids:
             return {}
 
@@ -201,7 +153,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
         }
 
         for row in rows:
-
             grouped[
                 str(row["freelancer_id"])
             ].append(
@@ -216,16 +167,11 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             for key, value in grouped.items()
         }
 
-    # ========================================================
-    # 2. CONVERT DATABASE ROW TO SUMMARY
-    # ========================================================
-
     @staticmethod
     def _to_summary(
-        row,
+        row: RowMapping,
         skills: tuple[FreelancerSkill, ...],
     ) -> FreelancerSummary:
-
         return FreelancerSummary(
             user_id=str(row["user_id"]),
             name=row["name"],
@@ -257,32 +203,22 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             ),
         )
 
-    # ========================================================
-    # 3. SEARCH FREELANCERS
-    # ========================================================
-
     def search_freelancers(
         self,
         filters: FreelancerSearchFilters,
         limit: int,
         offset: int,
     ) -> list[FreelancerSummary]:
-
         sql = _BASE_QUERY
 
-        params: dict = {
+        params: SqlParams = {
             "limit": limit,
             "offset": offset,
         }
 
         expanding_skills = False
 
-        # ====================================================
-        # AVAILABILITY FILTER
-        # ====================================================
-
         if filters.availability_status is not None:
-
             sql += """
                 AND fp.availability_status =
                     :availability_status
@@ -292,24 +228,14 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 filters.availability_status
             )
 
-        # ====================================================
-        # CITY FILTER
-        # ====================================================
-
         if filters.city is not None:
-
             sql += """
                 AND LOWER(fp.city) = LOWER(:city)
             """
 
             params["city"] = filters.city
 
-        # ====================================================
-        # NAME / PROFESSION / SKILL SEARCH
-        # ====================================================
-
         if filters.search is not None:
-
             sql += """
                 AND (
                     LOWER(u.name)
@@ -345,12 +271,7 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 + "%"
             )
 
-        # ====================================================
-        # SKILL FILTER
-        # ====================================================
-
         if filters.skill_ids:
-
             sql += """
                 AND EXISTS (
                     SELECT 1
@@ -370,19 +291,7 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
 
             expanding_skills = True
 
-        # ====================================================
-        # PRICE RANGE FILTER
-        # ====================================================
-
-        # Harga Freelancer dianggap cocok jika
-        # rentang jasanya beririsan dengan
-        # rentang yang dicari UMKM.
-        #
-        # Jika batas yang diperlukan belum diisi,
-        # Freelancer tidak lolos filter tersebut.
-
         if filters.min_price is not None:
-
             sql += """
                 AND fp.service_price_max IS NOT NULL
 
@@ -394,7 +303,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             )
 
         if filters.max_price is not None:
-
             sql += """
                 AND fp.service_price_min IS NOT NULL
 
@@ -405,12 +313,7 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 filters.max_price
             )
 
-        # ====================================================
-        # EXPERIENCE FILTER
-        # ====================================================
-
         if filters.min_experience_count is not None:
-
             sql += """
                 AND COALESCE(
                     exp.experience_count, 0
@@ -421,12 +324,7 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 filters.min_experience_count
             )
 
-        # ====================================================
-        # RATING FILTER
-        # ====================================================
-
         if filters.min_rating is not None:
-
             sql += """
                 AND COALESCE(
                     ratings.review_count, 0
@@ -436,10 +334,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             """
 
             params["min_rating"] = filters.min_rating
-
-        # ====================================================
-        # SORTING & PAGINATION
-        # ====================================================
 
         sql += """
             ORDER BY
@@ -453,7 +347,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
         statement = text(sql)
 
         if expanding_skills:
-
             statement = statement.bindparams(
                 bindparam(
                     "skill_ids",
@@ -466,10 +359,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             params,
         ).mappings().all()
 
-        # ====================================================
-        # BULK LOAD RELATED SKILLS
-        # ====================================================
-
         freelancer_ids = [
             str(row["user_id"])
             for row in rows
@@ -478,10 +367,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
         skills_by_user = self._load_skills(
             freelancer_ids
         )
-
-        # ====================================================
-        # BUILD DOMAIN ENTITIES
-        # ====================================================
 
         return [
             self._to_summary(
@@ -494,19 +379,10 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             for row in rows
         ]
 
-    # ========================================================
-    # 4. GET FREELANCER DETAIL
-    # ========================================================
-
     def get_freelancer_detail(
         self,
         freelancer_id: str,
     ) -> FreelancerDetail | None:
-
-        # ====================================================
-        # GET BASIC PROFILE
-        # ====================================================
-
         statement = text(
             _BASE_QUERY
             + " AND fp.user_id = :freelancer_id"
@@ -522,10 +398,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
         if row is None:
             return None
 
-        # ====================================================
-        # GET SKILLS
-        # ====================================================
-
         skills = self._load_skills(
             [freelancer_id]
         ).get(
@@ -537,10 +409,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             row,
             skills,
         )
-
-        # ====================================================
-        # GET EXPERIENCES
-        # ====================================================
 
         experiences = self._session.execute(
             text("""
@@ -562,10 +430,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 "freelancer_id": freelancer_id,
             },
         ).mappings().all()
-
-        # ====================================================
-        # GET PORTFOLIOS
-        # ====================================================
 
         portfolios = self._session.execute(
             text("""
@@ -592,10 +456,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
             },
         ).mappings().all()
 
-        # ====================================================
-        # GET REVIEWS
-        # ====================================================
-
         reviews = self._session.execute(
             text("""
                 SELECT
@@ -620,10 +480,6 @@ class SqlAlchemyDiscoveryRepository(DiscoveryRepository):
                 "freelancer_id": freelancer_id,
             },
         ).mappings().all()
-
-        # ====================================================
-        # BUILD FREELANCER DETAIL
-        # ====================================================
 
         return FreelancerDetail(
             **{

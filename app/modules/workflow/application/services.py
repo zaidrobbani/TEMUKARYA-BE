@@ -44,8 +44,6 @@ def resolve_party(project: WorkflowProject, agreement: Agreement | None, actor: 
 
 
 class ProjectAccess:
-    """Memuat project + kesepakatan dan memastikan actor adalah pihak di project itu."""
-
     def __init__(self, repository: WorkflowRepository):
         self._repository = repository
 
@@ -55,7 +53,6 @@ class ProjectAccess:
             raise NotFoundError(PROJECT_NOT_FOUND)
         agreement = self._repository.get_agreement(project_id, lock=lock)
         party = resolve_party(project, agreement, actor)
-        # 404 (bukan 403) supaya keberadaan project milik orang lain tidak bocor.
         if party is None:
             raise NotFoundError(PROJECT_NOT_FOUND)
         return ProjectContext(project, agreement, party)
@@ -141,14 +138,11 @@ def _cancellation(
 
 
 class ApprovalResetter:
-    """Kontrak reset_approvals(project_id) untuk modul milestones."""
-
     def __init__(self, repository: WorkflowRepository, clock: Clock = utc_now):
         self._repository = repository
         self._clock = clock
 
     def reset(self, project_id: str) -> Agreement:
-        # Urutan kunci sama dengan use case lain (project → kesepakatan) agar tidak deadlock.
         self._repository.get_project(project_id, lock=True)
         agreement = self._repository.get_agreement(project_id, lock=True)
         if agreement is None or agreement.status != AgreementStatus.PENDING_APPROVAL:

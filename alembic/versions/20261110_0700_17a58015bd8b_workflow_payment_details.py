@@ -1,9 +1,3 @@
-"""Kolom tambahan untuk workflow, pembayaran, review hasil, dan ulasan sesuai Figma.
-
-Revision ID: 17a58015bd8b
-Revises: a1d4e7c29b63
-"""
-
 from typing import Sequence, Union
 
 import sqlalchemy as sa

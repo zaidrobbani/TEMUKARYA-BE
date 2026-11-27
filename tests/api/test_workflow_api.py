@@ -1,5 +1,3 @@
-"""Test HTTP workflow, pembayaran, hasil kerja, ulasan, notifikasi, dan admin keuangan (fake repository)."""
-
 from decimal import Decimal
 
 import pytest

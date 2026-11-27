@@ -12,8 +12,6 @@ _CHUNK = 1024 * 1024
 
 
 class LocalSubmissionFileStorage(SubmissionFileStorage):
-    """File hasil kerja di folder privat (volume Docker). storage_key tidak memakai nama file client."""
-
     def __init__(self, root: str | Path):
         self._root = Path(root).resolve()
 
@@ -29,7 +27,6 @@ class LocalSubmissionFileStorage(SubmissionFileStorage):
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
             source.seek(0)
-            # Tulis ke file sementara lalu rename agar tidak ada file setengah jadi.
             fd, temp = tempfile.mkstemp(dir=target.parent, suffix=".part")
             try:
                 with os.fdopen(fd, "wb") as out:

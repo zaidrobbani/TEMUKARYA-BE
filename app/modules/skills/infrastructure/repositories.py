@@ -8,7 +8,6 @@ from app.modules.skills.domain.entities import (
 
 
 class SqlAlchemyMasterDataRepository:
-
     def __init__(self, session: Session):
         self._session = session
 

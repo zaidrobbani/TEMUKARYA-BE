@@ -7,8 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
-# 1. UMKM PROFILE MODEL
-
 class UmkmProfileModel(Base):
     __tablename__ = "umkm_profiles"
 
@@ -52,8 +50,6 @@ class UmkmProfileModel(Base):
         ),
     )
 
-
-# 2. FREELANCER PROFILE MODEL
 
 class FreelancerProfileModel(Base):
     __tablename__ = "freelancer_profiles"
@@ -109,8 +105,6 @@ class FreelancerProfileModel(Base):
         ),
     )
 
-
-# 3. FREELANCER EXPERIENCE MODEL
 
 class FreelancerExperienceModel(Base):
     __tablename__ = "freelancer_experiences"

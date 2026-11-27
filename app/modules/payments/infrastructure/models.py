@@ -5,7 +5,7 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base, CreatedAt, UpdatedAt, UuidPk
-from app.modules.workflow.infrastructure import models as _workflow_models  # noqa: F401
+from app.modules.workflow.infrastructure import models as _workflow_models
 
 
 class PaymentModel(Base):

@@ -1,4 +1,3 @@
-
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -17,11 +16,6 @@ from app.modules.applications.infrastructure.models import (
 
 
 def _is_duplicate_application(exc: IntegrityError) -> bool:
-    """
-    Kenali pelanggaran unique constraint aplikasi,
-    bukan seluruh jenis IntegrityError.
-    """
-
     message = str(exc.orig).lower()
 
     mysql_error_code = None
@@ -35,7 +29,6 @@ def _is_duplicate_application(exc: IntegrityError) -> bool:
     ):
         return True
 
-    # Dukungan SQLite hanya untuk unit test Repository.
     return (
         "unique constraint failed:" in message
         and "project_applications.project_id" in message
@@ -61,19 +54,8 @@ def _to_entity(
 
 
 class SqlAlchemyApplicationRepository(ApplicationRepository):
-    """
-    Implementasi ApplicationRepository menggunakan
-    SQLAlchemy dan database session dari UnitOfWork.
-
-    Repository tidak melakukan commit sendiri.
-    """
-
     def __init__(self, session: Session):
         self._session = session
-
-    # ========================================================
-    # FREELANCER PROFILE VALIDATION
-    # ========================================================
 
     def freelancer_profile_exists(
         self,
@@ -93,10 +75,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
 
         return result is not None
 
-    # ========================================================
-    # PROJECT AVAILABILITY
-    # ========================================================
-
     def project_is_open(
         self,
         project_id: str,
@@ -113,8 +91,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
         )
 
         if lock:
-            # Digunakan oleh SubmitApplication
-            # ketika transaksi berjalan di MySQL.
             query += " FOR UPDATE"
 
         result = self._session.scalar(
@@ -123,10 +99,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
         )
 
         return result is not None
-
-    # ========================================================
-    # PROJECT OWNERSHIP
-    # ========================================================
 
     def project_owned_by_umkm(
         self,
@@ -150,10 +122,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
         )
 
         return result is not None
-
-    # ========================================================
-    # CREATE APPLICATION
-    # ========================================================
 
     def add(
         self,
@@ -187,10 +155,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
 
         return _to_entity(model)
 
-    # ========================================================
-    # GET APPLICATION BY ID
-    # ========================================================
-
     def get_by_id(
         self,
         application_id: str,
@@ -204,10 +168,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
             return None
 
         return _to_entity(model)
-
-    # ========================================================
-    # GET APPLICATION BY PROJECT AND FREELANCER
-    # ========================================================
 
     def get_by_project_and_freelancer(
         self,
@@ -227,10 +187,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
             return None
 
         return _to_entity(model)
-
-    # ========================================================
-    # LIST FREELANCER APPLICATIONS
-    # ========================================================
 
     def list_by_freelancer(
         self,
@@ -255,10 +211,6 @@ class SqlAlchemyApplicationRepository(ApplicationRepository):
         models = self._session.scalars(statement).all()
 
         return [_to_entity(model) for model in models]
-
-    # ========================================================
-    # LIST PROJECT APPLICANTS
-    # ========================================================
 
     def list_by_project(
         self,

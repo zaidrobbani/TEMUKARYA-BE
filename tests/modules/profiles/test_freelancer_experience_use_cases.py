@@ -27,8 +27,6 @@ from app.modules.profiles.domain.repositories import FreelancerExperienceReposit
 from app.core.unit_of_work import UnitOfWork
 
 
-# HELPER: DATA EXPERIENCE YANG VALID
-
 def valid_experience_input():
     return CreateFreelancerExperienceInput(
         job_title="Graphic Designer",
@@ -38,8 +36,6 @@ def valid_experience_input():
         end_date=date(2025, 12, 20),
     )
 
-
-# HELPER: MEMBUAT USE CASE UNTUK TEST
 
 def make_use_case(profile_exists=True):
     profile_repo = MagicMock()
@@ -64,8 +60,6 @@ def make_use_case(profile_exists=True):
     )
 
 
-# TEST 1: CREATE EXPERIENCE BERHASIL
-
 def test_create_experience_success():
     use_case, profile_repo, experience_repo, uow = (
         make_use_case()
@@ -83,7 +77,6 @@ def test_create_experience_success():
     assert result.organization_name == "Studio Kreatif ABC"
     assert result.description == "Membuat desain branding UMKM"
 
-    # Memastikan ID yang dibuat berbentuk UUID valid
     UUID(result.id)
 
     profile_repo.get_by_user_id.assert_called_once_with(
@@ -93,8 +86,6 @@ def test_create_experience_success():
     experience_repo.add.assert_called_once_with(result)
     uow.commit.assert_called_once()
 
-
-# TEST 2: PROFIL FREELANCER TIDAK ADA
 
 def test_create_experience_profile_not_found():
     use_case, _, experience_repo, uow = make_use_case(
@@ -110,8 +101,6 @@ def test_create_experience_profile_not_found():
     experience_repo.add.assert_not_called()
     uow.commit.assert_not_called()
 
-
-# TEST 3-8: INPUT TIDAK VALID
 
 @pytest.mark.parametrize(
     "changes",
@@ -141,12 +130,9 @@ def test_create_experience_invalid_input(changes):
             data=data,
         )
 
-    # Data tidak boleh disimpan jika validasi gagal
     experience_repo.add.assert_not_called()
     uow.commit.assert_not_called()
 
-
-# TEST 9: FREELANCER MASIH BEKERJA
 
 def test_create_experience_ongoing():
     use_case, _, experience_repo, uow = make_use_case()
@@ -165,8 +151,6 @@ def test_create_experience_ongoing():
     experience_repo.add.assert_called_once()
     uow.commit.assert_called_once()
 
-
-# TEST 10: SPASI BERLEBIH DIBERSIHKAN
 
 def test_create_experience_trims_text():
     use_case, _, experience_repo, uow = make_use_case()

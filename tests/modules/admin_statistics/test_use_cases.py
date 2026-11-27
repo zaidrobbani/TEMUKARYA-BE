@@ -38,10 +38,6 @@ from app.modules.admin_statistics.domain.entities import (
 )
 
 
-# ============================================================
-# 1. TEST CONSTANTS
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4, 10, 0,
     tzinfo=timezone.utc,
@@ -65,16 +61,11 @@ FREELANCER_ACTOR = AdminActor(
 )
 
 
-# ============================================================
-# 2. TEST DATA HELPERS
-# ============================================================
-
 def make_user(
     user_id: str,
     name: str,
     role: str,
 ) -> AdminUserSummary:
-
     return AdminUserSummary(
         id=user_id,
         name=name,
@@ -90,7 +81,6 @@ def make_project(
     status: str,
     assigned: bool = False,
 ) -> AdminProjectSummary:
-
     return AdminProjectSummary(
         id=project_id,
         title=title,
@@ -110,22 +100,8 @@ def make_project(
     )
 
 
-# ============================================================
-# 3. FAKE ADMIN STATISTICS REPOSITORY
-# ============================================================
-
 class FakeAdminStatisticsRepository:
-    """
-    Fake Repository untuk unit testing.
-
-    Tidak terhubung ke MySQL.
-
-    Semua fungsi hanya melakukan pembacaan
-    terhadap data simulasi.
-    """
-
     def __init__(self):
-
         self.users = (
             make_user(
                 "u1",
@@ -212,7 +188,6 @@ class FakeAdminStatisticsRepository:
             platform_income=90000,
         )
 
-        # Digunakan untuk mensimulasikan error.
         self.override_users = None
         self.override_projects = None
         self.override_user_detail = None
@@ -224,17 +199,12 @@ class FakeAdminStatisticsRepository:
 
         self.calls = []
 
-    # ========================================================
-    # A. FILTER USERS
-    # ========================================================
-
     def _filtered_users(
         self,
         *,
         role,
         search,
     ):
-
         items = list(self.users)
 
         if role is not None:
@@ -258,10 +228,6 @@ class FakeAdminStatisticsRepository:
 
         return tuple(items)
 
-    # ========================================================
-    # B. LIST USERS
-    # ========================================================
-
     def list_users(
         self,
         *,
@@ -270,7 +236,6 @@ class FakeAdminStatisticsRepository:
         limit,
         offset,
     ):
-
         self.calls.append(
             ("list_users", role, search, limit, offset)
         )
@@ -285,17 +250,12 @@ class FakeAdminStatisticsRepository:
 
         return items[offset:offset + limit]
 
-    # ========================================================
-    # C. COUNT USERS
-    # ========================================================
-
     def count_users(
         self,
         *,
         role,
         search,
     ):
-
         self.calls.append(
             ("count_users", role, search)
         )
@@ -310,15 +270,10 @@ class FakeAdminStatisticsRepository:
             )
         )
 
-    # ========================================================
-    # D. USER DETAIL
-    # ========================================================
-
     def get_user_detail(
         self,
         user_id,
     ):
-
         self.calls.append(
             ("get_user_detail", user_id)
         )
@@ -330,17 +285,12 @@ class FakeAdminStatisticsRepository:
             user_id
         )
 
-    # ========================================================
-    # E. FILTER PROJECTS
-    # ========================================================
-
     def _filtered_projects(
         self,
         *,
         status,
         search,
     ):
-
         items = list(self.projects)
 
         if status is not None:
@@ -361,10 +311,6 @@ class FakeAdminStatisticsRepository:
 
         return tuple(items)
 
-    # ========================================================
-    # F. LIST PROJECTS
-    # ========================================================
-
     def list_projects(
         self,
         *,
@@ -373,7 +319,6 @@ class FakeAdminStatisticsRepository:
         limit,
         offset,
     ):
-
         self.calls.append(
             (
                 "list_projects",
@@ -394,17 +339,12 @@ class FakeAdminStatisticsRepository:
 
         return items[offset:offset + limit]
 
-    # ========================================================
-    # G. COUNT PROJECTS
-    # ========================================================
-
     def count_projects(
         self,
         *,
         status,
         search,
     ):
-
         self.calls.append(
             ("count_projects", status, search)
         )
@@ -419,15 +359,10 @@ class FakeAdminStatisticsRepository:
             )
         )
 
-    # ========================================================
-    # H. PROJECT DETAIL
-    # ========================================================
-
     def get_project_detail(
         self,
         project_id,
     ):
-
         self.calls.append(
             ("get_project_detail", project_id)
         )
@@ -439,12 +374,7 @@ class FakeAdminStatisticsRepository:
             project_id
         )
 
-    # ========================================================
-    # I. SYSTEM STATISTICS
-    # ========================================================
-
     def get_system_statistics(self):
-
         self.calls.append(
             ("get_system_statistics",)
         )
@@ -455,21 +385,12 @@ class FakeAdminStatisticsRepository:
         return self.statistics
 
 
-# ============================================================
-# 4. PYTEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def repo():
     return FakeAdminStatisticsRepository()
 
 
-# ============================================================
-# 5. LIST USERS TESTS
-# ============================================================
-
 def test_list_all_users(repo):
-
     result = ListAdminUsers(repo).execute(
         ListAdminUsersInput(
             actor=ADMIN,
@@ -483,7 +404,6 @@ def test_list_all_users(repo):
 
 
 def test_list_users_filter_role(repo):
-
     result = ListAdminUsers(repo).execute(
         ListAdminUsersInput(
             actor=ADMIN,
@@ -502,7 +422,6 @@ def test_list_users_filter_role(repo):
 
 
 def test_list_users_search(repo):
-
     result = ListAdminUsers(repo).execute(
         ListAdminUsersInput(
             actor=ADMIN,
@@ -521,7 +440,6 @@ def test_list_users_search(repo):
 
 
 def test_list_users_pagination(repo):
-
     result = ListAdminUsers(repo).execute(
         ListAdminUsersInput(
             actor=ADMIN,
@@ -536,7 +454,6 @@ def test_list_users_pagination(repo):
 
 
 def test_list_users_no_match(repo):
-
     result = ListAdminUsers(repo).execute(
         ListAdminUsersInput(
             actor=ADMIN,
@@ -553,7 +470,6 @@ def test_list_users_no_match(repo):
     [0, 101, True],
 )
 def test_list_users_invalid_limit(repo, limit):
-
     with pytest.raises(BadRequestError):
         ListAdminUsers(repo).execute(
             ListAdminUsersInput(
@@ -570,7 +486,6 @@ def test_list_users_invalid_limit(repo, limit):
     [-1, 10001, True],
 )
 def test_list_users_invalid_offset(repo, offset):
-
     with pytest.raises(BadRequestError):
         ListAdminUsers(repo).execute(
             ListAdminUsersInput(
@@ -585,7 +500,6 @@ def test_list_users_invalid_offset(repo, offset):
     ["admin", "guest"],
 )
 def test_list_users_invalid_role_filter(repo, role):
-
     with pytest.raises(BadRequestError):
         ListAdminUsers(repo).execute(
             ListAdminUsersInput(
@@ -596,7 +510,6 @@ def test_list_users_invalid_role_filter(repo, role):
 
 
 def test_list_users_invalid_search(repo):
-
     with pytest.raises(BadRequestError):
         ListAdminUsers(repo).execute(
             ListAdminUsersInput(
@@ -607,7 +520,6 @@ def test_list_users_invalid_search(repo):
 
 
 def test_list_users_invalid_count(repo):
-
     repo.override_user_count = -1
 
     with pytest.raises(ConflictError):
@@ -617,7 +529,6 @@ def test_list_users_invalid_count(repo):
 
 
 def test_list_users_boolean_count_rejected(repo):
-
     repo.override_user_count = True
 
     with pytest.raises(ConflictError):
@@ -627,7 +538,6 @@ def test_list_users_boolean_count_rejected(repo):
 
 
 def test_list_users_wrong_role_result(repo):
-
     repo.override_users = (
         repo.users[1],
     )
@@ -642,7 +552,6 @@ def test_list_users_wrong_role_result(repo):
 
 
 def test_list_users_too_many_results(repo):
-
     repo.override_users = (
         repo.users[0],
         repo.users[1],
@@ -658,7 +567,6 @@ def test_list_users_too_many_results(repo):
 
 
 def test_list_users_invalid_row(repo):
-
     repo.override_users = (
         {"id": "u1"},
     )
@@ -669,12 +577,7 @@ def test_list_users_invalid_row(repo):
         )
 
 
-# ============================================================
-# 6. USER DETAIL TESTS
-# ============================================================
-
 def test_get_umkm_detail(repo):
-
     result = GetAdminUser(repo).execute(
         GetAdminUserInput(
             actor=ADMIN,
@@ -688,7 +591,6 @@ def test_get_umkm_detail(repo):
 
 
 def test_get_freelancer_detail(repo):
-
     result = GetAdminUser(repo).execute(
         GetAdminUserInput(
             actor=ADMIN,
@@ -702,7 +604,6 @@ def test_get_freelancer_detail(repo):
 
 
 def test_get_admin_user_without_profile(repo):
-
     result = GetAdminUser(repo).execute(
         GetAdminUserInput(
             actor=ADMIN,
@@ -716,7 +617,6 @@ def test_get_admin_user_without_profile(repo):
 
 
 def test_get_missing_user(repo):
-
     with pytest.raises(NotFoundError):
         GetAdminUser(repo).execute(
             GetAdminUserInput(
@@ -727,7 +627,6 @@ def test_get_missing_user(repo):
 
 
 def test_get_user_invalid_id(repo):
-
     with pytest.raises(BadRequestError):
         GetAdminUser(repo).execute(
             GetAdminUserInput(
@@ -738,7 +637,6 @@ def test_get_user_invalid_id(repo):
 
 
 def test_get_user_wrong_repository_identity(repo):
-
     repo.override_user_detail = (
         repo.user_details["f1"]
     )
@@ -753,7 +651,6 @@ def test_get_user_wrong_repository_identity(repo):
 
 
 def test_get_user_wrong_profile_role(repo):
-
     repo.override_user_detail = AdminUserDetail(
         user=repo.users[0],
         freelancer_profile=(
@@ -770,12 +667,7 @@ def test_get_user_wrong_profile_role(repo):
         )
 
 
-# ============================================================
-# 7. LIST PROJECTS TESTS
-# ============================================================
-
 def test_list_all_projects(repo):
-
     result = ListAdminProjects(repo).execute(
         ListAdminProjectsInput(
             actor=ADMIN,
@@ -787,7 +679,6 @@ def test_list_all_projects(repo):
 
 
 def test_list_project_filter_status(repo):
-
     result = ListAdminProjects(repo).execute(
         ListAdminProjectsInput(
             actor=ADMIN,
@@ -806,7 +697,6 @@ def test_list_project_filter_status(repo):
 
 
 def test_list_project_search(repo):
-
     result = ListAdminProjects(repo).execute(
         ListAdminProjectsInput(
             actor=ADMIN,
@@ -819,7 +709,6 @@ def test_list_project_search(repo):
 
 
 def test_list_project_without_freelancer(repo):
-
     result = ListAdminProjects(repo).execute(
         ListAdminProjectsInput(
             actor=ADMIN,
@@ -831,7 +720,6 @@ def test_list_project_without_freelancer(repo):
 
 
 def test_list_project_no_match(repo):
-
     result = ListAdminProjects(repo).execute(
         ListAdminProjectsInput(
             actor=ADMIN,
@@ -844,7 +732,6 @@ def test_list_project_no_match(repo):
 
 
 def test_list_project_invalid_status(repo):
-
     with pytest.raises(BadRequestError):
         ListAdminProjects(repo).execute(
             ListAdminProjectsInput(
@@ -859,7 +746,6 @@ def test_list_project_invalid_status(repo):
     [0, 101, True],
 )
 def test_list_project_invalid_limit(repo, limit):
-
     with pytest.raises(BadRequestError):
         ListAdminProjects(repo).execute(
             ListAdminProjectsInput(
@@ -870,7 +756,6 @@ def test_list_project_invalid_limit(repo, limit):
 
 
 def test_list_project_invalid_offset(repo):
-
     with pytest.raises(BadRequestError):
         ListAdminProjects(repo).execute(
             ListAdminProjectsInput(
@@ -881,7 +766,6 @@ def test_list_project_invalid_offset(repo):
 
 
 def test_list_project_invalid_count(repo):
-
     repo.override_project_count = -1
 
     with pytest.raises(ConflictError):
@@ -891,7 +775,6 @@ def test_list_project_invalid_count(repo):
 
 
 def test_list_project_wrong_status_result(repo):
-
     repo.override_projects = (
         repo.projects[0],
     )
@@ -906,7 +789,6 @@ def test_list_project_wrong_status_result(repo):
 
 
 def test_list_project_too_many_results(repo):
-
     repo.override_projects = repo.projects
 
     with pytest.raises(ConflictError):
@@ -918,12 +800,7 @@ def test_list_project_too_many_results(repo):
         )
 
 
-# ============================================================
-# 8. PROJECT DETAIL TESTS
-# ============================================================
-
 def test_get_project_without_agreement(repo):
-
     result = GetAdminProject(repo).execute(
         GetAdminProjectInput(
             actor=ADMIN,
@@ -937,7 +814,6 @@ def test_get_project_without_agreement(repo):
 
 
 def test_get_project_with_agreement(repo):
-
     result = GetAdminProject(repo).execute(
         GetAdminProjectInput(
             actor=ADMIN,
@@ -951,7 +827,6 @@ def test_get_project_with_agreement(repo):
 
 
 def test_get_missing_project(repo):
-
     with pytest.raises(NotFoundError):
         GetAdminProject(repo).execute(
             GetAdminProjectInput(
@@ -962,7 +837,6 @@ def test_get_missing_project(repo):
 
 
 def test_get_project_invalid_id(repo):
-
     with pytest.raises(BadRequestError):
         GetAdminProject(repo).execute(
             GetAdminProjectInput(
@@ -973,7 +847,6 @@ def test_get_project_invalid_id(repo):
 
 
 def test_get_project_wrong_identity(repo):
-
     repo.override_project_detail = (
         repo.project_details["p2"]
     )
@@ -988,7 +861,6 @@ def test_get_project_wrong_identity(repo):
 
 
 def test_get_project_invalid_result_type(repo):
-
     repo.override_project_detail = {
         "project_id": "p1"
     }
@@ -1002,12 +874,7 @@ def test_get_project_invalid_result_type(repo):
         )
 
 
-# ============================================================
-# 9. SYSTEM STATISTICS TESTS
-# ============================================================
-
 def test_get_system_statistics(repo):
-
     result = GetAdminStatistics(repo).execute(
         GetAdminStatisticsInput(
             actor=ADMIN,
@@ -1023,7 +890,6 @@ def test_get_system_statistics(repo):
 
 
 def test_get_system_statistics_zero_values(repo):
-
     repo.statistics = AdminSystemStatistics(
         total_umkm=0,
         total_freelancers=0,
@@ -1044,7 +910,6 @@ def test_get_system_statistics_zero_values(repo):
 
 
 def test_get_statistics_invalid_completed_count(repo):
-
     repo.statistics = replace(
         repo.statistics,
         total_projects=1,
@@ -1060,7 +925,6 @@ def test_get_statistics_invalid_completed_count(repo):
 
 
 def test_get_statistics_negative_income(repo):
-
     repo.statistics = replace(
         repo.statistics,
         platform_income=-1,
@@ -1075,7 +939,6 @@ def test_get_statistics_negative_income(repo):
 
 
 def test_get_statistics_wrong_result_type(repo):
-
     repo.override_statistics = {
         "total_umkm": 1
     }
@@ -1087,10 +950,6 @@ def test_get_statistics_wrong_result_type(repo):
             )
         )
 
-
-# ============================================================
-# 10. ADMIN AUTHORIZATION TESTS
-# ============================================================
 
 @pytest.mark.parametrize(
     "actor",
@@ -1116,15 +975,12 @@ def test_non_admin_rejected_for_all_use_cases(
     actor,
     use_case,
 ):
-
     if use_case == "list_users":
-
         action = lambda: ListAdminUsers(repo).execute(
             ListAdminUsersInput(actor=actor)
         )
 
     elif use_case == "get_user":
-
         action = lambda: GetAdminUser(repo).execute(
             GetAdminUserInput(
                 actor=actor,
@@ -1133,13 +989,11 @@ def test_non_admin_rejected_for_all_use_cases(
         )
 
     elif use_case == "list_projects":
-
         action = lambda: ListAdminProjects(repo).execute(
             ListAdminProjectsInput(actor=actor)
         )
 
     elif use_case == "get_project":
-
         action = lambda: GetAdminProject(repo).execute(
             GetAdminProjectInput(
                 actor=actor,
@@ -1148,7 +1002,6 @@ def test_non_admin_rejected_for_all_use_cases(
         )
 
     else:
-
         action = lambda: GetAdminStatistics(repo).execute(
             GetAdminStatisticsInput(actor=actor)
         )
@@ -1156,6 +1009,4 @@ def test_non_admin_rejected_for_all_use_cases(
     with pytest.raises(ForbiddenError):
         action()
 
-    # Authorization harus terjadi
-    # sebelum Repository diakses.
     assert repo.calls == []

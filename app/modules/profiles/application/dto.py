@@ -12,7 +12,6 @@ class CreateUmkmProfileInput:
     city: str
 
 
-
 @dataclass(frozen=True)
 class CreateFreelancerProfileInput:
     professional_title: str
@@ -24,7 +23,7 @@ class CreateFreelancerProfileInput:
 
 @dataclass(frozen=True)
 class UpdateUmkmProfileInput(CreateUmkmProfileInput):
-    """Replace editable fields; identity is supplied separately by authentication."""
+    pass
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -48,7 +47,7 @@ class CreateFreelancerExperienceInput:
 
 @dataclass(frozen=True)
 class UpdateFreelancerExperienceInput(CreateFreelancerExperienceInput):
-    """Penggantian seluruh isi experience, tanpa ID atau ownership dari body."""
+    pass
 
 
 @dataclass(frozen=True)
@@ -60,7 +59,7 @@ class CreatePortfolioInput:
 
 @dataclass(frozen=True)
 class UpdatePortfolioInput(CreatePortfolioInput):
-    """Penggantian metadata tanpa ownership atau tanggal audit dari client."""
+    pass
 
 
 @dataclass(frozen=True)

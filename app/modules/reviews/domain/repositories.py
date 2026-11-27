@@ -12,7 +12,7 @@ class ReviewRepository(ABC):
 
     @abstractmethod
     def list_for_freelancer(self, freelancer_id: str, limit: int, offset: int) -> list[PublicReview]:
-        """Ulasan dari project yang kesepakatannya dengan freelancer ini, terbaru dulu."""
+        pass
 
     @abstractmethod
     def summary_for_freelancer(self, freelancer_id: str) -> RatingSummary: ...

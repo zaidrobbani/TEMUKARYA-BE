@@ -51,7 +51,6 @@ def photo(size=(3000, 2000), fmt="JPEG") -> bytes:
 
 
 def smooth_photo(size=(3000, 2000)) -> bytes:
-    # Mirip foto asli (gradasi halus), bukan noise acak.
     r = Image.linear_gradient("L").resize(size)
     g = Image.linear_gradient("L").rotate(90).resize(size)
     picture = Image.merge("RGB", (r, g, Image.new("L", size, 120)))

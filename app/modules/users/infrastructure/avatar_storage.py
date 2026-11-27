@@ -25,7 +25,6 @@ from app.modules.users.domain.avatar import (
 
 logger = logging.getLogger(__name__)
 KEY_PATTERN = re.compile(r"[0-9a-f]{32}\.webp\Z")
-# Gambar sumber di atas ini ditolak sebelum di-decode (cegah decompression bomb).
 MAX_SOURCE_DIMENSION = 4096
 QUALITY_STEPS = (80, 70, 60, 50, 40)
 DECODER_SLOT = BoundedSemaphore(1)
@@ -40,11 +39,6 @@ def _is_supported_signature(head: bytes) -> bool:
 
 
 class LocalAvatarStorage(AvatarStorage):
-    """
-    Semua foto dikompres ulang di server: orientasi EXIF diterapkan, metadata dibuang, diperkecil ke
-    maks 512 px, lalu disimpan sebagai WebP. Kualitas diturunkan bertahap sampai ukuran <= 150 KB.
-    """
-
     def __init__(self, root: str | Path):
         root = Path(root)
         if not root.is_absolute() or root.is_symlink():
@@ -103,7 +97,6 @@ class LocalAvatarStorage(AvatarStorage):
                     mode = "RGBA" if "A" in oriented.getbands() else "RGB"
                     image = oriented.convert(mode)
                     image.thumbnail((AVATAR_MAX_DIMENSION, AVATAR_MAX_DIMENSION), Image.Resampling.LANCZOS)
-                    # Gambar baru hanya berisi piksel: EXIF/ICC/XMP tidak ikut tersimpan.
                     clean = Image.frombytes(mode, image.size, image.tobytes())
         except (Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
             raise AvatarInvalidError("Dimensi foto tidak aman") from exc
@@ -117,7 +110,6 @@ class LocalAvatarStorage(AvatarStorage):
             encoded = buffer.getvalue()
             if len(encoded) <= AVATAR_MAX_STORED_BYTES:
                 return encoded
-        # Sangat jarang untuk 512 px; perkecil sekali lagi daripada menolak user.
         clean.thumbnail((AVATAR_MAX_DIMENSION // 2, AVATAR_MAX_DIMENSION // 2), Image.Resampling.LANCZOS)
         buffer = io.BytesIO()
         clean.save(buffer, format="WEBP", quality=QUALITY_STEPS[-1], method=6)
@@ -139,5 +131,4 @@ class LocalAvatarStorage(AvatarStorage):
         except AvatarNotFoundError:
             return
         except OSError:
-            # File lama yatim tidak mengganggu user; cukup dicatat untuk dibersihkan.
             logger.exception("Avatar cleanup required: %s", key)

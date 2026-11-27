@@ -1,4 +1,3 @@
-
 from dataclasses import replace
 from datetime import date
 from uuid import uuid4
@@ -27,10 +26,6 @@ UMKM_B = "22222222-2222-4222-8222-222222222222"
 PROJECT_ID = "33333333-3333-4333-8333-333333333333"
 
 
-# ============================================================
-# TEST DATA
-# ============================================================
-
 def make_project():
     return Project(
         id=PROJECT_ID,
@@ -43,10 +38,6 @@ def make_project():
         status="TERBUKA",
     )
 
-
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
 
 class FakeProjectRepository:
     def __init__(self, project=None):
@@ -101,10 +92,6 @@ def setup_use_case(project=None):
 
     return use_case, repository, uow
 
-
-# ============================================================
-# APPLICATION LAYER TESTS
-# ============================================================
 
 def test_owner_can_delete_open_project():
     use_case, repository, uow = setup_use_case(
@@ -194,8 +181,6 @@ def test_delete_blocked_by_related_data():
         make_project()
     )
 
-    # Simulasi repository menemukan relasi yang
-    # menghalangi penghapusan, misalnya lamaran.
     repository.can_delete = False
 
     with pytest.raises(ConflictError):
@@ -210,10 +195,6 @@ def test_delete_blocked_by_related_data():
     ]
     assert uow.commit_count == 0
 
-
-# ============================================================
-# HTTP ROUTER TESTS
-# ============================================================
 
 @pytest.fixture
 def http_context():

@@ -1,4 +1,3 @@
-
 import math
 
 from app.core.exceptions import (
@@ -21,10 +20,6 @@ from app.modules.discovery.domain.repositories import (
 )
 
 
-# ============================================================
-# BUSINESS CONSTANTS
-# ============================================================
-
 MAX_SEARCH_LENGTH = 100
 MAX_CITY_LENGTH = 100
 MAX_AVAILABILITY_LENGTH = 25
@@ -38,20 +33,11 @@ MAX_PAGE_OFFSET = 10000
 MAX_SERVICE_PRICE = (2**64) - 1
 
 
-# ============================================================
-# SHARED VALIDATION HELPERS
-# ============================================================
-
 def normalize_optional_text(
     value: str | None,
     field_name: str,
     max_length: int,
 ) -> str | None:
-    """
-    Memvalidasi teks opsional dan menghapus
-    spasi di awal serta akhir.
-    """
-
     if value is None:
         return None
 
@@ -79,11 +65,6 @@ def validate_optional_price(
     value: int | None,
     field_name: str,
 ) -> None:
-    """
-    Harga jasa memakai BIGINT UNSIGNED
-    pada database MySQL.
-    """
-
     if value is None:
         return
 
@@ -101,7 +82,6 @@ def validate_pagination(
     limit: int,
     offset: int,
 ) -> None:
-
     if (
         type(limit) is not int
         or not 1 <= limit <= MAX_PAGE_LIMIT
@@ -124,11 +104,6 @@ def validate_pagination(
 def normalize_skill_ids(
     skill_ids: tuple[str, ...],
 ) -> tuple[str, ...]:
-    """
-    Menghapus duplikasi skill tanpa mengubah
-    urutan filter yang dikirim.
-    """
-
     if not isinstance(skill_ids, tuple):
         raise BadRequestError(
             "Skill IDs harus berupa tuple"
@@ -143,7 +118,6 @@ def normalize_skill_ids(
     seen = set()
 
     for skill_id in skill_ids:
-
         valid_id = normalize_optional_text(
             skill_id,
             "Skill ID",
@@ -157,23 +131,7 @@ def normalize_skill_ids(
     return tuple(normalized)
 
 
-# ============================================================
-# 1. SEARCH FREELANCERS
-# ============================================================
-
 class SearchFreelancers:
-    """
-    Use Case pencarian Freelancer oleh UMKM.
-
-    Tanggung jawab:
-    - Validasi input
-    - Normalisasi filter
-    - Pagination
-    - Memanggil Repository
-
-    Query SQL tidak ditulis pada layer ini.
-    """
-
     def __init__(
         self,
         repository: DiscoveryRepository,
@@ -184,19 +142,10 @@ class SearchFreelancers:
         self,
         data: SearchFreelancersInput,
     ) -> FreelancersPage:
-
-        # ====================================================
-        # 1. VALIDASI PAGINATION
-        # ====================================================
-
         validate_pagination(
             limit=data.limit,
             offset=data.offset,
         )
-
-        # ====================================================
-        # 2. NORMALISASI SEARCH & TEXT FILTERS
-        # ====================================================
 
         search = normalize_optional_text(
             data.search,
@@ -216,17 +165,9 @@ class SearchFreelancers:
             MAX_AVAILABILITY_LENGTH,
         )
 
-        # ====================================================
-        # 3. VALIDASI SKILLS
-        # ====================================================
-
         skill_ids = normalize_skill_ids(
             data.skill_ids
         )
-
-        # ====================================================
-        # 4. VALIDASI PRICE RANGE
-        # ====================================================
 
         validate_optional_price(
             data.min_price,
@@ -247,12 +188,7 @@ class SearchFreelancers:
                 "Min price tidak boleh melebihi max price"
             )
 
-        # ====================================================
-        # 5. VALIDASI EXPERIENCE COUNT
-        # ====================================================
-
         if data.min_experience_count is not None:
-
             if (
                 type(data.min_experience_count) is not int
                 or data.min_experience_count < 0
@@ -262,12 +198,7 @@ class SearchFreelancers:
                     "berupa bilangan bulat tidak negatif"
                 )
 
-        # ====================================================
-        # 6. VALIDASI RATING
-        # ====================================================
-
         if data.min_rating is not None:
-
             if (
                 type(data.min_rating) not in (int, float)
                 or not math.isfinite(data.min_rating)
@@ -277,10 +208,6 @@ class SearchFreelancers:
                     "Minimum rating harus berupa "
                     "angka antara 0 dan 5"
                 )
-
-        # ====================================================
-        # 7. BUILD DOMAIN FILTERS
-        # ====================================================
 
         filters = FreelancerSearchFilters(
             search=search,
@@ -295,21 +222,11 @@ class SearchFreelancers:
             min_rating=data.min_rating,
         )
 
-        # ====================================================
-        # 8. EXECUTE REPOSITORY QUERY
-        # ====================================================
-
-        # Ambil satu data tambahan agar kita tahu
-        # apakah halaman berikutnya masih tersedia.
         freelancers = self._repository.search_freelancers(
             filters=filters,
             limit=data.limit + 1,
             offset=data.offset,
         )
-
-        # ====================================================
-        # 9. BUILD PAGINATED RESULT
-        # ====================================================
 
         return FreelancersPage(
             items=tuple(freelancers[:data.limit]),
@@ -319,18 +236,7 @@ class SearchFreelancers:
         )
 
 
-# ============================================================
-# 2. GET FREELANCER DETAIL
-# ============================================================
-
 class GetFreelancerDetail:
-    """
-    Use Case mengambil profil detail Freelancer.
-
-    Repository hanya boleh mengembalikan
-    informasi publik sesuai Domain Entity.
-    """
-
     def __init__(
         self,
         repository: DiscoveryRepository,
@@ -341,11 +247,6 @@ class GetFreelancerDetail:
         self,
         freelancer_id: str,
     ) -> FreelancerDetail:
-
-        # ====================================================
-        # 1. VALIDASI FREELANCER ID
-        # ====================================================
-
         if not isinstance(freelancer_id, str):
             raise BadRequestError(
                 "Freelancer ID harus berupa teks"
@@ -363,19 +264,11 @@ class GetFreelancerDetail:
                 "Freelancer ID terlalu panjang"
             )
 
-        # ====================================================
-        # 2. GET DETAIL FROM REPOSITORY
-        # ====================================================
-
         freelancer = (
             self._repository.get_freelancer_detail(
                 freelancer_id=freelancer_id,
             )
         )
-
-        # ====================================================
-        # 3. HANDLE NOT FOUND
-        # ====================================================
 
         if freelancer is None:
             raise NotFoundError(

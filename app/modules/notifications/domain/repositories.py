@@ -12,7 +12,7 @@ class NotificationRepository(ABC):
     def list_for_user(
         self, user_id: str, types: tuple[str, ...] | None, unread_only: bool, limit: int, offset: int
     ) -> list[Notification]:
-        """Urut terbaru dulu."""
+        pass
 
     @abstractmethod
     def count_by_type(self, user_id: str) -> dict[str, int]: ...
@@ -25,7 +25,7 @@ class NotificationRepository(ABC):
 
     @abstractmethod
     def mark_read(self, user_id: str, notification_id: str, read_at: datetime) -> None:
-        """Hanya mengisi read_at yang masih kosong."""
+        pass
 
     @abstractmethod
     def mark_all_read(self, user_id: str, read_at: datetime) -> int: ...
@@ -34,7 +34,7 @@ class NotificationRepository(ABC):
 class DeviceTokenRepository(ABC):
     @abstractmethod
     def upsert(self, user_id: str, token: str, platform: str) -> None:
-        """Token yang sudah ada dipindah ke user ini (perangkat dipakai login akun lain)."""
+        pass
 
     @abstractmethod
     def remove(self, user_id: str, token: str) -> None: ...
@@ -44,4 +44,4 @@ class DeviceTokenRepository(ABC):
 
     @abstractmethod
     def remove_tokens(self, tokens: list[str]) -> None:
-        """Hapus token yang ditolak FCM (aplikasi di-uninstall / token kedaluwarsa)."""
+        pass

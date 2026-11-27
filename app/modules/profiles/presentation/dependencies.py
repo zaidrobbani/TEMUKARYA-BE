@@ -73,7 +73,6 @@ from app.modules.profiles.infrastructure.media_storage import LocalImageStorage
 def get_umkm_profile_repository(
     db: Session = Depends(get_db),
 ) -> UmkmProfileRepository:
-
     return SqlAlchemyUmkmProfileRepository(db)
 
 
@@ -83,18 +82,15 @@ def create_umkm_profile_use_case(
     ),
     uow: UnitOfWork = Depends(get_uow),
 ) -> CreateUmkmProfile:
-
     return CreateUmkmProfile(
         repository=repository,
         uow=uow,
     )
 
 
-
 def get_freelancer_profile_repository(
     db: Session = Depends(get_db),
 ) -> FreelancerProfileRepository:
-
     return SqlAlchemyFreelancerProfileRepository(db)
 
 
@@ -104,12 +100,10 @@ def create_freelancer_profile_use_case(
     ),
     uow: UnitOfWork = Depends(get_uow),
 ) -> CreateFreelancerProfile:
-
     return CreateFreelancerProfile(
         repository=repository,
         uow=uow,
     )
-
 
 
 def get_umkm_profile_use_case(
@@ -141,7 +135,6 @@ def update_freelancer_profile_use_case(
 def get_freelancer_skills_repository(
     db: Session = Depends(get_db),
 ) -> FreelancerSkillsRepository:
-
     return SqlAlchemyFreelancerSkillsRepository(db)
 
 
@@ -154,7 +147,6 @@ def set_freelancer_skills_use_case(
     ),
     uow: UnitOfWork = Depends(get_uow),
 ) -> SetFreelancerSkills:
-
     return SetFreelancerSkills(
         profile_repository=profile_repository,
         skills_repository=skills_repository,
@@ -170,18 +162,15 @@ def get_freelancer_skills_use_case(
         get_freelancer_skills_repository
     ),
 ) -> GetFreelancerSkills:
-
     return GetFreelancerSkills(
         profile_repository=profile_repository,
         skills_repository=skills_repository,
     )
 
-# FREELANCER EXPERIENCE DEPENDENCIES
 
 def get_freelancer_experience_repository(
     db: Session = Depends(get_db),
 ) -> FreelancerExperienceRepository:
-
     return SqlAlchemyFreelancerExperienceRepository(db)
 
 
@@ -194,7 +183,6 @@ def create_freelancer_experience_use_case(
     ),
     uow: UnitOfWork = Depends(get_uow),
 ) -> CreateFreelancerExperience:
-
     return CreateFreelancerExperience(
         profile_repository=profile_repository,
         experience_repository=experience_repository,
@@ -265,20 +253,21 @@ def update_portfolio_use_case(
     return UpdatePortfolio(portfolio_repository, uow)
 
 
-def get_media_repository(db: Session = Depends(get_db)):
+def get_media_repository(db: Session = Depends(get_db)) -> SqlAlchemyMediaRepository:
     return SqlAlchemyMediaRepository(db)
 
 
-def get_portfolio_storage():
+def get_portfolio_storage() -> LocalImageStorage:
     return LocalImageStorage(os.environ.get("PORTFOLIO_STORAGE_ROOT", "/app/storage/portfolios"))
 
 
 def get_media_service(
-    repository=Depends(get_media_repository), storage=Depends(get_portfolio_storage),
+    repository: SqlAlchemyMediaRepository = Depends(get_media_repository),
+    storage: LocalImageStorage = Depends(get_portfolio_storage),
     uow: UnitOfWork = Depends(get_uow),
-):
+) -> PortfolioMediaService:
     return PortfolioMediaService(repository, storage, uow)
 
 
-def delete_portfolio_use_case(service=Depends(get_media_service)) -> DeletePortfolioWithMedia:
+def delete_portfolio_use_case(service: PortfolioMediaService = Depends(get_media_service)) -> DeletePortfolioWithMedia:
     return DeletePortfolioWithMedia(service)

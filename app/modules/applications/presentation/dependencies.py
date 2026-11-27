@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 
 from fastapi import Depends
@@ -27,10 +26,6 @@ from app.modules.applications.infrastructure.repositories import (
 from app.modules.notifications.infrastructure.hooks import notify_application_received
 
 
-# ============================================================
-# AUTHENTICATED APPLICATION USER
-# ============================================================
-
 @dataclass(frozen=True)
 class AuthenticatedApplicationUser:
     user_id: str
@@ -43,19 +38,11 @@ def get_authenticated_application_user(
     return AuthenticatedApplicationUser(user_id=user.id, role=user.role)
 
 
-# ============================================================
-# REPOSITORY DEPENDENCY
-# ============================================================
-
 def get_application_repository(
     db: Session = Depends(get_db),
 ) -> ApplicationRepository:
     return SqlAlchemyApplicationRepository(db)
 
-
-# ============================================================
-# SUBMIT APPLICATION DEPENDENCY
-# ============================================================
 
 def get_submit_application_use_case(
     repository: ApplicationRepository = Depends(
@@ -64,7 +51,6 @@ def get_submit_application_use_case(
     uow: UnitOfWork = Depends(get_uow),
     db: Session = Depends(get_db),
 ) -> SubmitApplication:
-
     return SubmitApplication(
         repository=repository,
         uow=uow,
@@ -74,31 +60,21 @@ def get_submit_application_use_case(
     )
 
 
-# ============================================================
-# GET MY APPLICATIONS DEPENDENCY
-# ============================================================
-
 def get_my_applications_use_case(
     repository: ApplicationRepository = Depends(
         get_application_repository
     ),
 ) -> GetMyApplications:
-
     return GetMyApplications(
         repository=repository,
     )
 
-
-# ============================================================
-# GET PROJECT APPLICANTS DEPENDENCY
-# ============================================================
 
 def get_project_applicants_use_case(
     repository: ApplicationRepository = Depends(
         get_application_repository
     ),
 ) -> GetProjectApplicants:
-
     return GetProjectApplicants(
         repository=repository,
     )

@@ -1,16 +1,3 @@
-"""
-Push notifikasi ke HP lewat Firebase Cloud Messaging (HTTP v1 API).
-
-Alur: notifikasi baru di-COMMIT → `after_commit` (lihat realtime.py) memanggil `push_dispatcher().dispatch(...)`
-→ dikirim di thread latar (request tidak menunggu Google) ke semua token perangkat milik user penerima.
-Token yang ditolak FCM (aplikasi di-uninstall, token kedaluwarsa) langsung dihapus.
-
-Kredensial: file JSON service account Firebase, path-nya di env `FIREBASE_CREDENTIALS_FILE`.
-Bila kosong atau file tidak ada, push nonaktif (no-op) dan fitur lain tetap berjalan.
-Pesan dikirim sebagai *data message* prioritas tinggi supaya aplikasi Android sendiri yang menampilkan
-notifikasi (channel, ikon, dan tujuan saat diketuk diatur di aplikasi), baik saat aplikasi dibuka maupun ditutup.
-"""
-
 import json
 import logging
 import threading
@@ -128,7 +115,7 @@ class FcmClient:
             return SendResult.INVALID_TOKEN
         if response.status_code in (401, 403):
             with self._lock:
-                self._access_token = None  # paksa ambil ulang di kiriman berikutnya
+                self._access_token = None
         logger.warning("FCM menolak pesan (%s): %s", response.status_code, response.text[:300])
         return SendResult.FAILED
 
@@ -143,12 +130,10 @@ def _is_invalid_token(response: httpx.Response) -> bool:
     codes = {detail.get("errorCode") for detail in error.get("details", []) if isinstance(detail, dict)}
     if "UNREGISTERED" in codes or error.get("status") == "NOT_FOUND":
         return True
-    # INVALID_ARGUMENT untuk token rusak; payload kita selalu valid sehingga ini berarti tokennya.
     return response.status_code == 400 and ("INVALID_ARGUMENT" in codes or error.get("status") == "INVALID_ARGUMENT")
 
 
 def notification_data(notification: Notification) -> dict[str, str]:
-    """FCM data message hanya menerima string."""
     return {
         "notification_id": notification.id,
         "type": notification.notification_type,

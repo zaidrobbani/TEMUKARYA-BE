@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.modules.matching.domain.scoring import (
@@ -7,17 +6,9 @@ from app.modules.matching.domain.scoring import (
 )
 
 
-# ============================================================
-# THRESHOLD
-# ============================================================
-
 def test_threshold_is_60_percent():
     assert MIN_MATCH_SCORE == 60
 
-
-# ============================================================
-# MATCHING SCORE CALCULATION
-# ============================================================
 
 @pytest.mark.parametrize(
     "owned,expected_score,eligible",
@@ -71,10 +62,6 @@ def test_matching_score_and_threshold(
     assert result.meets_threshold is eligible
 
 
-# ============================================================
-# MATCHED AND MISSING SKILLS
-# ============================================================
-
 def test_explainable_matched_and_missing_skills():
     result = calculate_skill_match(
         ("python", "fastapi", "mysql"),
@@ -95,10 +82,6 @@ def test_explainable_matched_and_missing_skills():
     )
 
 
-# ============================================================
-# DUPLICATE SKILLS
-# ============================================================
-
 def test_duplicate_skills_are_not_double_counted():
     result = calculate_skill_match(
         ("python", "python", "mysql"),
@@ -110,10 +93,6 @@ def test_duplicate_skills_are_not_double_counted():
     assert result.score_percent == 50.0
     assert not result.meets_threshold
 
-
-# ============================================================
-# EMPTY PROJECT REQUIREMENTS
-# ============================================================
 
 def test_empty_project_requirements_do_not_match():
     result = calculate_skill_match(
@@ -128,10 +107,6 @@ def test_empty_project_requirements_do_not_match():
     assert not result.meets_threshold
 
 
-# ============================================================
-# EXTRA FREELANCER SKILLS
-# ============================================================
-
 def test_extra_freelancer_skills_do_not_increase_score():
     result = calculate_skill_match(
         ("python",),
@@ -141,10 +116,6 @@ def test_extra_freelancer_skills_do_not_increase_score():
     assert result.score_percent == 100.0
     assert result.matched_count == 1
 
-
-# ============================================================
-# SKILL ID NORMALIZATION
-# ============================================================
 
 def test_skill_ids_are_trimmed_but_not_case_folded():
     result = calculate_skill_match(
@@ -158,10 +129,6 @@ def test_skill_ids_are_trimmed_but_not_case_folded():
         "mysql",
     )
 
-
-# ============================================================
-# INVALID SKILL COLLECTIONS
-# ============================================================
 
 @pytest.mark.parametrize(
     "bad_skills",
@@ -184,10 +151,6 @@ def test_invalid_skill_collections_rejected(
             ("python",),
         )
 
-
-# ============================================================
-# INVALID FREELANCER SKILLS
-# ============================================================
 
 def test_invalid_freelancer_skill_ids_rejected():
     with pytest.raises(TypeError):

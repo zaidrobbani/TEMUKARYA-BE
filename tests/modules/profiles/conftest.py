@@ -18,8 +18,6 @@ from app.modules.profiles.infrastructure.repositories import (
 
 @pytest.fixture
 def experience_store():
-    # Isolated SQLite table for executing real repository queries. MySQL-specific
-    # timestamp defaults and foreign keys are outside this fixture's scope.
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool,
     )
@@ -72,7 +70,6 @@ def portfolio_session():
         Column("created_at", DateTime, nullable=False, server_default=func.current_timestamp()),
         Column("updated_at", DateTime, nullable=False, server_default=func.current_timestamp()),
     )
-    # Test-only SQLite schema. Production MySQL defaults/FKs are not modified.
     Table(
         "portfolio_media", metadata,
         Column("id", String(36), primary_key=True),
@@ -112,8 +109,7 @@ def portfolio_store(portfolio_session):
 
 @pytest.fixture
 def self_profile_store():
-    # Register FK target metadata, as application startup does; no users table DDL.
-    import app.modules.users.infrastructure.models  # noqa: F401
+    import app.modules.users.infrastructure.models
     from app.modules.profiles.domain.entities import UmkmProfile, FreelancerProfile
     from app.modules.profiles.infrastructure.repositories import (
         SqlAlchemyUmkmProfileRepository, SqlAlchemyFreelancerProfileRepository,
@@ -121,7 +117,6 @@ def self_profile_store():
 
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     metadata = MetaData()
-    # Only isolated test tables; MySQL defaults/unsigned limits/FKs tested separately.
     for name, columns in [
         ("umkm_profiles", [
             Column("business_name", String(160), nullable=False),

@@ -6,10 +6,6 @@ from app.modules.admin_statistics.domain.entities import (
 )
 
 
-# ============================================================
-# 1. DOMAIN CONSTANTS
-# ============================================================
-
 ALLOWED_USER_FILTER_ROLES = frozenset({
     "umkm",
     "freelancer",
@@ -21,23 +17,10 @@ MAX_SEARCH_LENGTH = 100
 MAX_IDENTIFIER_LENGTH = 36
 
 
-# ============================================================
-# 2. VALIDATE IDENTIFIER
-# ============================================================
-
 def validate_identifier(
     value: str,
     field_name: str = "ID",
 ) -> str:
-    """
-    Validasi dasar identifier.
-
-    Tidak mengakses database.
-
-    SQL tetap harus menggunakan parameter
-    binding di Infrastructure Layer.
-    """
-
     if not isinstance(value, str):
         raise ValueError(
             f"{field_name} harus berupa string"
@@ -72,20 +55,9 @@ def validate_identifier(
     return normalized
 
 
-# ============================================================
-# 3. REQUIRE ADMIN ACTOR
-# ============================================================
-
 def require_admin_actor(
     actor: AdminActor,
 ) -> None:
-    """
-    Hanya pengguna dengan role Admin yang
-    dapat menggunakan modul ini.
-
-    Actor wajib berasal dari JWT terverifikasi.
-    """
-
     if not isinstance(actor, AdminActor):
         raise PermissionError(
             "Identitas Admin tidak valid"
@@ -117,24 +89,10 @@ def require_admin_actor(
         )
 
 
-# ============================================================
-# 4. VALIDATE PAGINATION
-# ============================================================
-
 def validate_pagination(
     limit: int,
     offset: int,
 ) -> tuple[int, int]:
-    """
-    Validasi limit dan offset.
-
-    Limit:
-        1 sampai 100
-
-    Offset:
-        0 sampai 10000
-    """
-
     if (
         type(limit) is not int
         or limit < 1
@@ -156,25 +114,9 @@ def validate_pagination(
     return limit, offset
 
 
-# ============================================================
-# 5. NORMALIZE SEARCH QUERY
-# ============================================================
-
 def normalize_search_query(
     query: str | None,
 ) -> str | None:
-    """
-    Normalisasi kata pencarian.
-
-    Contoh:
-        "  desain logo  "
-        menjadi:
-        "desain logo"
-
-    Escaping karakter LIKE dilakukan
-    oleh Infrastructure Layer.
-    """
-
     if query is None:
         return None
 
@@ -201,23 +143,9 @@ def normalize_search_query(
     return normalized
 
 
-# ============================================================
-# 6. NORMALIZE USER ROLE FILTER
-# ============================================================
-
 def normalize_user_role_filter(
     role: str | None,
 ) -> str | None:
-    """
-    Filter role untuk daftar pengguna.
-
-    Role yang boleh digunakan:
-        umkm
-        freelancer
-
-    None berarti tanpa filter.
-    """
-
     if role is None:
         return None
 
@@ -239,25 +167,9 @@ def normalize_user_role_filter(
     return normalized
 
 
-# ============================================================
-# 7. NORMALIZE PROJECT STATUS FILTER
-# ============================================================
-
 def normalize_project_status_filter(
     status: str | None,
 ) -> str | None:
-    """
-    Normalisasi filter status Project.
-
-    Tidak membatasi daftar status secara tetap
-    karena status Project diatur oleh Workflow.
-
-    Contoh:
-        " selesai "
-        menjadi:
-        "SELESAI"
-    """
-
     if status is None:
         return None
 
@@ -282,21 +194,10 @@ def normalize_project_status_filter(
     return normalized
 
 
-# ============================================================
-# 8. VALIDATE NON-NEGATIVE INTEGER
-# ============================================================
-
 def validate_non_negative_integer(
     value: int,
     field_name: str,
 ) -> int:
-    """
-    Statistik tidak boleh bernilai negatif.
-
-    bool juga harus ditolak karena:
-        isinstance(True, int) == True
-    """
-
     if type(value) is not int:
         raise ValueError(
             f"{field_name} harus berupa integer"
@@ -310,10 +211,6 @@ def validate_non_negative_integer(
     return value
 
 
-# ============================================================
-# 9. BUILD SYSTEM STATISTICS
-# ============================================================
-
 def build_system_statistics(
     *,
     total_umkm: int,
@@ -323,15 +220,6 @@ def build_system_statistics(
     total_transactions: int,
     platform_income: int,
 ) -> AdminSystemStatistics:
-    """
-    Membangun hasil statistik sistem.
-
-    Semua angka harus integer non-negatif.
-
-    Project selesai tidak mungkin lebih
-    banyak dari total seluruh Project.
-    """
-
     values = {
         "total_umkm": total_umkm,
         "total_freelancers": total_freelancers,

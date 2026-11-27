@@ -7,7 +7,6 @@ from app.modules.skills.domain.entities import (
 
 
 class MasterDataRepository(Protocol):
-
     def list_skills(self) -> list[Skill]:
         ...
 

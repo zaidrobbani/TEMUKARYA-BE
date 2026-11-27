@@ -16,6 +16,8 @@ from app.modules.notifications.application.use_cases import (
 from app.modules.notifications.domain.repositories import DeviceTokenRepository, NotificationRepository
 from app.modules.notifications.infrastructure.device_tokens import SqlAlchemyDeviceTokenRepository
 from app.modules.notifications.infrastructure.repositories import SqlAlchemyNotificationRepository
+from collections.abc import Callable
+from app.modules.notifications.infrastructure.realtime import NotificationHub
 
 
 def get_notification_repository(db: Session = Depends(get_db)) -> NotificationRepository:
@@ -70,12 +72,6 @@ def unregister_device_use_case(
     return UnregisterDeviceToken(repository, uow)
 
 
-
-# ------------------------------------------------------------
-# WebSocket notifikasi: autentikasi token & hitung belum dibaca dengan session per aksi
-# (bukan per koneksi) agar koneksi pool tidak tertahan selama socket terbuka.
-# ------------------------------------------------------------
-
 def _authenticate_socket(token: str) -> str:
     from app.core.database import SessionLocal
     from app.core.dependencies import get_token_service
@@ -104,15 +100,20 @@ def _count_unread(user_id: str) -> int:
         session.close()
 
 
-def get_notification_socket_authenticator():
+SocketAuthenticator = Callable[[str], str]
+
+UnreadCounter = Callable[[str], int]
+
+
+def get_notification_socket_authenticator() -> SocketAuthenticator:
     return _authenticate_socket
 
 
-def get_unread_counter():
+def get_unread_counter() -> UnreadCounter:
     return _count_unread
 
 
-def get_notification_hub():
+def get_notification_hub() -> NotificationHub:
     from app.modules.notifications.infrastructure.realtime import notification_hub
 
     return notification_hub

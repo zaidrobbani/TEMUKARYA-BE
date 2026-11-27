@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from fastapi.concurrency import run_in_threadpool
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 from app.modules.auth.presentation.dependencies import get_current_user
 from app.modules.notifications.application.use_cases import (
     CountUnreadNotifications,
@@ -33,6 +33,9 @@ from app.modules.notifications.presentation.schemas import (
     UnreadCountResponse,
 )
 from app.modules.users.domain.entities import User
+from app.core.json_types import JsonObject
+from app.modules.notifications.domain.entities import Notification
+from app.modules.notifications.presentation.dependencies import SocketAuthenticator, UnreadCounter
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -49,7 +52,7 @@ def list_notifications(
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
     use_case: ListNotifications = Depends(list_notifications_use_case),
-):
+) -> SuccessBody[NotificationListResponse]:
     page = use_case.execute(user.id, category, unread_only, limit, offset)
     return success_response(
         "Daftar notifikasi",
@@ -68,7 +71,7 @@ def list_notifications(
 def unread_count(
     user: User = Depends(get_current_user),
     use_case: CountUnreadNotifications = Depends(count_unread_use_case),
-):
+) -> SuccessBody[UnreadCountResponse]:
     return success_response("Jumlah notifikasi belum dibaca", {"unread_count": use_case.execute(user.id)})
 
 
@@ -76,7 +79,7 @@ def unread_count(
 def mark_all_read(
     user: User = Depends(get_current_user),
     use_case: MarkAllNotificationsRead = Depends(mark_all_read_use_case),
-):
+) -> SuccessBody[MarkAllReadResponse]:
     return success_response("Semua notifikasi ditandai sudah dibaca", {"updated": use_case.execute(user.id)})
 
 
@@ -89,14 +92,10 @@ def mark_read(
     notification_id: str,
     user: User = Depends(get_current_user),
     use_case: MarkNotificationRead = Depends(mark_read_use_case),
-):
+) -> SuccessBody[NotificationResponse]:
     notification = use_case.execute(user.id, notification_id)
     return success_response("Notifikasi ditandai sudah dibaca", NotificationResponse.from_entity(notification))
 
-
-# ============================================================
-# PUSH FCM: token perangkat
-# ============================================================
 
 @router.put(
     "/devices",
@@ -112,7 +111,7 @@ def register_device(
     body: DeviceTokenRequest,
     user: User = Depends(get_current_user),
     use_case: RegisterDeviceToken = Depends(register_device_use_case),
-):
+) -> SuccessBody[None]:
     use_case.execute(user.id, body.token, body.platform)
     return success_response("Perangkat terdaftar untuk notifikasi")
 
@@ -127,25 +126,19 @@ def unregister_device(
     body: DeviceTokenDeleteRequest,
     user: User = Depends(get_current_user),
     use_case: UnregisterDeviceToken = Depends(unregister_device_use_case),
-):
+) -> SuccessBody[None]:
     use_case.execute(user.id, body.token)
     return success_response("Perangkat dihapus dari notifikasi")
 
 
-
-# ============================================================
-# REAL-TIME: WS /notifications/ws
-# ============================================================
-
 CLOSE_UNAUTHORIZED = 4401
 
 
-def _serialize(notification) -> dict:
+def _serialize(notification: Notification) -> JsonObject:
     return NotificationResponse.from_entity(notification).model_dump(mode="json")
 
 
 def _token_from(socket: WebSocket) -> str | None:
-    """Token dari header `Authorization: Bearer` (Android/OkHttp) atau query `?token=` (browser/websocat)."""
     header = socket.headers.get("authorization", "")
     if header.lower().startswith("bearer "):
         return header[7:].strip() or None
@@ -155,18 +148,10 @@ def _token_from(socket: WebSocket) -> str | None:
 @router.websocket("/ws")
 async def notification_socket(
     socket: WebSocket,
-    authenticate=Depends(get_notification_socket_authenticator),
-    count_unread=Depends(get_unread_counter),
+    authenticate: SocketAuthenticator = Depends(get_notification_socket_authenticator),
+    count_unread: UnreadCounter = Depends(get_unread_counter),
     hub: NotificationHub = Depends(get_notification_hub),
-):
-    """
-    Push notifikasi baru milik user yang login.
-
-    Server → client: `{"type":"ready","unread_count":n}` lalu `{"type":"notification","notification":{...}}`
-    (bentuk sama dengan item `GET /notifications`). Client → server: `{"type":"ping"}` → `{"type":"pong"}`.
-    Token tidak valid → close 4401.
-    """
-    # Terima dulu agar kode close sampai ke client (close sebelum accept dibalas HTTP 403 oleh uvicorn).
+) -> None:
     await socket.accept()
     token = _token_from(socket)
     try:

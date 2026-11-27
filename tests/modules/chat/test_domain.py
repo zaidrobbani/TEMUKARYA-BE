@@ -18,10 +18,6 @@ NOW = datetime(
 )
 
 
-# ============================================================
-# 1. MESSAGE TYPES
-# ============================================================
-
 def test_message_type_values():
     assert [
         item.value
@@ -33,20 +29,12 @@ def test_message_type_values():
     ]
 
 
-# ============================================================
-# 2. CHAT ACTOR
-# ============================================================
-
 def test_chat_actor():
     actor = ChatActor("u1", "UMKM")
 
     assert actor.user_id == "u1"
     assert actor.role == "UMKM"
 
-
-# ============================================================
-# 3. GENERAL CONVERSATION
-# ============================================================
 
 def test_general_conversation():
     data = Conversation(
@@ -58,10 +46,6 @@ def test_general_conversation():
     assert data.last_message_at is None
 
 
-# ============================================================
-# 4. PROJECT CONVERSATION
-# ============================================================
-
 def test_project_conversation():
     data = Conversation(
         "c1", "u1", "f1",
@@ -70,10 +54,6 @@ def test_project_conversation():
 
     assert data.project_id == "p1"
 
-
-# ============================================================
-# 5. TEXT MESSAGE
-# ============================================================
 
 def test_text_message():
     msg = Message(
@@ -86,10 +66,6 @@ def test_text_message():
     assert msg.read_at is None
 
 
-# ============================================================
-# 6. READ MESSAGE
-# ============================================================
-
 def test_read_message():
     msg = Message(
         "m1", "c1", "u1",
@@ -99,10 +75,6 @@ def test_read_message():
 
     assert msg.read_at == NOW
 
-
-# ============================================================
-# 7. ATTACHMENT ENTITY
-# ============================================================
 
 def test_attachment():
     item = MessageAttachment(
@@ -117,10 +89,6 @@ def test_attachment():
 
     assert item.file_size_bytes == 42
 
-
-# ============================================================
-# 8. IMMUTABLE ENTITIES
-# ============================================================
 
 def test_domain_entities_immutable():
     conv = Conversation(

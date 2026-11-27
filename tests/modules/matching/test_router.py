@@ -1,4 +1,3 @@
-
 from dataclasses import replace
 
 import pytest
@@ -24,10 +23,6 @@ from app.modules.matching.presentation.dependencies import (
 from app.modules.matching.presentation.router import router
 
 
-# ============================================================
-# TEST CONSTANTS
-# ============================================================
-
 UMKM_ID = "umkm-1"
 FREELANCER_ID = "freelancer-1"
 PROJECT_ID = "project-1"
@@ -48,10 +43,6 @@ SKILLS = (
     "react",
 )
 
-
-# ============================================================
-# TEST DATA FACTORIES
-# ============================================================
 
 def make_project(
     project_id=PROJECT_ID,
@@ -88,19 +79,8 @@ def make_freelancer(
     )
 
 
-# ============================================================
-# FAKE MATCHING REPOSITORY
-# ============================================================
-
 class FakeMatchingRepository:
-    """
-    Fake Repository untuk pengujian HTTP.
-
-    Tidak menggunakan MySQL.
-    """
-
     def __init__(self):
-
         self.projects = {
             PROJECT_ID: make_project(),
         }
@@ -188,21 +168,11 @@ class FakeMatchingRepository:
         return list(self.project_candidates)
 
 
-# ============================================================
-# AUTH HELPER
-# ============================================================
-
 def authenticate(
     app,
     role,
     user_id,
 ):
-    """
-    Simulasi user terautentikasi.
-
-    Hanya digunakan pada unit test.
-    """
-
     app.dependency_overrides[
         get_authenticated_matching_user
     ] = lambda: AuthenticatedMatchingUser(
@@ -211,13 +181,8 @@ def authenticate(
     )
 
 
-# ============================================================
-# FASTAPI TEST FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-
     app = FastAPI()
 
     register_error_handlers(app)
@@ -229,7 +194,6 @@ def context():
         get_matching_repository
     ] = lambda: repository
 
-    # Default: UMKM yang login.
     authenticate(
         app,
         UserRole.UMKM,
@@ -241,10 +205,6 @@ def context():
 
     app.dependency_overrides.clear()
 
-
-# ============================================================
-# 1. UMKM RECOMMENDATIONS - 200
-# ============================================================
 
 def test_umkm_recommendations_200(context):
     client, app, repo = context
@@ -279,10 +239,6 @@ def test_umkm_recommendations_200(context):
     ]
 
 
-# ============================================================
-# 2. FREELANCER RECOMMENDATIONS - 200
-# ============================================================
-
 def test_freelancer_recommendations_200(context):
     client, app, repo = context
 
@@ -311,10 +267,6 @@ def test_freelancer_recommendations_200(context):
     ]
 
 
-# ============================================================
-# 3. MATCHING SCORE EXPLANATION
-# ============================================================
-
 def test_matching_response_contains_score_details(
     context,
 ):
@@ -341,10 +293,6 @@ def test_matching_response_contains_score_details(
     assert match["meets_threshold"] is True
 
 
-# ============================================================
-# 4. PUBLIC FREELANCER FIELDS
-# ============================================================
-
 def test_freelancer_response_public_fields(context):
     client, app, repo = context
 
@@ -369,10 +317,6 @@ def test_freelancer_response_public_fields(context):
     )
 
 
-# ============================================================
-# 5. PROJECT RESPONSE FIELDS
-# ============================================================
-
 def test_project_response_public_fields(context):
     client, app, repo = context
 
@@ -395,10 +339,6 @@ def test_project_response_public_fields(context):
         SKILLS
     )
 
-
-# ============================================================
-# 6. UMKM PAGINATION
-# ============================================================
 
 def test_umkm_pagination_first_page(context):
     client, app, repo = context
@@ -460,10 +400,6 @@ def test_umkm_pagination_beyond_results(context):
     assert body["has_more"] is False
 
 
-# ============================================================
-# 7. FREELANCER PAGINATION
-# ============================================================
-
 def test_freelancer_pagination(context):
     client, app, repo = context
 
@@ -501,10 +437,6 @@ def test_freelancer_pagination(context):
     assert next_page.json()["data"]["has_more"] is False
 
 
-# ============================================================
-# 8. UNAUTHENTICATED - 401
-# ============================================================
-
 @pytest.mark.parametrize(
     "url",
     [
@@ -534,10 +466,6 @@ def test_unauthenticated_requests_401(
     assert repo.freelancer_candidate_reads == 0
     assert repo.project_candidate_reads == 0
 
-
-# ============================================================
-# 9. WRONG ROLE - 403
-# ============================================================
 
 def test_freelancer_cannot_request_umkm_recommendations(
     context,
@@ -571,10 +499,6 @@ def test_umkm_cannot_request_freelancer_recommendations(
     assert repo.project_candidate_reads == 0
 
 
-# ============================================================
-# 10. PROJECT NOT FOUND - 404
-# ============================================================
-
 def test_project_not_found_404(context):
     client, app, repo = context
 
@@ -590,10 +514,6 @@ def test_project_not_found_404(context):
 
     assert repo.freelancer_candidate_reads == 0
 
-
-# ============================================================
-# 11. PROJECT OWNERSHIP PROTECTION - 404
-# ============================================================
 
 def test_umkm_cannot_access_another_umkm_project(
     context,
@@ -617,10 +537,6 @@ def test_umkm_cannot_access_another_umkm_project(
     assert repo.freelancer_candidate_reads == 0
 
 
-# ============================================================
-# 12. PROJECT CLOSED - 409
-# ============================================================
-
 def test_closed_project_returns_409(context):
     client, app, repo = context
 
@@ -635,10 +551,6 @@ def test_closed_project_returns_409(context):
 
     assert repo.freelancer_candidate_reads == 0
 
-
-# ============================================================
-# 13. FREELANCER PROFILE NOT FOUND - 404
-# ============================================================
 
 def test_freelancer_profile_not_found_404(context):
     client, app, repo = context
@@ -659,10 +571,6 @@ def test_freelancer_profile_not_found_404(context):
 
     assert repo.project_candidate_reads == 0
 
-
-# ============================================================
-# 14. QUERY PARAMETER VALIDATION - 422
-# ============================================================
 
 @pytest.mark.parametrize(
     "params",
@@ -705,10 +613,6 @@ def test_invalid_pagination_returns_422(
     assert response.status_code == 422
 
 
-# ============================================================
-# 15. PROJECT ID PATH VALIDATION - 422
-# ============================================================
-
 def test_project_id_too_long_returns_422(context):
     client, app, repo = context
 
@@ -720,10 +624,6 @@ def test_project_id_too_long_returns_422(context):
 
     assert response.status_code == 422
 
-
-# ============================================================
-# 16. EMPTY RESULTS
-# ============================================================
 
 def test_empty_freelancer_recommendations(context):
     client, app, repo = context
@@ -761,10 +661,6 @@ def test_empty_project_recommendations(context):
     assert body["has_more"] is False
 
 
-# ============================================================
-# 17. FREELANCER WITHOUT SKILLS
-# ============================================================
-
 def test_freelancer_without_skills_gets_empty_results(
     context,
 ):
@@ -789,10 +685,6 @@ def test_freelancer_without_skills_gets_empty_results(
     assert repo.project_candidate_reads == 0
 
 
-# ============================================================
-# 18. PROJECT WITHOUT REQUIRED SKILLS
-# ============================================================
-
 def test_project_without_skills_gets_empty_results(
     context,
 ):
@@ -810,10 +702,6 @@ def test_project_without_skills_gets_empty_results(
 
     assert repo.freelancer_candidate_reads == 0
 
-
-# ============================================================
-# 19. BUSY FREELANCER
-# ============================================================
 
 def test_busy_freelancer_can_view_project_recommendations(
     context,
@@ -837,10 +725,6 @@ def test_busy_freelancer_can_view_project_recommendations(
     assert len(response.json()["data"]["items"]) == 3
 
 
-# ============================================================
-# 20. QUERY USER ID SPOOFING
-# ============================================================
-
 def test_umkm_id_cannot_be_spoofed_via_query(
     context,
 ):
@@ -857,7 +741,6 @@ def test_umkm_id_cannot_be_spoofed_via_query(
         params={"umkm_id": UMKM_ID},
     )
 
-    # Query parameter cannot override JWT identity.
     assert response.status_code == 404
 
 
@@ -879,10 +762,6 @@ def test_freelancer_id_cannot_be_spoofed_via_query(
 
     assert response.status_code == 404
 
-
-# ============================================================
-# 21. SENSITIVE DATA PROTECTION
-# ============================================================
 
 @pytest.mark.parametrize(
     "url",
@@ -920,10 +799,6 @@ def test_response_has_no_sensitive_fields(
         assert forbidden not in serialized
 
 
-# ============================================================
-# 22. OPENAPI DOCUMENTATION
-# ============================================================
-
 def test_matching_endpoints_registered_in_openapi(
     context,
 ):
@@ -954,10 +829,6 @@ def test_matching_endpoints_registered_in_openapi(
     ]
 
 
-# ============================================================
-# 23. MATCHING REQUESTS ARE READ-ONLY
-# ============================================================
-
 def test_matching_only_exposes_get_routes(context):
     client, app, repo = context
 
@@ -969,10 +840,6 @@ def test_matching_only_exposes_get_routes(context):
 
     assert response.status_code == 405
 
-
-# ============================================================
-# 24. STABLE RECOMMENDATION ORDER
-# ============================================================
 
 def test_recommendation_order_is_deterministic(
     context,
@@ -990,10 +857,6 @@ def test_recommendation_order_is_deterministic(
     )
 
 
-# ============================================================
-# 25. MATCHING THRESHOLD ENFORCED
-# ============================================================
-
 def test_only_eligible_matches_are_returned(
     context,
 ):
@@ -1008,10 +871,6 @@ def test_only_eligible_matches_are_returned(
         assert item["match"]["meets_threshold"] is True
 
 
-# ============================================================
-# 26. PROJECT ID FORWARDED TO REPOSITORY
-# ============================================================
-
 def test_project_id_forwarded_correctly(context):
     client, app, repo = context
 
@@ -1020,10 +879,6 @@ def test_project_id_forwarded_correctly(context):
     assert response.status_code == 200
     assert repo.last_project_id == PROJECT_ID
 
-
-# ============================================================
-# 27. FREELANCER ID FROM AUTHENTICATION
-# ============================================================
 
 def test_freelancer_id_from_authentication(context):
     client, app, repo = context

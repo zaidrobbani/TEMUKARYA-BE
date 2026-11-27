@@ -1,4 +1,3 @@
-
 import os
 
 from datetime import date, datetime, timedelta
@@ -26,19 +25,8 @@ from app.modules.projects.infrastructure.repositories import (
 )
 
 
-# ============================================================
-# MYSQL TEST CONFIGURATION
-# ============================================================
-
 @pytest.fixture
 def mysql_engine():
-    """
-    Mengaktifkan MySQL integration test hanya
-    ketika environment variable disetel.
-
-    Pengujian dibatasi pada database development.
-    """
-
     if os.getenv("TEMUKARYA_RUN_MYSQL_TESTS") != "1":
         pytest.skip(
             "MySQL integration tests disabled"
@@ -60,8 +48,6 @@ def mysql_engine():
             "Unexpected database name"
         )
 
-    # Menyelesaikan metadata foreign key lintas modul
-    # hanya untuk keperluan integration test.
     Base.metadata.reflect(
         bind=engine,
         only=[
@@ -76,17 +62,12 @@ def mysql_engine():
     return engine
 
 
-# ============================================================
-# TEST DATA FACTORIES
-# ============================================================
-
 def make_project(
     project_id: str,
     umkm_id: str,
     category_id: str,
     status: str = "TERBUKA",
 ) -> Project:
-
     return Project(
         id=project_id,
         umkm_id=umkm_id,
@@ -109,7 +90,6 @@ def make_attachment(
     extension: str,
     mime_type: str,
 ) -> AttachmentRecord:
-
     return AttachmentRecord(
         id=str(uuid4()),
         project_id=project_id,
@@ -120,37 +100,13 @@ def make_attachment(
     )
 
 
-# ============================================================
-# MYSQL ATTACHMENT INTEGRATION TEST
-# ============================================================
-
 def test_attachment_repository_mysql(mysql_engine):
-    """
-    Menguji:
-
-    1. Kepemilikan project UMKM.
-    2. Penguncian parent project.
-    3. Pembatasan project yang boleh diedit.
-    4. Penyimpanan metadata attachment.
-    5. Pengambilan detail attachment.
-    6. Listing attachment berdasarkan project.
-    7. Isolasi attachment antarproject.
-    8. Penghapusan metadata attachment.
-    9. Rollback semua data sementara.
-    """
-
-    # ========================================================
-    # 1. GENERATE TEMPORARY IDENTIFIERS
-    # ========================================================
-
     user_id = str(uuid4())
     other_user_id = str(uuid4())
 
     project_a_id = str(uuid4())
     project_b_id = str(uuid4())
 
-    # Belum membuat file fisik.
-    # Pengujian ini khusus metadata database.
     attachment_a = make_attachment(
         project_id=project_a_id,
         filename="brief-project.pdf",
@@ -178,16 +134,11 @@ def test_attachment_repository_mysql(mysql_engine):
         attachment_c.id,
     )
 
-    # ========================================================
-    # 2. START TRANSACTION
-    # ========================================================
-
     connection = mysql_engine.connect()
     transaction = connection.begin()
 
     try:
         with Session(bind=connection) as session:
-
             project_repository = (
                 SqlAlchemyProjectRepository(session)
             )
@@ -195,10 +146,6 @@ def test_attachment_repository_mysql(mysql_engine):
             attachment_repository = (
                 SqlAlchemyAttachmentRepository(session)
             )
-
-            # =================================================
-            # 3. GET ACTIVE PROJECT CATEGORY
-            # =================================================
 
             category_id = session.execute(
                 text("""
@@ -208,10 +155,6 @@ def test_attachment_repository_mysql(mysql_engine):
                     LIMIT 1
                 """)
             ).scalar_one()
-
-            # =================================================
-            # 4. CREATE TEMPORARY UMKM USER
-            # =================================================
 
             session.execute(
                 text("""
@@ -242,10 +185,6 @@ def test_attachment_repository_mysql(mysql_engine):
                     "role": "UMKM",
                 },
             )
-
-            # =================================================
-            # 5. CREATE TEMPORARY UMKM PROFILE
-            # =================================================
 
             session.execute(
                 text("""
@@ -281,10 +220,6 @@ def test_attachment_repository_mysql(mysql_engine):
 
             print("\nTEMPORARY UMKM: CREATED")
 
-            # =================================================
-            # 6. CREATE TWO TEMPORARY PROJECTS
-            # =================================================
-
             project_a = make_project(
                 project_id=project_a_id,
                 umkm_id=user_id,
@@ -305,10 +240,6 @@ def test_attachment_repository_mysql(mysql_engine):
             session.flush()
 
             print("TEMPORARY PROJECTS: CREATED")
-
-            # =================================================
-            # 7. VERIFY PROJECT OWNERSHIP
-            # =================================================
 
             assert attachment_repository.owns_project(
                 project_id=project_a_id,
@@ -333,19 +264,12 @@ def test_attachment_repository_mysql(mysql_engine):
 
             print("PROJECT OWNERSHIP: OK")
 
-            # =================================================
-            # 8. VERIFY EDITABLE STATUS
-            # =================================================
-
-            # TERBUKA boleh diedit.
             assert attachment_repository.owns_project(
                 project_id=project_a_id,
                 umkm_id=user_id,
                 editable_only=True,
             ) is True
 
-            # BERJALAN masih dimiliki UMKM,
-            # tetapi tidak boleh diedit.
             assert attachment_repository.owns_project(
                 project_id=project_b_id,
                 umkm_id=user_id,
@@ -359,10 +283,6 @@ def test_attachment_repository_mysql(mysql_engine):
             ) is False
 
             print("EDITABLE STATUS PROTECTION: OK")
-
-            # =================================================
-            # 9. INSERT ATTACHMENT METADATA
-            # =================================================
 
             saved_a = attachment_repository.add(
                 attachment_a
@@ -388,17 +308,12 @@ def test_attachment_repository_mysql(mysql_engine):
             assert saved_a.mime_type == "application/pdf"
             assert saved_a.file_size_bytes == 1024
 
-            # Timestamp dari default MySQL.
             assert isinstance(
                 saved_a.uploaded_at,
                 datetime,
             )
 
             print("ATTACHMENT INSERT: OK")
-
-            # =================================================
-            # 10. VERIFY GET BY ID
-            # =================================================
 
             found = attachment_repository.get_by_id(
                 project_id=project_a_id,
@@ -420,12 +335,6 @@ def test_attachment_repository_mysql(mysql_engine):
 
             print("ATTACHMENT GET BY ID: OK")
 
-            # =================================================
-            # 11. VERIFY PROJECT ISOLATION
-            # =================================================
-
-            # Attachment project B tidak boleh ditemukan
-            # jika dicari menggunakan project A.
             cross_project = (
                 attachment_repository.get_by_id(
                     project_id=project_a_id,
@@ -436,10 +345,6 @@ def test_attachment_repository_mysql(mysql_engine):
             assert cross_project is None
 
             print("ATTACHMENT PROJECT ISOLATION: OK")
-
-            # =================================================
-            # 12. VERIFY LIST ATTACHMENTS
-            # =================================================
 
             list_a = (
                 attachment_repository.list_by_project(
@@ -471,12 +376,6 @@ def test_attachment_repository_mysql(mysql_engine):
 
             print("ATTACHMENT LIST: OK")
 
-            # =================================================
-            # 13. BLOCK CROSS-PROJECT DELETE
-            # =================================================
-
-            # Attachment milik project B tidak boleh
-            # terhapus melalui project A.
             wrong_project_delete = (
                 attachment_repository.delete(
                     project_id=project_a_id,
@@ -492,10 +391,6 @@ def test_attachment_repository_mysql(mysql_engine):
             ) is not None
 
             print("CROSS-PROJECT DELETE PROTECTION: OK")
-
-            # =================================================
-            # 14. DELETE VALID ATTACHMENT
-            # =================================================
 
             deleted = attachment_repository.delete(
                 project_id=project_a_id,
@@ -524,10 +419,6 @@ def test_attachment_repository_mysql(mysql_engine):
 
             print("ATTACHMENT DELETE: OK")
 
-            # =================================================
-            # 15. VERIFY METADATA IN MYSQL
-            # =================================================
-
             remaining_count = session.execute(
                 text("""
                     SELECT COUNT(*)
@@ -543,28 +434,17 @@ def test_attachment_repository_mysql(mysql_engine):
                 },
             ).scalar_one()
 
-            # Dua record tersisa di dalam transaksi:
-            # attachment B dan C.
             assert remaining_count == 2
 
             print("MYSQL ATTACHMENT VALUES: OK")
 
     finally:
-        # ====================================================
-        # 16. ROLLBACK ALL TEST DATA
-        # ====================================================
-
         transaction.rollback()
         connection.close()
 
         print("TRANSACTION ROLLBACK: EXECUTED")
 
-    # ========================================================
-    # 17. VERIFY DATABASE CLEANUP
-    # ========================================================
-
     with mysql_engine.connect() as connection:
-
         user_count = connection.execute(
             text("""
                 SELECT COUNT(*)

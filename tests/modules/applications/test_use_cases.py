@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 
 import pytest
@@ -24,21 +23,12 @@ from app.modules.applications.domain.entities import (
 )
 
 
-# ============================================================
-# TEST IDENTIFIERS
-# ============================================================
-
 FREELANCER_ID = "11111111-1111-4111-8111-111111111111"
 UMKM_ID = "22222222-2222-4222-8222-222222222222"
 PROJECT_ID = "33333333-3333-4333-8333-333333333333"
 
 
-# ============================================================
-# FAKE REPOSITORY
-# ============================================================
-
 class FakeApplicationRepository:
-
     def __init__(self):
         self.applications = []
         self.profile_exists = True
@@ -143,12 +133,7 @@ class FakeApplicationRepository:
         return matching[offset:offset + limit]
 
 
-# ============================================================
-# FAKE UNIT OF WORK
-# ============================================================
-
 class FakeUnitOfWork:
-
     def __init__(self):
         self.commit_count = 0
 
@@ -156,13 +141,8 @@ class FakeUnitOfWork:
         self.commit_count += 1
 
 
-# ============================================================
-# FIXTURE
-# ============================================================
-
 @pytest.fixture
 def context():
-
     repository = FakeApplicationRepository()
     uow = FakeUnitOfWork()
 
@@ -173,10 +153,6 @@ def context():
 
     return repository, uow, submit
 
-
-# ============================================================
-# TEST DATA FACTORIES
-# ============================================================
 
 def valid_input():
     return SubmitApplicationInput(
@@ -201,10 +177,6 @@ def make_application(
         proposal_message="Proposal proyek UMKM",
     )
 
-
-# ============================================================
-# SUBMIT APPLICATION TESTS
-# ============================================================
 
 def test_submit_application_success(context):
     repository, uow, submit = context
@@ -397,10 +369,6 @@ def test_submit_rejects_duplicate_application(context):
     assert uow.commit_count == 0
 
 
-# ============================================================
-# GET MY APPLICATIONS TESTS
-# ============================================================
-
 def test_get_my_applications(context):
     repository, uow, submit = context
 
@@ -492,10 +460,6 @@ def test_get_my_applications_invalid_pagination(
             offset=offset,
         )
 
-
-# ============================================================
-# GET PROJECT APPLICANTS TESTS
-# ============================================================
 
 def test_umkm_can_view_project_applicants(context):
     repository, uow, submit = context

@@ -40,8 +40,6 @@ def login_as(app, role=UserRole.FREELANCER, user_id="owner-1"):
 @pytest.fixture
 def experience_app(experience_store):
     repository, uow = experience_store
-    # Exercise the real dependency factories, use cases and SQL queries.
-    # All overrides belong to this test application, never app.main.app.
     repository_spy = MagicMock(wraps=repository)
     app = FastAPI()
     register_error_handlers(app)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.core.exceptions import BadRequestError, ForbiddenError
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 
 from app.modules.users.domain.entities import UserRole
 
@@ -28,19 +28,11 @@ from app.modules.discovery.presentation.schemas import (
 )
 
 
-# ============================================================
-# DISCOVERY ROUTER
-# ============================================================
-
 router = APIRouter(
     prefix="/freelancers",
     tags=["discovery"],
 )
 
-
-# ============================================================
-# 1. SEARCH & FILTER FREELANCERS
-# ============================================================
 
 @router.get(
     "",
@@ -124,20 +116,11 @@ def search_freelancers(
     use_case: SearchFreelancers = Depends(
         get_search_freelancers_use_case
     ),
-):
-
-    # ========================================================
-    # 1. ROLE AUTHORIZATION
-    # ========================================================
-
+) -> SuccessBody[FreelancersPageResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya UMKM yang dapat mencari Freelancer"
         )
-
-    # ========================================================
-    # 2. NORMALIZE AVAILABILITY STATUS
-    # ========================================================
 
     normalized_availability = (
         availability_status.strip().upper()
@@ -154,10 +137,6 @@ def search_freelancers(
             "Availability status harus AVAILABLE, "
             "BUSY, atau ALL"
         )
-
-    # ========================================================
-    # 3. BUILD APPLICATION INPUT
-    # ========================================================
 
     data = SearchFreelancersInput(
         search=search,
@@ -178,15 +157,7 @@ def search_freelancers(
         offset=offset,
     )
 
-    # ========================================================
-    # 4. EXECUTE USE CASE
-    # ========================================================
-
     page = use_case.execute(data)
-
-    # ========================================================
-    # 5. BUILD HTTP RESPONSE
-    # ========================================================
 
     return success_response(
         "Daftar Freelancer berhasil diambil",
@@ -203,10 +174,6 @@ def search_freelancers(
         ),
     )
 
-
-# ============================================================
-# 2. GET FREELANCER DETAIL
-# ============================================================
 
 @router.get(
     "/{freelancer_id}",
@@ -229,29 +196,16 @@ def get_freelancer_detail(
     use_case: GetFreelancerDetail = Depends(
         get_freelancer_detail_use_case
     ),
-):
-
-    # ========================================================
-    # 1. ROLE AUTHORIZATION
-    # ========================================================
-
+) -> SuccessBody[FreelancerDetailResponse]:
     if current_user.role != UserRole.UMKM:
         raise ForbiddenError(
             "Hanya UMKM yang dapat melihat "
             "detail Freelancer"
         )
 
-    # ========================================================
-    # 2. EXECUTE USE CASE
-    # ========================================================
-
     freelancer = use_case.execute(
         freelancer_id=freelancer_id
     )
-
-    # ========================================================
-    # 3. BUILD HTTP RESPONSE
-    # ========================================================
 
     return success_response(
         "Detail Freelancer berhasil diambil",

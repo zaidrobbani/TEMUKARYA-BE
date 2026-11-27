@@ -23,10 +23,6 @@ from app.modules.chat.domain.message_rules import (
 )
 
 
-# ============================================================
-# TEST DATA
-# ============================================================
-
 NOW = datetime(
     2026, 11, 4,
     tzinfo=timezone.utc,
@@ -45,10 +41,6 @@ FREELANCER = ChatActor(
     "f1", "FREELANCER"
 )
 
-
-# ============================================================
-# TEST HELPERS
-# ============================================================
 
 def msg(read_at=None):
     return Message(
@@ -74,10 +66,6 @@ def att(mime="image/png"):
         NOW,
     )
 
-
-# ============================================================
-# 1. MESSAGE TEXT
-# ============================================================
 
 def test_normalize_text():
     assert normalize_message_text(
@@ -134,10 +122,6 @@ def test_max_text_length_accepted():
         )
     ) == MAX_TEXT_LENGTH
 
-
-# ============================================================
-# 2. ATTACHMENT VALIDATION
-# ============================================================
 
 def test_validate_image_attachment():
     validate_attachment(att())
@@ -216,10 +200,6 @@ def test_bad_size_rejected(size):
         )
 
 
-# ============================================================
-# 3. MESSAGE PAYLOAD VALIDATION
-# ============================================================
-
 def test_text_payload():
     assert validate_message_payload(
         MessageType.TEXT,
@@ -296,10 +276,6 @@ def test_reject_too_many_attachments():
         )
 
 
-# ============================================================
-# 4. MESSAGE SENDER AUTHORIZATION
-# ============================================================
-
 def test_sender_is_member():
     require_message_sender(CONV, UMKM)
     require_message_sender(CONV, FREELANCER)
@@ -312,10 +288,6 @@ def test_sender_outsider_rejected():
             ChatActor("other", "UMKM"),
         )
 
-
-# ============================================================
-# 5. MESSAGE READ STATUS
-# ============================================================
 
 def test_recipient_mark_read():
     assert should_mark_message_read(
@@ -374,10 +346,6 @@ def test_forged_sender_rejected():
             FREELANCER,
         )
 
-
-# ============================================================
-# 6. ATTACHMENT OWNERSHIP
-# ============================================================
 
 def test_attachment_message_match():
     require_attachment_belongs_to_message(

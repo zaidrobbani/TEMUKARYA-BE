@@ -1,4 +1,3 @@
-
 from dataclasses import FrozenInstanceError, asdict
 from datetime import date, datetime
 
@@ -18,10 +17,6 @@ from app.modules.discovery.domain.repositories import (
     DiscoveryRepository,
 )
 
-
-# ============================================================
-# TEST DATA FACTORIES
-# ============================================================
 
 FREELANCER_ID = (
     "11111111-1111-4111-8111-111111111111"
@@ -52,10 +47,6 @@ def make_summary():
         review_count=2,
     )
 
-
-# ============================================================
-# FREELANCER SUMMARY TESTS
-# ============================================================
 
 def test_freelancer_summary_fields():
     freelancer = make_summary()
@@ -118,10 +109,6 @@ def test_summary_does_not_expose_credentials():
     assert "password" not in data
     assert "email" not in data
 
-
-# ============================================================
-# FREELANCER DETAIL TESTS
-# ============================================================
 
 def test_freelancer_detail():
     detail = FreelancerDetail(
@@ -220,10 +207,6 @@ def test_freelancer_review_optional_text():
     assert review.created_at is None
 
 
-# ============================================================
-# SEARCH FILTER TESTS
-# ============================================================
-
 def test_default_search_filters():
     filters = FreelancerSearchFilters()
 
@@ -257,10 +240,6 @@ def test_search_filters_can_be_configured():
     assert filters.min_experience_count == 2
     assert filters.min_rating == 4.0
 
-
-# ============================================================
-# REPOSITORY CONTRACT TESTS
-# ============================================================
 
 @pytest.mark.parametrize(
     "method_name",

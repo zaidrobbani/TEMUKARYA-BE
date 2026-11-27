@@ -17,16 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
 
-# ============================================================
-# PROJECT MILESTONE MODEL
-# ============================================================
-
 class ProjectMilestoneModel(Base):
-    """
-    Representasi tabel project_milestones
-    menggunakan SQLAlchemy ORM.
-    """
-
     __tablename__ = "project_milestones"
 
     __table_args__ = (
@@ -41,19 +32,11 @@ class ProjectMilestoneModel(Base):
         ),
     )
 
-    # ========================================================
-    # 1. PRIMARY KEY
-    # ========================================================
-
     id: Mapped[str] = mapped_column(
         CHAR(36),
         primary_key=True,
         server_default=text("(UUID())"),
     )
-
-    # ========================================================
-    # 2. PROJECT RELATION
-    # ========================================================
 
     project_id: Mapped[str] = mapped_column(
         CHAR(36),
@@ -63,10 +46,6 @@ class ProjectMilestoneModel(Base):
         ),
         nullable=False,
     )
-
-    # ========================================================
-    # 3. MILESTONE INFORMATION
-    # ========================================================
 
     name: Mapped[str] = mapped_column(
         String(180),
@@ -78,10 +57,6 @@ class ProjectMilestoneModel(Base):
         nullable=False,
     )
 
-    # ========================================================
-    # 4. WEIGHT
-    # ========================================================
-
     weight_percent: Mapped[Decimal] = mapped_column(
         Numeric(
             5,
@@ -90,10 +65,6 @@ class ProjectMilestoneModel(Base):
         ),
         nullable=False,
     )
-
-    # ========================================================
-    # 5. STATUS AND SORTING
-    # ========================================================
 
     status: Mapped[str] = mapped_column(
         String(25),
@@ -105,10 +76,6 @@ class ProjectMilestoneModel(Base):
         mysql.INTEGER(unsigned=True),
         nullable=False,
     )
-
-    # ========================================================
-    # 6. COMPLETION TRACKING
-    # ========================================================
 
     completed_at: Mapped[
         datetime | None
@@ -127,10 +94,6 @@ class ProjectMilestoneModel(Base):
         ),
         nullable=True,
     )
-
-    # ========================================================
-    # 7. TIMESTAMPS
-    # ========================================================
 
     created_at: Mapped[datetime] = mapped_column(
         mysql.DATETIME(fsp=3),

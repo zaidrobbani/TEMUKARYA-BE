@@ -192,7 +192,6 @@ class TestHub:
         with connect(client) as ws:
             ws.receive_json()
             assert hub.connection_count("c1") == 1
-        # Keluar dari context = socket ditutup client.
         with connect(client, "token-freelancer") as ws:
             ws.receive_json()
             ws.send_json({"type": "ping"})

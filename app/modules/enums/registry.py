@@ -20,6 +20,7 @@ from app.modules.workflow.domain.entities import (
     PROJECT_STATUS_LABELS,
     WORKFLOW_ACTION_LABELS,
 )
+from collections.abc import Mapping
 
 
 @dataclass(frozen=True)
@@ -28,7 +29,7 @@ class EnumOption:
     label: str
 
 
-def _options(labels: dict) -> list[EnumOption]:
+def _options(labels: Mapping[str, str]) -> list[EnumOption]:
     return [EnumOption(str(value), label) for value, label in labels.items()]
 
 

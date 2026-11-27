@@ -1,8 +1,7 @@
-from typing import Any
-
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic_core import ErrorDetails
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.exceptions import (
@@ -60,7 +59,7 @@ _VALIDATION_MESSAGES: dict[str, str] = {
 _LOCATION_PREFIXES = {"body", "query", "path", "header", "cookie"}
 
 
-def _field_name(error: dict[str, Any]) -> str:
+def _field_name(error: ErrorDetails) -> str:
     loc = [str(part) for part in error["loc"]]
     if error["type"] == "json_invalid":
         return "body"
@@ -69,7 +68,7 @@ def _field_name(error: dict[str, Any]) -> str:
     return ".".join(loc)
 
 
-def validation_message(error: dict[str, Any]) -> str:
+def validation_message(error: ErrorDetails) -> str:
     error_type, ctx = error["type"], error.get("ctx", {})
     if error_type == "string_too_short":
         return "Wajib diisi" if ctx["min_length"] == 1 else f"Minimal {ctx['min_length']} karakter"

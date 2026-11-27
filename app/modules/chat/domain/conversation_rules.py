@@ -5,31 +5,16 @@ from app.modules.chat.domain.entities import (
 from app.modules.users.domain.entities import UserRole
 
 
-# ============================================================
-# 1. VALID CHAT ROLES
-# ============================================================
-
 VALID_CHAT_ROLES = frozenset({
     UserRole.UMKM,
     UserRole.FREELANCER,
 })
 
 
-# ============================================================
-# 2. VALIDATE CHAT ID
-# ============================================================
-
 def validate_chat_id(
     value: str,
     field: str = "ID",
 ) -> str:
-    """
-    Validasi dasar ID di Domain Layer.
-
-    Pemeriksaan format UUID yang ketat
-    dilakukan pada boundary API.
-    """
-
     if not isinstance(value, str):
         raise ValueError(
             f"{field} harus berupa string"
@@ -56,22 +41,11 @@ def validate_chat_id(
     return normalized
 
 
-# ============================================================
-# 3. VALIDATE CONVERSATION PARTICIPANTS
-# ============================================================
-
 def validate_conversation_participants(
     umkm_id: str,
     freelancer_id: str,
     project_id: str | None = None,
 ) -> tuple[str, str, str | None]:
-    """
-    Memastikan peserta percakapan valid.
-
-    UMKM dan Freelancer tidak boleh
-    merupakan pengguna yang sama.
-    """
-
     umkm = validate_chat_id(
         umkm_id,
         "UMKM ID",
@@ -99,27 +73,11 @@ def validate_conversation_participants(
     return umkm, freelancer, project
 
 
-# ============================================================
-# 4. CONVERSATION IDENTITY KEY
-# ============================================================
-
 def conversation_identity_key(
     umkm_id: str,
     freelancer_id: str,
     project_id: str | None = None,
 ) -> tuple[str, str, str | None]:
-    """
-    Identitas unik sebuah percakapan.
-
-    Digunakan untuk membedakan:
-    - Chat umum
-    - Chat untuk project tertentu
-
-    Database tetap wajib menggunakan
-    unique constraint untuk mencegah
-    duplicate saat request bersamaan.
-    """
-
     return validate_conversation_participants(
         umkm_id,
         freelancer_id,
@@ -127,18 +85,9 @@ def conversation_identity_key(
     )
 
 
-# ============================================================
-# 5. REQUIRE VALID CHAT ACTOR
-# ============================================================
-
 def require_chat_actor(
     actor: ChatActor,
 ) -> None:
-    """
-    Pastikan pengguna memiliki identitas
-    dan role yang diizinkan.
-    """
-
     if not isinstance(actor, ChatActor):
         raise PermissionError(
             "Identitas pengguna tidak valid"
@@ -160,19 +109,10 @@ def require_chat_actor(
         )
 
 
-# ============================================================
-# 6. REQUIRE CONVERSATION ACCESS
-# ============================================================
-
 def require_conversation_access(
     conversation: Conversation,
     actor: ChatActor,
 ) -> None:
-    """
-    Hanya dua peserta resmi yang boleh
-    mengakses percakapan.
-    """
-
     require_chat_actor(actor)
 
     umkm, freelancer, _ = (
@@ -202,24 +142,12 @@ def require_conversation_access(
         )
 
 
-# ============================================================
-# 7. REQUIRE CONVERSATION INITIATOR
-# ============================================================
-
 def require_conversation_initiator(
     actor: ChatActor,
     umkm_id: str,
     freelancer_id: str,
     project_id: str | None = None,
 ) -> None:
-    """
-    Memvalidasi pihak yang ingin membuat chat.
-
-    UMKM hanya bisa membuat chat sebagai UMKM.
-    Freelancer hanya bisa membuat chat
-    sebagai Freelancer.
-    """
-
     umkm, freelancer, _ = (
         validate_conversation_participants(
             umkm_id,
@@ -246,22 +174,10 @@ def require_conversation_initiator(
         )
 
 
-# ============================================================
-# 8. REQUIRE PROJECT OWNER
-# ============================================================
-
 def require_project_owner(
     conversation: Conversation,
     project_umkm_id: str | None,
 ) -> None:
-    """
-    Jika chat terhubung ke suatu project,
-    UMKM peserta chat harus pemilik project.
-
-    project_umkm_id harus diperoleh dari
-    repository Projects yang tepercaya.
-    """
-
     if conversation.project_id is None:
         return
 

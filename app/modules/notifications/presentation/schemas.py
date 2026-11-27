@@ -69,5 +69,4 @@ class DeviceTokenDeleteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     token: str = Field(min_length=1, max_length=512)
-    # Android mengirim body yang sama dengan pendaftaran; platform diterima tapi tidak dipakai.
     platform: Literal["ANDROID"] | None = None

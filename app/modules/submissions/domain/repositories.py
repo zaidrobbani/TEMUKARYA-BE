@@ -10,11 +10,11 @@ class SubmissionRepository(ABC):
 
     @abstractmethod
     def add(self, submission: Submission) -> None:
-        """Menyimpan kiriman beserta files-nya."""
+        pass
 
     @abstractmethod
     def list_for_project(self, project_id: str) -> list[Submission]:
-        """Lengkap dengan files dan review, urut versi terbaru dulu."""
+        pass
 
     @abstractmethod
     def get(self, project_id: str, submission_id: str) -> Submission | None: ...
@@ -29,7 +29,7 @@ class SubmissionRepository(ABC):
 class SubmissionFileStorage(ABC):
     @abstractmethod
     def save(self, source: BinaryIO, extension: str) -> str:
-        """Menyalin isi file dan mengembalikan storage_key."""
+        pass
 
     @abstractmethod
     def open(self, storage_key: str) -> BinaryIO: ...

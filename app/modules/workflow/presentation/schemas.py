@@ -31,9 +31,11 @@ from app.modules.workflow.domain.entities import (
     WorkflowProject,
     status_label,
 )
+from collections.abc import Mapping
+from typing import Self
 
 
-def _label(labels: dict, value: str | None) -> str | None:
+def _label(labels: Mapping[str, str], value: str | None) -> str | None:
     if value is None:
         return None
     return next((label for key, label in labels.items() if key == value), value)
@@ -47,7 +49,7 @@ class SelectFreelancerRequest(BaseModel):
     scope_of_work: str | None = Field(None, max_length=5000, description="Default: deskripsi project")
 
     @model_validator(mode="after")
-    def exactly_one(self):
+    def exactly_one(self) -> Self:
         if (self.application_id is None) == (self.freelancer_id is None):
             raise ValueError("Isi salah satu: application_id atau freelancer_id")
         return self
@@ -404,4 +406,3 @@ class MyProjectsResponse(BaseModel):
             has_more=page.has_more,
             status_counts=counts,
         )
-

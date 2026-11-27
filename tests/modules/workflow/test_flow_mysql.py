@@ -1,9 +1,3 @@
-"""Alur lengkap TEMUKARYA terhadap MySQL sungguhan + uji permintaan bersamaan.
-
-Jalankan dengan TEMUKARYA_RUN_MYSQL_TESTS=1 pada DB `temukarya` lokal/sementara.
-Data yang dibuat dihapus lagi di akhir test.
-"""
-
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -202,7 +196,6 @@ def test_full_flow_with_revision_payment_and_release(seed, client):
     assert statuses == {seed.f1: "ACCEPTED", seed.f2: "NOT_SELECTED"}
     assert ok(client("GET", "/workflow/projects", seed.f1))["items"][0]["project"]["id"] == pid
 
-    # Rencana pengerjaan disusun freelancer; milestone terbaca oleh freelancer terpilih.
     plan = ok(client("PUT", f"{p}/milestones", seed.f1, json={"items": [
         {"name": "Riset & Moodboard", "weight_percent": 20},
         {"name": "Konsep Logo", "weight_percent": 30},
@@ -215,7 +208,7 @@ def test_full_flow_with_revision_payment_and_release(seed, client):
 
     ok(client("POST", f"{p}/agreement/approve", seed.f1))
     changed = ok(client("PATCH", f"{p}/agreement", seed.umkm, json={"agreed_price": 1_600_000}))
-    assert changed["agreement"]["agreement_version"] == 3  # rencana + harga = 2 perubahan
+    assert changed["agreement"]["agreement_version"] == 3
     assert changed["agreement"]["freelancer_approved_at"] is None
     assert client("POST", f"{p}/agreement/approve", seed.umkm, json={"agreement_version": 2}).status_code == 409
     ok(client("POST", f"{p}/agreement/approve", seed.umkm, json={"agreement_version": 3}))

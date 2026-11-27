@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.modules.admin_statistics.domain.entities import (
@@ -18,10 +17,6 @@ from app.modules.admin_statistics.domain.statistics_rules import (
 )
 
 
-# ============================================================
-# 1. TEST DATA
-# ============================================================
-
 def valid_stats():
     return {
         "total_umkm": 10,
@@ -32,10 +27,6 @@ def valid_stats():
         "platform_income": 350000,
     }
 
-
-# ============================================================
-# 2. ADMIN AUTHORIZATION - VALID
-# ============================================================
 
 @pytest.mark.parametrize(
     "role",
@@ -53,10 +44,6 @@ def test_valid_admin_actor(role):
 
     require_admin_actor(actor)
 
-
-# ============================================================
-# 3. ADMIN AUTHORIZATION - WRONG ROLE
-# ============================================================
 
 @pytest.mark.parametrize(
     "role",
@@ -77,10 +64,6 @@ def test_non_admin_role_rejected(role):
         require_admin_actor(actor)
 
 
-# ============================================================
-# 4. ADMIN AUTHORIZATION - INVALID IDENTITY
-# ============================================================
-
 @pytest.mark.parametrize(
     "actor",
     [
@@ -99,10 +82,6 @@ def test_invalid_admin_identity_rejected(actor):
         require_admin_actor(actor)
 
 
-# ============================================================
-# 5. VALID IDENTIFIER
-# ============================================================
-
 @pytest.mark.parametrize(
     "value,expected",
     [
@@ -114,10 +93,6 @@ def test_invalid_admin_identity_rejected(actor):
 def test_valid_identifier(value, expected):
     assert validate_identifier(value) == expected
 
-
-# ============================================================
-# 6. INVALID IDENTIFIER
-# ============================================================
 
 @pytest.mark.parametrize(
     "value",
@@ -148,10 +123,6 @@ def test_identifier_custom_field_name():
         )
 
 
-# ============================================================
-# 7. VALID PAGINATION
-# ============================================================
-
 @pytest.mark.parametrize(
     "limit,offset",
     [
@@ -166,10 +137,6 @@ def test_valid_pagination(limit, offset):
         offset,
     ) == (limit, offset)
 
-
-# ============================================================
-# 8. INVALID LIMIT
-# ============================================================
 
 @pytest.mark.parametrize(
     "limit",
@@ -192,10 +159,6 @@ def test_invalid_limit_rejected(limit):
         )
 
 
-# ============================================================
-# 9. INVALID OFFSET
-# ============================================================
-
 @pytest.mark.parametrize(
     "offset",
     [
@@ -216,10 +179,6 @@ def test_invalid_offset_rejected(offset):
         )
 
 
-# ============================================================
-# 10. EMPTY SEARCH QUERY
-# ============================================================
-
 @pytest.mark.parametrize(
     "query",
     [
@@ -233,10 +192,6 @@ def test_empty_search_query(query):
     assert normalize_search_query(query) is None
 
 
-# ============================================================
-# 11. VALID SEARCH QUERY
-# ============================================================
-
 @pytest.mark.parametrize(
     "query,expected",
     [
@@ -247,10 +202,6 @@ def test_empty_search_query(query):
 def test_valid_search_query(query, expected):
     assert normalize_search_query(query) == expected
 
-
-# ============================================================
-# 12. INVALID SEARCH QUERY
-# ============================================================
 
 @pytest.mark.parametrize(
     "query",
@@ -265,10 +216,6 @@ def test_invalid_search_query_rejected(query):
         normalize_search_query(query)
 
 
-# ============================================================
-# 13. EMPTY USER ROLE FILTER
-# ============================================================
-
 @pytest.mark.parametrize(
     "role",
     [
@@ -280,10 +227,6 @@ def test_invalid_search_query_rejected(query):
 def test_empty_role_filter(role):
     assert normalize_user_role_filter(role) is None
 
-
-# ============================================================
-# 14. VALID USER ROLE FILTER
-# ============================================================
 
 @pytest.mark.parametrize(
     "role,expected",
@@ -297,10 +240,6 @@ def test_valid_role_filter(role, expected):
         role
     ) == expected
 
-
-# ============================================================
-# 15. INVALID USER ROLE FILTER
-# ============================================================
 
 @pytest.mark.parametrize(
     "role",
@@ -317,10 +256,6 @@ def test_invalid_role_filter_rejected(role):
         normalize_user_role_filter(role)
 
 
-# ============================================================
-# 16. EMPTY PROJECT STATUS FILTER
-# ============================================================
-
 @pytest.mark.parametrize(
     "status",
     [
@@ -336,10 +271,6 @@ def test_empty_project_status(status):
     )
 
 
-# ============================================================
-# 17. VALID PROJECT STATUS
-# ============================================================
-
 @pytest.mark.parametrize(
     "status,expected",
     [
@@ -353,10 +284,6 @@ def test_valid_project_status(status, expected):
         status
     ) == expected
 
-
-# ============================================================
-# 18. INVALID PROJECT STATUS
-# ============================================================
 
 @pytest.mark.parametrize(
     "status",
@@ -373,10 +300,6 @@ def test_invalid_project_status_rejected(status):
         normalize_project_status_filter(status)
 
 
-# ============================================================
-# 19. VALID NON-NEGATIVE INTEGERS
-# ============================================================
-
 @pytest.mark.parametrize(
     "value,field",
     [
@@ -391,10 +314,6 @@ def test_non_negative_integer(value, field):
         field,
     ) == value
 
-
-# ============================================================
-# 20. INVALID NUMERIC VALUES
-# ============================================================
 
 @pytest.mark.parametrize(
     "value",
@@ -415,10 +334,6 @@ def test_invalid_numeric_value_rejected(value):
         )
 
 
-# ============================================================
-# 21. VALID SYSTEM STATISTICS
-# ============================================================
-
 def test_build_system_statistics():
     result = build_system_statistics(
         **valid_stats()
@@ -437,10 +352,6 @@ def test_build_system_statistics():
     assert result.platform_income == 350000
 
 
-# ============================================================
-# 22. EMPTY SYSTEM STATISTICS
-# ============================================================
-
 def test_build_zero_statistics():
     result = build_system_statistics(
         total_umkm=0,
@@ -456,10 +367,6 @@ def test_build_zero_statistics():
     assert result.platform_income == 0
 
 
-# ============================================================
-# 23. COMPLETED PROJECTS EXCEED TOTAL
-# ============================================================
-
 def test_completed_projects_cannot_exceed_total():
     values = valid_stats()
 
@@ -469,10 +376,6 @@ def test_completed_projects_cannot_exceed_total():
     with pytest.raises(ValueError):
         build_system_statistics(**values)
 
-
-# ============================================================
-# 24. REJECT NEGATIVE STATISTICS
-# ============================================================
 
 @pytest.mark.parametrize(
     "field",
@@ -493,10 +396,6 @@ def test_negative_statistic_rejected(field):
     with pytest.raises(ValueError):
         build_system_statistics(**values)
 
-
-# ============================================================
-# 25. REJECT BOOLEAN STATISTICS
-# ============================================================
 
 @pytest.mark.parametrize(
     "field",

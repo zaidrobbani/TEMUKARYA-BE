@@ -17,7 +17,6 @@ from app.modules.profiles.infrastructure.models import (
 
 
 class SqlAlchemyUmkmProfileRepository:
-
     def __init__(self, session: Session):
         self._session = session
 
@@ -28,14 +27,12 @@ class SqlAlchemyUmkmProfileRepository:
                 business_address=profile.business_address, city=profile.city,
             )
         )
-        # No upsert; MySQL audit columns remain entirely server-managed.
         return profile if result.rowcount else None
 
     def get_by_user_id(
         self,
         user_id: str,
     ) -> UmkmProfile | None:
-
         model = self._session.get(
             UmkmProfileModel,
             user_id,
@@ -50,7 +47,6 @@ class SqlAlchemyUmkmProfileRepository:
         self,
         profile: UmkmProfile,
     ) -> UmkmProfile:
-
         model = UmkmProfileModel(
             user_id=profile.user_id,
             business_name=profile.business_name,
@@ -67,7 +63,6 @@ class SqlAlchemyUmkmProfileRepository:
     def _to_entity(
         model: UmkmProfileModel,
     ) -> UmkmProfile:
-
         return UmkmProfile(
             user_id=model.user_id,
             business_name=model.business_name,
@@ -77,9 +72,7 @@ class SqlAlchemyUmkmProfileRepository:
         )
 
 
-
 class SqlAlchemyFreelancerProfileRepository:
-
     def __init__(self, session: Session):
         self._session = session
 
@@ -97,7 +90,6 @@ class SqlAlchemyFreelancerProfileRepository:
         self,
         user_id: str,
     ) -> FreelancerProfile | None:
-
         model = self._session.get(
             FreelancerProfileModel,
             user_id,
@@ -112,7 +104,6 @@ class SqlAlchemyFreelancerProfileRepository:
         self,
         profile: FreelancerProfile,
     ) -> FreelancerProfile:
-
         model = FreelancerProfileModel(
             user_id=profile.user_id,
             professional_title=profile.professional_title,
@@ -131,7 +122,6 @@ class SqlAlchemyFreelancerProfileRepository:
     def _to_entity(
         model: FreelancerProfileModel,
     ) -> FreelancerProfile:
-
         return FreelancerProfile(
             user_id=model.user_id,
             professional_title=model.professional_title,
@@ -144,16 +134,13 @@ class SqlAlchemyFreelancerProfileRepository:
 
 
 class SqlAlchemyFreelancerSkillsRepository:
-
     def __init__(self, session: Session):
         self._session = session
 
-    # 1. Mengambil semua skill milik Freelancer
     def get_skill_ids(
         self,
         freelancer_id: str,
     ) -> list[str]:
-
         query = text("""
             SELECT skill_id
             FROM freelancer_skills
@@ -168,12 +155,10 @@ class SqlAlchemyFreelancerSkillsRepository:
 
         return list(result.scalars().all())
 
-    # 2. Memeriksa skill yang tersedia di master data
     def get_existing_skill_ids(
         self,
         skill_ids: list[str],
     ) -> set[str]:
-
         if not skill_ids:
             return set()
 
@@ -192,14 +177,11 @@ class SqlAlchemyFreelancerSkillsRepository:
 
         return set(result.scalars().all())
 
-    # 3. Mengganti seluruh daftar skill Freelancer
     def replace_skills(
         self,
         freelancer_id: str,
         skill_ids: list[str],
     ) -> None:
-
-        # Hapus daftar skill sebelumnya
         delete_query = text("""
             DELETE FROM freelancer_skills
             WHERE freelancer_id = :freelancer_id
@@ -210,7 +192,6 @@ class SqlAlchemyFreelancerSkillsRepository:
             {"freelancer_id": freelancer_id},
         )
 
-        # Tambahkan daftar skill terbaru
         if skill_ids:
             insert_query = text("""
                 INSERT INTO freelancer_skills (
@@ -237,10 +218,7 @@ class SqlAlchemyFreelancerSkillsRepository:
             )
 
 
-# FREELANCER EXPERIENCE REPOSITORY
-
 class SqlAlchemyFreelancerExperienceRepository:
-
     def __init__(self, session: Session):
         self._session = session
 
@@ -299,7 +277,6 @@ class SqlAlchemyFreelancerExperienceRepository:
         self,
         experience: FreelancerExperience,
     ) -> None:
-
         model = FreelancerExperienceModel(
             id=experience.id,
             freelancer_id=experience.freelancer_id,
@@ -325,7 +302,6 @@ class SqlAlchemyPortfolioRepository:
         )
         self._session.add(model)
         self._session.flush()
-        # Tanggal berasal dari database; repository tidak melakukan commit.
         self._session.refresh(model)
         return self._to_entity(model)
 

@@ -1,4 +1,3 @@
-
 from typing import Annotated
 
 from fastapi import (
@@ -7,7 +6,7 @@ from fastapi import (
     Query,
 )
 
-from app.core.responses import ApiResponse, error_responses, success_response
+from app.core.responses import ApiResponse, SuccessBody, error_responses, success_response
 
 from app.modules.admin_statistics.application.dto import (
     GetAdminProjectInput,
@@ -47,20 +46,11 @@ from app.modules.admin_statistics.presentation.schemas import (
 )
 
 
-# ============================================================
-# 1. ROUTER CONFIGURATION
-# ============================================================
-
 router = APIRouter(
     prefix="/admin",
     tags=["admin-statistics"],
 )
 
-
-# ============================================================
-# 2. LIST USERS
-# TK-F-A-02
-# ============================================================
 
 @router.get(
     "/users",
@@ -94,19 +84,7 @@ def list_admin_users(
         ge=0,
         le=10000,
     ),
-):
-    """
-    Mengambil daftar pengguna.
-
-    Mendukung:
-    - Role filtering
-    - Search by name/email
-    - Pagination
-
-    Admin authorization dilakukan
-    oleh Application Layer.
-    """
-
+) -> SuccessBody[AdminUserPageResponse]:
     use_case = ListAdminUsers(
         repository
     )
@@ -127,11 +105,6 @@ def list_admin_users(
     )
 
 
-# ============================================================
-# 3. GET USER DETAIL
-# TK-F-A-03
-# ============================================================
-
 @router.get(
     "/users/{user_id}",
     response_model=ApiResponse[AdminUserDetailResponse],
@@ -147,19 +120,7 @@ def get_admin_user_detail(
         SqlAlchemyAdminStatisticsRepository,
         Depends(get_admin_statistics_repository),
     ],
-):
-    """
-    Mengambil detail satu pengguna.
-
-    UMKM:
-        Menampilkan profil UMKM.
-
-    Freelancer:
-        Menampilkan profil Freelancer.
-
-    Password hash tidak dikirim.
-    """
-
+) -> SuccessBody[AdminUserDetailResponse]:
     use_case = GetAdminUser(
         repository
     )
@@ -176,11 +137,6 @@ def get_admin_user_detail(
         AdminUserDetailResponse.model_validate(result),
     )
 
-
-# ============================================================
-# 4. LIST PROJECTS
-# TK-F-A-04
-# ============================================================
 
 @router.get(
     "/projects",
@@ -214,19 +170,7 @@ def list_admin_projects(
         ge=0,
         le=10000,
     ),
-):
-    """
-    Mengambil seluruh Project.
-
-    Project tanpa Freelancer tetap
-    ditampilkan.
-
-    Mendukung:
-    - Filter status
-    - Search title
-    - Pagination
-    """
-
+) -> SuccessBody[AdminProjectPageResponse]:
     use_case = ListAdminProjects(
         repository
     )
@@ -247,11 +191,6 @@ def list_admin_projects(
     )
 
 
-# ============================================================
-# 5. GET PROJECT DETAIL
-# TK-F-A-05
-# ============================================================
-
 @router.get(
     "/projects/{project_id}",
     response_model=ApiResponse[AdminProjectDetailResponse],
@@ -267,19 +206,7 @@ def get_admin_project_detail(
         SqlAlchemyAdminStatisticsRepository,
         Depends(get_admin_statistics_repository),
     ],
-):
-    """
-    Mengambil detail sebuah Project.
-
-    Menampilkan:
-    - UMKM pemilik
-    - Freelancer yang ditugaskan
-    - Budget
-    - Agreed price
-    - Deadline
-    - Status
-    """
-
+) -> SuccessBody[AdminProjectDetailResponse]:
     use_case = GetAdminProject(
         repository
     )
@@ -297,11 +224,6 @@ def get_admin_project_detail(
     )
 
 
-# ============================================================
-# 6. GET SYSTEM STATISTICS
-# TK-F-A-11
-# ============================================================
-
 @router.get(
     "/statistics",
     response_model=ApiResponse[AdminSystemStatisticsResponse],
@@ -316,21 +238,7 @@ def get_admin_system_statistics(
         SqlAlchemyAdminStatisticsRepository,
         Depends(get_admin_statistics_repository),
     ],
-):
-    """
-    Mengambil ringkasan statistik TEMUKARYA.
-
-    Statistik:
-    - Total UMKM
-    - Total Freelancer
-    - Total Project
-    - Total Project Selesai
-    - Total Transaksi
-    - Platform Income
-
-    Hanya Admin yang diizinkan.
-    """
-
+) -> SuccessBody[AdminSystemStatisticsResponse]:
     use_case = GetAdminStatistics(
         repository
     )

@@ -1,4 +1,3 @@
-
 from collections.abc import Iterable
 from decimal import Decimal
 
@@ -16,31 +15,11 @@ from app.modules.milestones.domain.weight import (
 )
 
 
-# ============================================================
-# CALCULATE WEIGHTED PROJECT PROGRESS
-# ============================================================
-
 def calculate_milestone_progress(
     project_id: str,
     milestones: Iterable[Milestone],
 ) -> MilestoneProgress:
-    """
-    Menghitung progres berdasarkan bobot milestone
-    yang berstatus SELESAI.
-
-    Contoh:
-    - Milestone A: 20% SELESAI
-    - Milestone B: 30% SELESAI
-    - Milestone C: 50% BELUM_SELESAI
-
-    Hasil progress = 50%.
-    """
-
     items = tuple(milestones)
-
-    # ========================================================
-    # 1. VERIFY PROJECT ID
-    # ========================================================
 
     if not isinstance(project_id, str):
         raise ValueError(
@@ -60,23 +39,14 @@ def calculate_milestone_progress(
                 "Milestone bukan milik project ini"
             )
 
-    # ========================================================
-    # 2. VALIDATE MILESTONE PLAN
-    # ========================================================
-
     total_weight = validate_milestone_plan(
         items
     )
-
-    # ========================================================
-    # 3. COUNT COMPLETED MILESTONES
-    # ========================================================
 
     completed_weight = ZERO
     completed_count = 0
 
     for item in items:
-
         if item.status not in (
             MilestoneStatus.BELUM_SELESAI,
             MilestoneStatus.SELESAI,
@@ -86,16 +56,11 @@ def calculate_milestone_progress(
             )
 
         if item.status == MilestoneStatus.SELESAI:
-
             completed_weight += validate_weight(
                 item.weight_percent
             )
 
             completed_count += 1
-
-    # ========================================================
-    # 4. CALCULATE REMAINING WEIGHT
-    # ========================================================
 
     remaining_weight = (
         total_weight - completed_weight
@@ -105,14 +70,7 @@ def calculate_milestone_progress(
         HUNDRED - total_weight
     )
 
-    # Karena bobot milestone menggunakan
-    # skala dari total project 100%,
-    # progress sama dengan bobot yang selesai.
     progress_percent = completed_weight
-
-    # ========================================================
-    # 5. RETURN PROGRESS
-    # ========================================================
 
     return MilestoneProgress(
         project_id=project_id,
