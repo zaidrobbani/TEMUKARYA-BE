@@ -353,6 +353,7 @@ Buka http://localhost:8025, klik tautan verifikasi di email (tautannya tetap ke 
 | Gejala | Penyebab & solusi |
 |---|---|
 | `permission denied ... docker.sock` | Belum logout-login setelah `usermod -aG docker`. |
+| `db` unhealthy, log `Fatal glibc error: CPU does not support x86-64-v2` | CPU VM tidak mendukung x86-64-v2 (wajib untuk `mysql:8.4`). Isi `MYSQL_IMAGE=mysql:8.0-debian` di `.env`, lalu `docker compose down -v && docker compose up -d` (hanya `-v` kalau DB belum berisi data). Alternatif tanpa ubah image: minta admin mengganti tipe CPU VM ke `host`. |
 | `curl 127.0.0.1/api/v1/health` OK, tapi domain 502/timeout | Proxy BCC tidak mengarah ke port `HTTP_PORT`. Ulangi langkah 3 / tanya admin BCC. |
 | Domain 502 dari nginx (`Server: nginx`) | API belum sehat. `docker compose ps`, `docker compose logs api`. |
 | API restart terus, log `JWT_SECRET_KEY` | Nilainya kosong / kurang dari 32 karakter. |
@@ -372,6 +373,7 @@ Buka http://localhost:8025, klik tautan verifikasi di email (tautannya tetap ke 
 | nginx dijalankan sebagai container di compose, bukan di-install di host. | Konfigurasi ikut versi di repo (`docker/nginx.conf`), server cukup punya Docker. |
 | Uvicorn **1 worker**. | Hub WebSocket chat dan dispatcher push masih in-memory per proses; multi-worker membuat pesan real-time tidak sampai ke semua koneksi. |
 | MySQL, API langsung, dan Mailpit hanya di `127.0.0.1`. | Tidak ada akses DB dari luar selain SSH tunnel. |
+| Server `temukarya.bccdev.id` memakai **MySQL 8.0 (`mysql:8.0-debian`)**, bukan 8.4 seperti dev. | CPU VM tidak mendukung x86-64-v2. Semua migrasi & test sudah dicek jalan di 8.0. MySQL 8.0 sudah EOL (April 2026); kembali ke 8.4 kalau tipe CPU VM bisa diganti admin. |
 | Swagger `/docs` tetap terbuka di produksi. | Memudahkan tim Android & admin web. Bisa ditutup belakangan kalau perlu. |
 | **Belum ada CORS middleware** di `app/main.py`. | Android tidak terpengaruh, tetapi admin web yang berjalan di browser dengan origin lain akan diblokir browser. Perlu ditambah begitu origin admin web diketahui. |
 | Email produksi via Gmail SMTP (App Password), cadangan Mailpit. | Verifikasi email wajib sebelum login (keputusan auth), jadi SMTP harus jalan sebelum Android dites ke server. |
