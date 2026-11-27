@@ -58,6 +58,10 @@ Migrasi juga otomatis dijalankan setiap container API start (`RUN_MIGRATIONS=tru
 Semua endpoint REST berada di prefix `/api/v1` (contoh `POST /api/v1/auth/login`).
 Konvensi umum + daftar endpoint: `docs/api/README.md`; kontrak per fitur ada di `docs/api/`.
 
+## Deploy ke server
+
+Panduan deploy ke `temukarya.bccdev.id` (Docker Compose produksi + nginx): `docs/deploy.md`.
+
 ## Troubleshooting
 
 - **Port 3306 / 8000 sudah dipakai**: ubah `DB_HOST_PORT` atau `API_PORT` di `.env`.

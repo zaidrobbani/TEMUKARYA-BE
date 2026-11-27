@@ -112,6 +112,7 @@ F4: total bobot milestone harus 100; progres dihitung dari milestone SELESAI (ti
 - [x] Ubah nama akun `PATCH /auth/me` (2026-11-23, branch `22-feat/update-account-name`): dipakai Nama Pemilik/Nama Lengkap di Android. Foto profil `PUT/DELETE /users/me/photo`, `GET /users/{id}/photo` (server kompres ke WebP 512 px ≤ 150 KB, maks unggah 2 MB). Kontrak: `docs/api/auth.md`.
 - [x] Chat real-time WebSocket `WS /conversations/{id}/ws` (2026-11-23): hub in-memory satu proses, REST send/read ikut di-push. Kontrak: `docs/api/chat-realtime.md`.
 - [x] Lampiran chat `POST /conversations/{id}/attachments` (foto dikompres WebP 1600 px ≤ 400 KB + thumbnail, dokumen PDF/Office/TXT/CSV/ZIP ≤ 10 MB). Kontrak: `docs/api/chat-attachments.md`.
+- [x] Deploy produksi (2026-11-27): `docker-compose.prod.yml` (nginx + api 1 worker + MySQL, port internal di 127.0.0.1), `docker/nginx.conf`, `.env.production.example`, `docker/backup.sh`. Server `temukarya.bccdev.id` (SSH `dev@proxy.bccdev.id -p 11119`, tanpa IP publik). Panduan: `docs/deploy.md`.
 - [ ] Di luar scope (keputusan PRD): pencairan dana & rekening bank (Figma Dompet: Cairkan Dana), push notification.
 
 ## Skema database (sudah final di migrasi)
