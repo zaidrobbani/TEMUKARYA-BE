@@ -3,7 +3,7 @@ from typing import BinaryIO
 
 from app.core.security import PasswordHasher
 from app.core.unit_of_work import UnitOfWork
-from app.modules.users.application.dto import CreateAdminInput, RegisterUserInput
+from app.modules.users.application.dto import CreateAdminInput, CreateVerifiedUserInput, RegisterUserInput
 from app.modules.users.domain.entities import SELF_REGISTRABLE_ROLES, User, UserRole
 from app.modules.users.domain.exceptions import (
     EmailAlreadyRegisteredError,
@@ -66,14 +66,27 @@ class RegisterUser(_UserCreator):
         )
 
 
-class CreateAdmin(_UserCreator):
-    def execute(self, data: CreateAdminInput) -> User:
+class CreateVerifiedUser(_UserCreator):
+    """Akun dari CLI operator (admin, akun demo/uji): email dianggap sudah terverifikasi."""
+
+    def execute(self, data: CreateVerifiedUserInput) -> User:
+        now = datetime.now(UTC)
         return self._create(
             name=data.name,
             email=data.email,
             password=data.password,
-            role=UserRole.ADMIN,
-            email_verified_at=datetime.now(UTC),
+            role=data.role,
+            phone_number=data.phone_number,
+            email_verified_at=now,
+            # Admin tidak melewati layar S&K aplikasi; UMKM/freelancer setara akun hasil register.
+            terms_accepted_at=None if data.role == UserRole.ADMIN else now,
+        )
+
+
+class CreateAdmin(CreateVerifiedUser):
+    def execute(self, data: CreateAdminInput) -> User:  # type: ignore[override]
+        return super().execute(
+            CreateVerifiedUserInput(name=data.name, email=data.email, password=data.password, role=UserRole.ADMIN)
         )
 
 

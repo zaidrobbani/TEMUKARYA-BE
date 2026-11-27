@@ -113,6 +113,7 @@ F4: total bobot milestone harus 100; progres dihitung dari milestone SELESAI (ti
 - [x] Chat real-time WebSocket `WS /conversations/{id}/ws` (2026-11-23): hub in-memory satu proses, REST send/read ikut di-push. Kontrak: `docs/api/chat-realtime.md`.
 - [x] Lampiran chat `POST /conversations/{id}/attachments` (foto dikompres WebP 1600 px ≤ 400 KB + thumbnail, dokumen PDF/Office/TXT/CSV/ZIP ≤ 10 MB). Kontrak: `docs/api/chat-attachments.md`.
 - [x] Deploy produksi (2026-11-27): `docker-compose.prod.yml` (nginx + api 1 worker + MySQL, port internal di 127.0.0.1), `docker/nginx.conf`, `.env.production.example`, `docker/backup.sh`. Server `temukarya.bccdev.id` (SSH `dev@proxy.bccdev.id -p 11119`, tanpa IP publik). Panduan: `docs/deploy.md`.
+- [x] Server pakai `mysql:8.0-debian` (`MYSQL_IMAGE` di `.env`): CPU VM tanpa x86-64-v2. Akun terverifikasi via `python -m app.scripts.create_user --role ADMIN|UMKM|FREELANCER`. CI/CD `.github/workflows/ci-cd.yml` (test + build tiap PR, deploy SSH ke server saat push `main` via `docker/deploy.sh`; secret `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`).
 - [ ] Di luar scope (keputusan PRD): pencairan dana & rekening bank (Figma Dompet: Cairkan Dana), push notification.
 
 ## Skema database (sudah final di migrasi)

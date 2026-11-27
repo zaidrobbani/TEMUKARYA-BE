@@ -3,8 +3,8 @@ from uuid import uuid4
 import pytest
 
 from app.core.security import ScryptPasswordHasher
-from app.modules.users.application.dto import CreateAdminInput, RegisterUserInput
-from app.modules.users.application.use_cases import CreateAdmin, GetUser, RegisterUser
+from app.modules.users.application.dto import CreateAdminInput, CreateVerifiedUserInput, RegisterUserInput
+from app.modules.users.application.use_cases import CreateAdmin, CreateVerifiedUser, GetUser, RegisterUser
 from app.modules.users.domain.entities import User, UserRole
 from app.modules.users.domain.exceptions import (
     EmailAlreadyRegisteredError,
@@ -86,6 +86,52 @@ def test_create_admin_rejects_duplicate_email():
         CreateAdmin(repo, ScryptPasswordHasher(), uow).execute(
             CreateAdminInput(name="Admin", email="budi@mail.com", password="rahasia123")
         )
+
+
+def test_create_admin_is_verified_without_terms():
+    repo, uow = FakeUserRepository(), FakeUnitOfWork()
+
+    admin = CreateAdmin(repo, ScryptPasswordHasher(), uow).execute(
+        CreateAdminInput(name="Admin", email="admin@temukarya.id", password="rahasia123")
+    )
+
+    assert admin.email_verified_at is not None
+    assert admin.terms_accepted_at is None
+
+
+@pytest.mark.parametrize("role", [UserRole.UMKM, UserRole.FREELANCER])
+def test_create_verified_user_is_equivalent_to_verified_registration(role):
+    repo, uow = FakeUserRepository(), FakeUnitOfWork()
+    hasher = ScryptPasswordHasher()
+
+    user = CreateVerifiedUser(repo, hasher, uow).execute(
+        CreateVerifiedUserInput(
+            name=" Rina ", email="Rina@Demo.id ", password="rahasia123", role=role, phone_number="+6281234567890"
+        )
+    )
+
+    assert user.role == role
+    assert user.name == "Rina"
+    assert user.email == "rina@demo.id"
+    assert user.phone_number == "+6281234567890"
+    assert user.email_verified_at is not None
+    assert user.terms_accepted_at is not None
+    assert hasher.verify("rahasia123", user.password_hash)
+    assert repo.get_by_email("rina@demo.id") is user
+    assert uow.committed
+
+
+def test_create_verified_user_rejects_duplicate_email_without_commit():
+    repo, uow = FakeUserRepository(), FakeUnitOfWork()
+    RegisterUser(repo, ScryptPasswordHasher(), uow).execute(make_input())
+    commits_before = uow.commits
+
+    with pytest.raises(EmailAlreadyRegisteredError):
+        CreateVerifiedUser(repo, ScryptPasswordHasher(), uow).execute(
+            CreateVerifiedUserInput(name="Budi", email="BUDI@mail.com", password="rahasia123", role=UserRole.FREELANCER)
+        )
+    assert len(repo.users) == 1
+    assert uow.commits == commits_before
 
 
 def test_get_user_returns_own_data():

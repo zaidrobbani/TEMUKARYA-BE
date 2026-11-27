@@ -69,7 +69,7 @@ def _field_name(error: dict[str, Any]) -> str:
     return ".".join(loc)
 
 
-def _field_message(error: dict[str, Any]) -> str:
+def validation_message(error: dict[str, Any]) -> str:
     error_type, ctx = error["type"], error.get("ctx", {})
     if error_type == "string_too_short":
         return "Wajib diisi" if ctx["min_length"] == 1 else f"Minimal {ctx['min_length']} karakter"
@@ -104,7 +104,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
-        errors = [{"field": _field_name(err), "message": _field_message(err)} for err in exc.errors()]
+        errors = [{"field": _field_name(err), "message": validation_message(err)} for err in exc.errors()]
         return JSONResponse(
             status_code=422,
             content=error_body("Data yang dikirim tidak valid", errors),

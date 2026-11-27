@@ -18,8 +18,9 @@ from app.modules.auth.presentation.dependencies import (
     get_action_token_repository,
     get_revoked_token_repository,
 )
-from app.modules.users.application.dto import CreateAdminInput
-from app.modules.users.application.use_cases import CreateAdmin
+from app.modules.users.application.dto import CreateAdminInput, CreateVerifiedUserInput
+from app.modules.users.application.use_cases import CreateAdmin, CreateVerifiedUser
+from app.modules.users.domain.entities import UserRole
 from app.modules.users.presentation.dependencies import get_user_repository
 from tests.fakes import (
     FakeAuthActionTokenRepository,
@@ -304,6 +305,31 @@ class TestLogin:
     )
     def test_invalid_body(self, client, body, expected):
         assert field_errors(client.post("/api/v1/auth/login", json=body)) == expected
+
+
+class TestAccountsCreatedByScript:
+    """Akun dari `app.scripts.create_user` harus bisa langsung login tanpa verifikasi email."""
+
+    @pytest.mark.parametrize("role", [UserRole.UMKM, UserRole.FREELANCER])
+    def test_app_account_can_login_immediately(self, client, users, emails, role):
+        CreateVerifiedUser(users, ScryptPasswordHasher(), FakeUnitOfWork()).execute(
+            CreateVerifiedUserInput(
+                name="Akun Uji", email="uji@demo.id", password=PASSWORD, role=role, phone_number="+6281234567890"
+            )
+        )
+
+        response = login(client, email="uji@demo.id")
+
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["user"]["role"] == role.value
+        assert emails.sent == []
+
+    def test_admin_account_can_login_to_dashboard(self, client, users):
+        CreateVerifiedUser(users, ScryptPasswordHasher(), FakeUnitOfWork()).execute(
+            CreateVerifiedUserInput(name="Admin 2", email="admin2@temukarya.id", password=PASSWORD, role=UserRole.ADMIN)
+        )
+
+        assert login(client, email="admin2@temukarya.id", path="/api/v1/auth/admin/login").status_code == 200
 
 
 class TestAdminLogin:

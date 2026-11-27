@@ -237,27 +237,99 @@ Lalu buka `https://temukarya.bccdev.id/docs` dan coba alur singkat:
 2. `POST /api/v1/auth/login` → dapat token.
 3. Kalau sempat, tes chat real-time dari Android (WebSocket lewat proxy BCC).
 
-## 9. Buat akun admin
+## 9. Buat akun (admin, UMKM, freelancer)
+
+Akun dari script ini **langsung terverifikasi**: tidak perlu klik email, bisa langsung login. Cocok untuk admin,
+akun demo, dan akun uji tim Android. Validasinya sama dengan register (format email, nomor WA dinormalisasi ke `+62…`,
+password minimal 8 karakter); UMKM/freelancer juga tercatat sudah menyetujui S&K.
 
 ```bash
-docker compose exec api python -m app.scripts.create_admin --name "Admin" --email admin@temukarya.id
+# Admin (login di admin web: POST /api/v1/auth/admin/login)
+docker compose exec api python -m app.scripts.create_user --role ADMIN --name "Admin" --email admin@temukarya.id
+
+# UMKM / freelancer (login di aplikasi: POST /api/v1/auth/login), --phone wajib
+docker compose exec api python -m app.scripts.create_user --role UMKM --name "Rina Pratiwi" --email umkm@demo.id --phone 081234567890
+docker compose exec api python -m app.scripts.create_user --role FREELANCER --name "Dimas Saputra" --email freelancer@demo.id --phone 081298765432
 ```
 
-Password diminta interaktif. Akun ini dipakai untuk login admin web (`POST /api/v1/auth/admin/login`).
+Password diminta interaktif (dua kali). Untuk membuat banyak akun sekaligus, kirim password lewat stdin (perhatikan `-T`):
+
+```bash
+echo 'Demo12345' | docker compose exec -T api python -m app.scripts.create_user \
+  --role FREELANCER --name "Freelancer 2" --email freelancer2@demo.id --phone 081200000002 --password-stdin
+```
+
+Perintah lama `python -m app.scripts.create_admin --name ... --email ...` masih bisa dipakai (sama dengan `--role ADMIN`).
+Profil UMKM/freelancer (bio, skill, dsb.) diisi setelah login lewat aplikasi, sama seperti akun hasil register.
+
+| Pesan | Arti |
+|---|---|
+| `Gagal membuat akun: Email ... sudah terdaftar` | Email sudah dipakai akun lain. |
+| `Gagal membuat akun: --phone wajib diisi untuk role UMKM` | UMKM/FREELANCER wajib punya nomor WA. |
+| `Gagal membuat akun: --email: Format email tidak valid ...` | Pesan validasi sama dengan API register; beberapa error digabung dengan `;`. |
+| `Gagal membuat akun: Konfirmasi password tidak sama dengan password` | Ketik ulang password. |
+| `argument --role: invalid choice` | Role hanya `ADMIN`, `UMKM`, `FREELANCER` (huruf besar/kecil bebas). |
+
+## 10. CI/CD (GitHub Actions)
+
+Workflow: `.github/workflows/ci-cd.yml`.
+
+| Kejadian | Yang jalan |
+|---|---|
+| Pull request (ke branch mana pun) | **Test** (migrasi + seluruh test termasuk integrasi MySQL, di MySQL 8.0 seperti server) dan **build image**. |
+| Push/merge ke `main` | Test + build, lalu kalau lolos **deploy** ke server lewat SSH (`docker/deploy.sh`). |
+| Manual (tab Actions → CI/CD → Run workflow, branch `main`) | Sama dengan push ke `main`. |
+
+`docker/deploy.sh` di server: backup DB + upload → `git pull --ff-only` branch `main` → `docker compose up -d --build`
+→ tunggu API `healthy` (maks 3 menit, kalau gagal log API ditampilkan di Actions) → hapus image lama.
+
+### Setup sekali
+
+**a. Di laptop**, buat key khusus GitHub Actions (jangan pakai key pribadi):
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/temukarya_actions -N ""
+ssh-keyscan -p 11119 proxy.bccdev.id 2>/dev/null     # simpan outputnya untuk DEPLOY_KNOWN_HOSTS
+```
+
+**b. Di server**, izinkan key itu **hanya** untuk menjalankan deploy (kalau key bocor, orang tidak dapat shell):
+
+```bash
+echo 'command="bash $HOME/temukarya-BE/docker/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ISI_DENGAN_ISI_temukarya_actions.pub' >> ~/.ssh/authorized_keys
+```
+
+Ganti `ISI_DENGAN_ISI_temukarya_actions.pub` dengan satu baris isi `~/.ssh/temukarya_actions.pub`.
+Pastikan juga repo di server mengikuti branch `main` (`git checkout main`) dan `main` sudah berisi file produksi.
+
+**c. Di GitHub**: repo → Settings → Secrets and variables → Actions → **New repository secret**:
+
+| Secret | Isi |
+|---|---|
+| `DEPLOY_SSH_KEY` | Seluruh isi `~/.ssh/temukarya_actions` (private key, termasuk baris `BEGIN`/`END`). |
+| `DEPLOY_KNOWN_HOSTS` | Output `ssh-keyscan` di langkah a. |
+
+Opsional (tab **Variables**), kalau server pindah: `DEPLOY_HOST` (default `proxy.bccdev.id`), `DEPLOY_PORT` (`11119`),
+`DEPLOY_USER` (`dev`), `DEPLOY_PATH` (`~/temukarya-BE`).
+
+**d. Uji**: tab Actions → CI/CD → Run workflow → branch `main`. Job **Deploy ke server** harus hijau dan
+langkah "Cek dari internet" menampilkan respons `/health`.
+
+Kalau langkah Deploy gagal `Connection timed out`, berarti port SSH proxy BCC tidak bisa diakses dari server GitHub.
+Alternatifnya pasang **self-hosted runner** di VM (repo → Settings → Actions → Runners → New self-hosted runner,
+ikuti perintahnya di server), lalu ubah `runs-on` job `deploy` menjadi `self-hosted` dan ganti langkah SSH dengan
+`bash ~/temukarya-BE/docker/deploy.sh`.
 
 ## Update ke versi terbaru
+
+Normalnya otomatis: merge ke `main` → CI/CD deploy (lihat langkah 10). Deploy manual (kalau Actions bermasalah):
 
 ```bash
 ssh temukarya
 cd ~/temukarya-BE
-docker/backup.sh                         # backup DB + upload dulu
-git pull
-docker compose up -d --build --wait
-docker compose ps
-docker image prune -f                    # bersihkan image lama
+bash docker/deploy.sh
 ```
 
-Migrasi baru ikut jalan otomatis. Kalau perubahan hanya di `.env`, cukup `docker compose up -d` (tanpa `--build`).
+Kalau perubahan hanya di `.env`, cukup `docker compose up -d` (tanpa build).
 Kalau `docker/nginx.conf` berubah: `docker compose restart nginx`.
 
 ## Operasional harian
@@ -373,10 +445,11 @@ Buka http://localhost:8025, klik tautan verifikasi di email (tautannya tetap ke 
 | nginx dijalankan sebagai container di compose, bukan di-install di host. | Konfigurasi ikut versi di repo (`docker/nginx.conf`), server cukup punya Docker. |
 | Uvicorn **1 worker**. | Hub WebSocket chat dan dispatcher push masih in-memory per proses; multi-worker membuat pesan real-time tidak sampai ke semua koneksi. |
 | MySQL, API langsung, dan Mailpit hanya di `127.0.0.1`. | Tidak ada akses DB dari luar selain SSH tunnel. |
-| Server `temukarya.bccdev.id` memakai **MySQL 8.0 (`mysql:8.0-debian`)**, bukan 8.4 seperti dev. | CPU VM tidak mendukung x86-64-v2. Semua migrasi & test sudah dicek jalan di 8.0. MySQL 8.0 sudah EOL (April 2026); kembali ke 8.4 kalau tipe CPU VM bisa diganti admin. |
+| Server `temukarya.bccdev.id` memakai **MySQL 8.0 (`mysql:8.0-debian`)**, bukan 8.4 seperti dev. | CPU VM tidak mendukung x86-64-v2. Sudah dicek di 8.0.46 (2026-11-27): `alembic upgrade head` dari nol + seluruh test termasuk integrasi MySQL lolos. MySQL 8.0 sudah EOL (April 2026); kembali ke 8.4 kalau tipe CPU VM bisa diganti admin. |
+| Akun admin/demo/uji dibuat lewat `app.scripts.create_user` dan langsung terverifikasi; admin tidak diberi `terms_accepted_at`. | Admin tidak melewati layar S&K aplikasi. UMKM/freelancer dari script setara akun hasil register + verifikasi email. |
 | Swagger `/docs` tetap terbuka di produksi. | Memudahkan tim Android & admin web. Bisa ditutup belakangan kalau perlu. |
 | **Belum ada CORS middleware** di `app/main.py`. | Android tidak terpengaruh, tetapi admin web yang berjalan di browser dengan origin lain akan diblokir browser. Perlu ditambah begitu origin admin web diketahui. |
 | Email produksi via Gmail SMTP (App Password), cadangan Mailpit. | Verifikasi email wajib sebelum login (keputusan auth), jadi SMTP harus jalan sebelum Android dites ke server. |
-| Deploy manual (`git pull` + `docker compose up --build`) dari branch `main`, tanpa CI/CD. | Cukup untuk skala tugas kelas; GitHub Actions bisa ditambah nanti kalau server bisa diakses dari runner. |
+| CI/CD GitHub Actions: test di MySQL 8.0 (sama dengan server) di setiap PR dan push ke `main`; deploy otomatis hanya dari `main` lewat SSH dengan key yang dikunci `command=` ke `docker/deploy.sh`. | Server tetap menarik kode dari GitHub (tidak ada registry image); deploy selalu backup dulu. **Belum terverifikasi** apakah port SSH proxy BCC bisa diakses runner GitHub, cadangannya self-hosted runner. |
 | Batas body nginx 60 MB (hasil kerja maks 50 MB). | Proxy BCC **terverifikasi** meloloskan body 55 MB (2026-11-27). |
 | Kredensial Firebase di-mount dari `secrets/` dan dikeluarkan dari image (`.dockerignore`). | Secret tidak ikut tersimpan di layer image. |

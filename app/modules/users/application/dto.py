@@ -17,3 +17,12 @@ class CreateAdminInput:
     name: str
     email: str
     password: str
+
+
+@dataclass(frozen=True)
+class CreateVerifiedUserInput:
+    name: str
+    email: str
+    password: str
+    role: UserRole
+    phone_number: str | None = None

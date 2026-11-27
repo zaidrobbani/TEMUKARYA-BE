@@ -45,8 +45,9 @@ docker compose exec api alembic downgrade -1
 # Test
 docker compose exec api pytest -q
 
-# Buat akun admin (password diminta interaktif)
-docker compose exec api python -m app.scripts.create_admin --name "Admin" --email admin@temukarya.id
+# Buat akun langsung terverifikasi (password diminta interaktif); --phone wajib untuk UMKM/FREELANCER
+docker compose exec api python -m app.scripts.create_user --role ADMIN --name "Admin" --email admin@temukarya.id
+docker compose exec api python -m app.scripts.create_user --role UMKM --name "UMKM Demo" --email umkm@demo.id --phone 081234567890
 
 # GUI database (Adminer) di http://localhost:8080
 # server: db, user/password sesuai .env
