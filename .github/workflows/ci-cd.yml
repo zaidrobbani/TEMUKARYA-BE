@@ -1,4 +1,4 @@
-# CI: test di MySQL 8.4 (dev) dan 8.0 (server produksi) + build image.
+# CI: build image + test di dalamnya terhadap MySQL 8.0 (sama dengan server produksi).
 # CD: push ke main → SSH ke server → docker/deploy.sh. Setup secret: docs/deploy.md bagian "CI/CD".
 name: CI/CD
 
@@ -19,90 +19,79 @@ jobs:
   test:
     name: Test (${{ matrix.mysql }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         mysql: ["mysql:8.0-debian"]
-    env:
-      DB_HOST: db
-      DB_PORT: "3306"
-      DB_NAME: temukarya
-      DB_USER: temukarya
-      DB_PASSWORD: ci-password
-      APP_ENV: test
-      JWT_SECRET_KEY: ci-secret-key-yang-panjangnya-minimal-32-karakter
-      TEMUKARYA_RUN_MYSQL_TESTS: "1"
-      TEMUKARYA_MYSQL_INTEGRATION: "1"
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
 
-      # Bukan `services:` karena service container tidak bisa diberi argumen mysqld (charset, timezone) seperti di compose.
+      # Image yang sama dengan produksi; test dijalankan di dalamnya karena sebagian test integrasi mewajibkan container.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: temukarya-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Jalankan MySQL
         run: |
-          docker run -d --name db -p 3306:3306 \
-            -e MYSQL_ROOT_PASSWORD=root-ci -e MYSQL_DATABASE=$DB_NAME \
-            -e MYSQL_USER=$DB_USER -e MYSQL_PASSWORD=$DB_PASSWORD \
+          docker network create ci
+          docker run -d --name db --network ci \
+            -e MYSQL_ROOT_PASSWORD=root-ci -e MYSQL_DATABASE=temukarya \
+            -e MYSQL_USER=temukarya -e MYSQL_PASSWORD=ci-password \
             ${{ matrix.mysql }} \
             --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+00:00
-          # Sebagian test integrasi hanya mau jalan ke host bernama `db`.
-          echo "127.0.0.1 db" | sudo tee -a /etc/hosts
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install dependensi
-        run: pip install -r requirements.txt
-
-      - name: Tunggu MySQL siap
-        run: |
           for i in $(seq 1 60); do
-            docker exec db mysql -u$DB_USER -p$DB_PASSWORD -e "select 1" $DB_NAME >/dev/null 2>&1 && exit 0
+            docker exec db mysql -utemukarya -pci-password -e "select 1" temukarya >/dev/null 2>&1 && exit 0
             sleep 2
           done
           docker logs db; exit 1
 
+      - name: Siapkan env test
+        run: |
+          cat > ci.env <<'ENV'
+          DB_HOST=db
+          DB_PORT=3306
+          DB_NAME=temukarya
+          DB_USER=temukarya
+          DB_PASSWORD=ci-password
+          APP_ENV=test
+          JWT_SECRET_KEY=ci-secret-key-yang-panjangnya-minimal-32-karakter
+          TEMUKARYA_RUN_MYSQL_TESTS=1
+          TEMUKARYA_MYSQL_INTEGRATION=1
+          ENV
+
       - name: Migrasi
-        run: alembic upgrade head
+        run: docker run --rm --network ci --env-file ci.env --entrypoint alembic temukarya-api:ci upgrade head
 
       - name: Test (host db)
         run: >
-          pytest -q -p no:cacheprovider
+          docker run --rm --network ci --env-file ci.env --entrypoint python temukarya-api:ci
+          -m pytest -q -p no:cacheprovider
           --ignore=tests/modules/admin_statistics/test_admin_mysql.py
           --ignore=tests/modules/chat/test_chat_mysql.py
           --ignore=tests/modules/milestones/test_milestones_mysql.py
           --ignore=tests/modules/matching/test_matching_mysql.py
 
-      # Empat file ini hanya mengizinkan host localhost/127.0.0.1.
+      # Empat file ini hanya mengizinkan host localhost/127.0.0.1: pinjam network namespace container MySQL.
       - name: Test (host 127.0.0.1)
-        env:
-          DB_HOST: 127.0.0.1
         run: >
-          pytest -q -p no:cacheprovider
+          docker run --rm --network container:db --env-file ci.env -e DB_HOST=127.0.0.1
+          --entrypoint python temukarya-api:ci
+          -m pytest -q -p no:cacheprovider
           tests/modules/admin_statistics/test_admin_mysql.py
           tests/modules/chat/test_chat_mysql.py
           tests/modules/milestones/test_milestones_mysql.py
           tests/modules/matching/test_matching_mysql.py
 
-  build:
-    name: Build image
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
     name: Deploy ke server
-    needs: [test, build]
+    needs: [test]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
