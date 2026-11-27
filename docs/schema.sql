@@ -581,3 +581,40 @@ CREATE INDEX ix_notifications_user_read_at ON notifications (user_id, read_at);
 
 UPDATE alembic_version SET version_num='17a58015bd8b' WHERE alembic_version.version_num = 'a1d4e7c29b63';
 
+-- Running upgrade 17a58015bd8b -> b7c2e91f4a10
+
+CREATE TABLE device_tokens (
+    id CHAR(36) NOT NULL DEFAULT (UUID()), 
+    user_id CHAR(36) NOT NULL, 
+    token VARCHAR(512) NOT NULL, 
+    platform VARCHAR(20) NOT NULL, 
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), 
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3), 
+    PRIMARY KEY (id), 
+    CONSTRAINT uq_device_tokens_token UNIQUE (token), 
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_device_tokens_user_id ON device_tokens (user_id);
+
+UPDATE alembic_version SET version_num='b7c2e91f4a10' WHERE alembic_version.version_num = '17a58015bd8b';
+
+-- Running upgrade b7c2e91f4a10 -> c3e8d41f7a52
+
+ALTER TABLE messages ADD COLUMN deleted_at DATETIME(3);
+
+ALTER TABLE messages DROP CHECK ck_messages_text_required;
+
+ALTER TABLE messages ADD CONSTRAINT ck_messages_text_required CHECK (message_type <> 'TEXT' OR message_text IS NOT NULL OR deleted_at IS NOT NULL);
+
+CREATE TABLE hidden_messages (
+    message_id CHAR(36) NOT NULL, 
+    user_id CHAR(36) NOT NULL, 
+    hidden_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), 
+    PRIMARY KEY (message_id, user_id), 
+    FOREIGN KEY(message_id) REFERENCES messages (id) ON DELETE CASCADE, 
+    FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+UPDATE alembic_version SET version_num='c3e8d41f7a52' WHERE alembic_version.version_num = 'b7c2e91f4a10';
+

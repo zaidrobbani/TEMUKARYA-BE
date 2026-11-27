@@ -177,6 +177,7 @@ class FakeMessageRepository:
         self.conversations = conversation_repository
         self.messages = []
         self.attachments = []
+        self.hidden = set()
 
     def create_with_attachments(
         self,
@@ -208,11 +209,13 @@ class FakeMessageRepository:
         *,
         limit,
         before=None,
+        viewer_user_id=None,
     ):
         items = [
             item
             for item in self.messages
             if item.conversation_id == conversation_id
+            and (item.id, viewer_user_id) not in self.hidden
         ]
 
         items.sort(
@@ -241,6 +244,27 @@ class FakeMessageRepository:
                 message = next(m for m in self.messages if m.id == item.message_id)
                 return item, message.conversation_id
         return None
+
+    def list_by_ids(self, conversation_id, message_ids):
+        return tuple(
+            item
+            for item in self.messages
+            if item.conversation_id == conversation_id and item.id in message_ids
+        )
+
+    def delete_for_everyone(self, message_ids, deleted_at):
+        removed = tuple(item for item in self.attachments if item.message_id in message_ids)
+        self.attachments = [item for item in self.attachments if item.message_id not in message_ids]
+        self.messages = [
+            replace(item, message_text=None, deleted_at=deleted_at)
+            if item.id in message_ids and item.deleted_at is None
+            else item
+            for item in self.messages
+        ]
+        return removed
+
+    def hide_for_user(self, message_ids, user_id, hidden_at):
+        self.hidden.update((message_id, user_id) for message_id in message_ids)
 
     def list_attachments(
         self,

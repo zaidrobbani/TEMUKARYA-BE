@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import BinaryIO
 from uuid import uuid4
 
@@ -23,6 +23,8 @@ from app.modules.chat.application.dto import (
     MarkConversationReadResult,
     SendAttachmentMessageInput,
     GetAttachmentFileInput,
+    DeleteMessagesInput,
+    DeleteMessagesResult,
 )
 
 from app.modules.chat.domain.entities import (
@@ -30,6 +32,7 @@ from app.modules.chat.domain.entities import (
     Conversation,
     Message,
     MessageAttachment,
+    MessageDeleteScope,
     MessageType,
 )
 
@@ -661,6 +664,7 @@ class ListConversationMessages:
                 conversation.id,
                 limit=data.limit + 1,
                 before=data.before,
+                viewer_user_id=data.actor.user_id,
             )
         )
 
@@ -965,3 +969,73 @@ class GetMessageAttachmentFile:
                 raise ChatFileNotFoundError()
             mime = "image/webp"
         return attachment, mime, self.storage.open(key)
+
+
+# ============================================================
+# 10. DELETE MESSAGES (pilih banyak, ala WhatsApp)
+# ============================================================
+
+MAX_DELETE_BATCH = 100
+# Seperti WhatsApp: hapus untuk semua orang hanya untuk pesan yang masih baru.
+DELETE_FOR_EVERYONE_WINDOW = timedelta(hours=48)
+
+
+class MessageDeleteExpiredError(BadRequestError):
+    code = "MESSAGE_DELETE_EXPIRED"
+
+    def __init__(self):
+        super().__init__("Pesan yang lebih dari 48 jam hanya bisa dihapus untuk saya")
+
+
+class DeleteMessages:
+    """
+    ME: pesan disembunyikan untuk actor saja (boleh pesan siapa pun di percakapan).
+    EVERYONE: hanya pesan milik actor, maksimal 48 jam; teks & lampiran dibuang,
+    pesan tetap tampil sebagai "Pesan ini telah dihapus".
+    Semua-atau-tidak-sama-sekali: satu id bermasalah menggagalkan seluruh permintaan.
+    """
+
+    def __init__(
+        self,
+        conversation_repository: ConversationRepository,
+        message_repository: MessageRepository,
+        clock: Callable[[], datetime] = _utc_now,
+    ):
+        self.message_repository = message_repository
+        self.clock = clock
+        self.get_conversation = GetConversation(conversation_repository)
+
+    def execute(self, data: DeleteMessagesInput) -> DeleteMessagesResult:
+        conversation = self.get_conversation.execute(
+            GetConversationInput(conversation_id=data.conversation_id, actor=data.actor)
+        )
+        try:
+            scope = MessageDeleteScope(data.scope)
+        except ValueError as exc:
+            raise BadRequestError("Scope hapus harus ME atau EVERYONE") from exc
+
+        message_ids = tuple(dict.fromkeys(_validate_id(item, "Message ID") for item in data.message_ids))
+        if not message_ids:
+            raise BadRequestError("Pilih minimal satu pesan")
+        if len(message_ids) > MAX_DELETE_BATCH:
+            raise BadRequestError(f"Maksimal {MAX_DELETE_BATCH} pesan sekali hapus")
+
+        found = {item.id: item for item in self.message_repository.list_by_ids(conversation.id, message_ids)}
+        if any(message_id not in found for message_id in message_ids):
+            raise NotFoundError("Pesan tidak ditemukan")
+
+        now = self.clock()
+        if scope == MessageDeleteScope.ME:
+            self.message_repository.hide_for_user(message_ids, data.actor.user_id, now)
+            return DeleteMessagesResult(conversation.id, scope, message_ids, now)
+
+        messages = [found[message_id] for message_id in message_ids]
+        if any(item.sender_user_id != data.actor.user_id for item in messages):
+            raise ForbiddenError("Hanya pesan milik sendiri yang bisa dihapus untuk semua orang")
+        # Pesan yang sudah dihapus dilewati (idempotent), sisanya wajib masih dalam batas waktu.
+        targets = tuple(item.id for item in messages if item.deleted_at is None)
+        if any(now - found[message_id].sent_at > DELETE_FOR_EVERYONE_WINDOW for message_id in targets):
+            raise MessageDeleteExpiredError()
+
+        removed = tuple(self.message_repository.delete_for_everyone(targets, now)) if targets else ()
+        return DeleteMessagesResult(conversation.id, scope, message_ids, now, removed)

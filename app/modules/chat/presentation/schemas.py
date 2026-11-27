@@ -7,6 +7,7 @@ from pydantic import (
 from app.core.responses import UtcDateTime
 
 from app.modules.chat.domain.entities import (
+    MessageDeleteScope,
     MessageType,
 )
 
@@ -131,6 +132,9 @@ class MessageResponse(ChatResponseBase):
 
     read_at: UtcDateTime | None
 
+    # Bukan null = dihapus untuk semua orang (message_text null, tanpa lampiran).
+    deleted_at: UtcDateTime | None = None
+
 
 # ============================================================
 # 7. MESSAGE ATTACHMENT RESPONSE
@@ -226,3 +230,21 @@ class MarkConversationReadResponse(
     conversation_id: str
 
     marked_count: int
+
+
+# ============================================================
+# 12. DELETE MESSAGES
+# ============================================================
+
+class DeleteMessagesRequest(BaseModel):
+    message_ids: list[str] = Field(min_length=1, max_length=100)
+    scope: MessageDeleteScope = Field(
+        description="ME = hapus untuk saya, EVERYONE = hapus untuk semua orang (pesan sendiri, maks 48 jam)",
+    )
+
+
+class DeleteMessagesResponse(ChatResponseBase):
+    conversation_id: str
+    scope: MessageDeleteScope
+    message_ids: list[str]
+    deleted_at: UtcDateTime

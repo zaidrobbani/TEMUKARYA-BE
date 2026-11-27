@@ -89,6 +89,7 @@ Status code:
 | | `GET /conversations`, `GET /conversations/{conversation_id}` | peserta | 200 |
 | | `POST /conversations/{conversation_id}/messages` | peserta | 201 |
 | | `GET /conversations/{conversation_id}/messages` (`limit`, `before_at` + `before_id`) | peserta | 200 |
+| | `POST /conversations/{conversation_id}/messages/delete` (hapus untuk saya / semua orang, lihat [chat-delete.md](chat-delete.md)) | peserta | 200 |
 | | `PATCH /conversations/{conversation_id}/read` | peserta | 200 |
 | | `POST /conversations/{conversation_id}/attachments` (foto/dokumen), `GET …/attachments/{attachment_id}/file` (lihat [chat-attachments.md](chat-attachments.md)) | peserta | 201 / 200 |
 | | `WS /conversations/{conversation_id}/ws` (chat real-time, lihat [chat-realtime.md](chat-realtime.md)) | peserta | 101 |

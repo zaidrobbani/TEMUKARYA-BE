@@ -123,8 +123,9 @@ class MessageModel(Base):
     __tablename__ = "messages"
 
     __table_args__ = (
+        # Pesan yang dihapus untuk semua orang tidak lagi menyimpan teks.
         CheckConstraint(
-            "message_type <> 'TEXT' OR message_text IS NOT NULL",
+            "message_type <> 'TEXT' OR message_text IS NOT NULL OR deleted_at IS NOT NULL",
             name="ck_messages_text_required",
         ),
         Index(
@@ -181,6 +182,35 @@ class MessageModel(Base):
     )
 
     created_at: Mapped[datetime] = mapped_column(
+        mysql.DATETIME(fsp=3),
+        nullable=False,
+        server_default=text("CURRENT_TIMESTAMP(3)"),
+    )
+
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        mysql.DATETIME(fsp=3),
+        nullable=True,
+    )
+
+
+class HiddenMessageModel(Base):
+    """Pesan yang dihapus "untuk saya": hanya disembunyikan dari user ini."""
+
+    __tablename__ = "hidden_messages"
+
+    message_id: Mapped[str] = mapped_column(
+        CHAR(36),
+        ForeignKey("messages.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    user_id: Mapped[str] = mapped_column(
+        CHAR(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    hidden_at: Mapped[datetime] = mapped_column(
         mysql.DATETIME(fsp=3),
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP(3)"),

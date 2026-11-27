@@ -7,6 +7,7 @@ from app.modules.chat.domain.entities import (
     Conversation,
     Message,
     MessageAttachment,
+    MessageDeleteScope,
 )
 
 
@@ -129,3 +130,21 @@ class GetAttachmentFileInput:
     attachment_id: str
     actor: ChatActor
     thumbnail: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteMessagesInput:
+    conversation_id: str
+    actor: ChatActor
+    message_ids: tuple[str, ...]
+    scope: MessageDeleteScope
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteMessagesResult:
+    conversation_id: str
+    scope: MessageDeleteScope
+    message_ids: tuple[str, ...]
+    deleted_at: datetime
+    # File fisik lampiran yang harus dibuang setelah commit (hanya EVERYONE).
+    removed_attachments: tuple[MessageAttachment, ...] = ()

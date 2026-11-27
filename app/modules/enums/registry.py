@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from app.modules.applications.domain.entities import APPLICATION_STATUS_LABELS
+from app.modules.chat.domain.entities import MessageDeleteScope
 from app.modules.notifications.domain.entities import NOTIFICATION_TYPE_LABELS, NotificationCategory
 from app.modules.payments.domain.entities import (
     DISPLAY_STATUS_LABELS,
@@ -72,4 +73,8 @@ ENUMS: dict[str, list[EnumOption]] = {
         EnumOption(NotificationCategory.MESSAGE.value, "Pesan"),
     ],
     "notification_types": _options(NOTIFICATION_TYPE_LABELS),
+    "message_delete_scopes": [
+        EnumOption(MessageDeleteScope.ME.value, "Hapus untuk saya"),
+        EnumOption(MessageDeleteScope.EVERYONE.value, "Hapus untuk semua orang"),
+    ],
 }
