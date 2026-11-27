@@ -10,3 +10,7 @@ __pycache__
 .vscode
 README.md
 /storage/
+/secrets/
+.env.*
+!.env.example
+!.env.production.example
