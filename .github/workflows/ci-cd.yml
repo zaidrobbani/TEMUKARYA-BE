@@ -111,6 +111,10 @@ jobs:
             echo "::error::Secret DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS belum diisi (lihat docs/deploy.md bagian CI/CD)"
             exit 1
           fi
+          if [ -z "${{ vars.DEPLOY_HOST }}" ] || [ -z "${{ vars.DEPLOY_PORT }}" ] || [ -z "${{ vars.DEPLOY_USER }}" ] || [ -z "${{ vars.DEPLOY_PATH }}" ]; then
+            echo "::error::Variable DEPLOY_HOST / DEPLOY_PORT / DEPLOY_USER / DEPLOY_PATH belum diisi (Settings → Secrets and variables → Actions → Variables)"
+            exit 1
+          fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key

@@ -308,8 +308,14 @@ Pastikan juga repo di server mengikuti branch `main` (`git checkout main`) dan `
 | `DEPLOY_SSH_KEY` | Seluruh isi `~/.ssh/temukarya_actions` (private key, termasuk baris `BEGIN`/`END`). |
 | `DEPLOY_KNOWN_HOSTS` | Output `ssh-keyscan` di langkah a. |
 
-Opsional (tab **Variables**), kalau server pindah: `DEPLOY_HOST` (default `proxy.bccdev.id`), `DEPLOY_PORT` (`11119`),
-`DEPLOY_USER` (`dev`), `DEPLOY_PATH` (`~/temukarya-BE`).
+Lalu tab **Variables** → **New repository variable** (wajib, workflow tidak punya nilai default):
+
+| Variable | Isi |
+|---|---|
+| `DEPLOY_HOST` | `proxy.bccdev.id` |
+| `DEPLOY_PORT` | `11119` |
+| `DEPLOY_USER` | `dev` |
+| `DEPLOY_PATH` | `~/temukarya-BE` |
 
 **d. Uji**: tab Actions → CI/CD → Run workflow → branch `main`. Job **Deploy ke server** harus hijau dan
 langkah "Cek dari internet" menampilkan respons `/health`.
